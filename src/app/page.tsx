@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
+import Image from "next/image";
 
 type SectionId =
   | "about"
@@ -103,7 +104,17 @@ export default function Home() {
             "
           >
             <div className="space-y-6">
-              <div className="h-24 w-24 rounded-full bg-neutral-800 border border-neutral-700" />
+              {/* ✅ REPLACED CIRCLE WITH YOUR IMAGE */}
+              <div className="h-24 w-24 rounded-full overflow-hidden border border-neutral-700 bg-neutral-800">
+                <Image
+                  src="/profile.jpg"
+                  alt="Ryder Tetreault"
+                  width={96}
+                  height={96}
+                  className="w-full h-full object-cover"
+                  priority
+                />
+              </div>
 
               <div className="space-y-4">
                 <h1 className="text-5xl sm:text-6xl font-semibold tracking-tight">
@@ -114,9 +125,7 @@ export default function Home() {
                   Computer Science | SWE | Cyber Defense
                 </p>
 
-                <p className="text-neutral-500 text-lg leading-loose max-w-sm">
-                  
-                </p>
+                <p className="text-neutral-500 text-lg leading-loose max-w-sm"></p>
               </div>
             </div>
 
