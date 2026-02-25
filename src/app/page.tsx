@@ -186,8 +186,8 @@ export default function Home() {
           <div className="space-y-24 sm:space-y-28 lg:space-y-32">
             <Section id="about" title="ABOUT">
               <p className="text-neutral-300 text-lg leading-loose max-w-2xl">
-                I’m a Computer Science & Software Engineering student at Auburn
-                University graduating in December 2025. My work focuses on
+                I’m a recent Computer Science & Software Engineering 
+                graduate from Auburn University. My work focuses on
                 systems design, distributed infrastructure, and cybersecurity
                 engineering, with long-term goals in Systems Engineering and
                 Enterprise Architecture.
