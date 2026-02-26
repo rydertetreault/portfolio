@@ -104,7 +104,7 @@ export default function Home() {
             "
           >
             <div className="space-y-6">
-              {/* ✅ REPLACED CIRCLE WITH YOUR IMAGE */}
+              {/* ✅ PROFILE IMAGE */}
               <div className="h-24 w-24 rounded-full overflow-hidden border border-neutral-700 bg-neutral-800">
                 <Image
                   src="/profile.jpg"
@@ -129,8 +129,44 @@ export default function Home() {
               </div>
             </div>
 
-            {/* NAV (no hover glow) */}
-            <nav className="space-y-7">
+            {/* ✅ MOBILE NAV (dropdown) */}
+            <div className="lg:hidden">
+              <label className="block text-xs tracking-[0.35em] text-neutral-500 mb-3">
+                JUMP TO
+              </label>
+
+              <div className="relative">
+                <select
+                  value={activeId}
+                  onChange={(e) => {
+                    const id = e.target.value as SectionId;
+                    setActiveId(id);
+                    document
+                      .getElementById(id)
+                      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
+                  className="
+                    w-full appearance-none rounded-xl
+                    border border-neutral-800 bg-neutral-950/60
+                    px-4 py-3 pr-10 text-sm text-neutral-200
+                    focus:outline-none focus:ring-2 focus:ring-emerald-400/40
+                  "
+                >
+                  {sections.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+
+                <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-neutral-500">
+                  ▾
+                </div>
+              </div>
+            </div>
+
+            {/* ✅ DESKTOP NAV (your original nav) */}
+            <nav className="hidden lg:block space-y-7">
               {sections.map((s) => {
                 const isActive = activeId === s.id;
 
@@ -186,11 +222,11 @@ export default function Home() {
           <div className="space-y-24 sm:space-y-28 lg:space-y-32">
             <Section id="about" title="ABOUT">
               <p className="text-neutral-300 text-lg leading-loose max-w-2xl">
-                I’m a recent Computer Science & Software Engineering 
-                graduate from Auburn University. My work focuses on
-                systems design, distributed infrastructure, and cybersecurity
-                engineering, with long-term goals in Systems Engineering and
-                Enterprise Architecture.
+                I’m a recent Computer Science & Software Engineering graduate
+                from Auburn University. My work focuses on systems design,
+                distributed infrastructure, and cybersecurity engineering, with
+                long-term goals in Systems Engineering and Enterprise
+                Architecture.
               </p>
             </Section>
 
