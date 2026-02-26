@@ -104,7 +104,7 @@ export default function Home() {
             "
           >
             <div className="space-y-6">
-              {/* ✅ PROFILE IMAGE */}
+              {/* PROFILE IMAGE */}
               <div className="h-24 w-24 rounded-full overflow-hidden border border-neutral-700 bg-neutral-800">
                 <Image
                   src="/profile.jpg"
@@ -129,7 +129,7 @@ export default function Home() {
               </div>
             </div>
 
-            {/* ✅ MOBILE NAV (dropdown) */}
+            {/* MOBILE NAV (dropdown) */}
             <div className="lg:hidden">
               <label className="block text-xs tracking-[0.35em] text-neutral-500 mb-3">
                 JUMP TO
@@ -165,7 +165,7 @@ export default function Home() {
               </div>
             </div>
 
-            {/* ✅ DESKTOP NAV (your original nav) */}
+            {/* DESKTOP NAV */}
             <nav className="hidden lg:block space-y-7">
               {sections.map((s) => {
                 const isActive = activeId === s.id;
@@ -221,7 +221,7 @@ export default function Home() {
           {/* RIGHT CONTENT */}
           <div className="space-y-24 sm:space-y-28 lg:space-y-32">
             <Section id="about" title="ABOUT">
-              <p className="text-neutral-300 text-lg leading-loose max-w-2xl">
+              <p className="text-neutral-300 text-base sm:text-lg leading-relaxed max-w-2xl">
                 I’m a recent Computer Science & Software Engineering graduate
                 from Auburn University. My work focuses on systems design,
                 distributed infrastructure, and cybersecurity engineering, with
@@ -314,12 +314,12 @@ export default function Home() {
             </Section>
 
             <Section id="learning" title="LEARNING">
-              <p className="text-neutral-300 text-lg leading-loose max-w-2xl">
+              <p className="text-neutral-300 text-base sm:text-lg leading-relaxed max-w-2xl">
                 Currently preparing for the CompTIA Security+ certification and
                 continuing advanced coursework in Cyber Defense.
               </p>
               <div className="h-6" />
-              <p className="text-neutral-300 text-lg leading-loose max-w-2xl">
+              <p className="text-neutral-300 text-base sm:text-lg leading-relaxed max-w-2xl">
                 Focused on strengthening knowledge in enterprise security
                 architecture, network security, threat detection, and risk
                 management.
@@ -327,7 +327,7 @@ export default function Home() {
             </Section>
 
             <Section id="contact" title="CONTACT">
-              <p className="text-neutral-300 text-lg leading-loose">
+              <p className="text-neutral-300 text-base sm:text-lg leading-relaxed">
                 LinkedIn:{" "}
                 <a
                   href="https://www.linkedin.com/in/ryder-tetreault"
@@ -410,14 +410,15 @@ function TimelineItem({
     <div className="relative pl-8 group">
       <div className="absolute left-0 top-0 h-full w-px bg-neutral-800 group-hover:bg-emerald-400/60 transition-colors duration-300" />
 
-      <div className="grid grid-cols-[160px_1fr] gap-10">
+      {/* ✅ Mobile: 1 column | Desktop: 2 columns */}
+      <div className="grid gap-6 lg:grid-cols-[160px_1fr] lg:gap-10">
         <p className="text-sm text-neutral-500">{date}</p>
 
         <div className="space-y-3">
           <p className="text-xl font-semibold">{title}</p>
           <p className="text-sm text-neutral-500">{subtitle}</p>
 
-          <p className="text-neutral-300 text-lg leading-loose max-w-2xl">
+          <p className="text-neutral-300 text-base sm:text-lg leading-relaxed max-w-2xl">
             {desc}
           </p>
 
@@ -451,13 +452,14 @@ function EduItem({
     <div className="relative pl-8 group">
       <div className="absolute left-0 top-0 h-full w-px bg-neutral-800 group-hover:bg-emerald-400/60 transition-colors duration-300" />
 
-      <div className="grid grid-cols-[160px_1fr] gap-10">
+      {/* ✅ Mobile: 1 column | Desktop: 2 columns */}
+      <div className="grid gap-6 lg:grid-cols-[160px_1fr] lg:gap-10">
         <p className="text-sm text-neutral-500">{date}</p>
 
         <div className="space-y-3">
           <p className="text-xl font-semibold">{title}</p>
           <p className="text-sm text-neutral-500">{subtitle}</p>
-          <p className="text-neutral-300 text-lg leading-loose max-w-2xl">
+          <p className="text-neutral-300 text-base sm:text-lg leading-relaxed max-w-2xl">
             {desc}
           </p>
         </div>
