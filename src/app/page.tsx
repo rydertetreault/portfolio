@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
+import { Linkedin, Mail, Github, Copy, Check, ArrowUpRight } from "lucide-react";
 
 type SectionId =
   | "about"
@@ -327,23 +328,33 @@ export default function Home() {
             </Section>
 
             <Section id="contact" title="CONTACT">
-              <p className="text-neutral-300 text-base sm:text-lg leading-relaxed">
-                LinkedIn:{" "}
-                <a
-                  href="https://www.linkedin.com/in/ryder-tetreault"
-                  className="text-emerald-400 hover:text-emerald-300 transition"
-                >
-                  linkedin.com/in/ryder-tetreault
-                </a>
-                <br />
-                Email:{" "}
-                <a
-                  href="mailto:rydertetreault@gmail.com"
-                  className="text-emerald-400 hover:text-emerald-300 transition"
-                >
-                  rydertetreault@gmail.com
-                </a>
-              </p>
+              <ContactItem
+                icon={Linkedin}
+                name="LinkedIn"
+                handle="linkedin.com/in/ryder-tetreault"
+                href="https://www.linkedin.com/in/ryder-tetreault"
+                copyText="https://www.linkedin.com/in/ryder-tetreault"
+              />
+
+              <div className="h-8" />
+
+              <ContactItem
+                icon={Mail}
+                name="Email"
+                handle="rydertetreault@gmail.com"
+                href="mailto:rydertetreault@gmail.com"
+                copyText="rydertetreault@gmail.com"
+              />
+
+              <div className="h-8" />
+
+              <ContactItem
+                icon={Github}
+                name="GitHub"
+                handle="github.com/rydertetreault"
+                href="https://github.com/rydertetreault"
+                copyText="https://github.com/rydertetreault"
+              />
             </Section>
 
             <div className="h-[30vh]" />
@@ -462,6 +473,71 @@ function EduItem({
           <p className="text-neutral-300 text-base sm:text-lg leading-relaxed max-w-2xl">
             {desc}
           </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ContactItem({
+  icon: Icon,
+  name,
+  handle,
+  href,
+  copyText,
+}: {
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  name: string;
+  handle: string;
+  href: string;
+  copyText: string;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(copyText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Silently fail — button stays in default state
+    }
+  };
+
+  return (
+    <div className="relative pl-8 group">
+      <div className="absolute left-0 top-0 h-full w-px bg-neutral-800 group-hover:bg-emerald-400/60 transition-colors duration-300" />
+
+      <div className="grid gap-6 lg:grid-cols-[160px_1fr] lg:gap-10">
+        <div className="text-neutral-500 group-hover:text-emerald-400 transition-colors duration-300">
+          <Icon size={24} />
+        </div>
+
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <p className="text-lg font-semibold">{name}</p>
+            <p className="text-sm text-neutral-500">{handle}</p>
+          </div>
+
+          <div className="flex items-center gap-2 pt-1">
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="text-neutral-500 hover:text-emerald-400 transition-colors cursor-pointer"
+              aria-label={`Copy ${name}`}
+            >
+              {copied ? <Check size={16} /> : <Copy size={16} />}
+            </button>
+            <a
+              href={href}
+              target="_blank"
+              rel="noreferrer"
+              className="text-neutral-500 hover:text-emerald-400 transition-colors"
+              aria-label={`Open ${name}`}
+            >
+              <ArrowUpRight size={16} />
+            </a>
+          </div>
         </div>
       </div>
     </div>
