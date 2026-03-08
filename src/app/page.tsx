@@ -2,12 +2,10 @@
 
 import React, { useEffect, useState } from "react";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
-import Link from "next/link";
 import {
   Github,
   Linkedin,
   Mail,
-  ArrowRight,
   ExternalLink,
   Shield,
   Code2,
@@ -24,29 +22,10 @@ import {
    ═══════════════════════════════════════════ */
 
 const navItems = [
-  { id: "projects", label: "Projects" },
   { id: "skills", label: "Skills" },
   { id: "experience", label: "Experience" },
   { id: "education", label: "Education" },
   { id: "contact", label: "Contact" },
-];
-
-const featuredProjects = [
-  {
-    title: "Portfolio Website",
-    description:
-      "A dark-themed, responsive portfolio built from scratch with Next.js, Tailwind CSS, and Framer Motion. Features scroll animations, interactive project cards, and a polished dark aesthetic.",
-    tech: ["Next.js", "TypeScript", "Tailwind CSS", "Framer Motion"],
-    github: "https://github.com/rydertetreault/portfolio",
-    live: "https://rydertetreault.dev",
-  },
-  {
-    title: "JRP Bot",
-    description:
-      "A Discord bot that serves as judge, oracle, and community enforcer. Features real sentencing with jail time, an appeals system, leaderboards, and community governance enforcement.",
-    tech: ["JavaScript", "Discord.js", "Node.js"],
-    github: "https://github.com/rydertetreault/JRP-Bot",
-  },
 ];
 
 const softwareSkills = [
@@ -293,10 +272,10 @@ export default function Home() {
             className="flex flex-col sm:flex-row items-center justify-center gap-4"
           >
             <button
-              onClick={() => scrollTo("projects")}
+              onClick={() => scrollTo("skills")}
               className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-black font-medium px-7 py-3 rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/20 cursor-pointer w-full sm:w-auto justify-center"
             >
-              View Projects <ArrowRight size={16} />
+              Learn More <ChevronDown size={16} />
             </button>
             <button
               onClick={() => scrollTo("contact")}
@@ -338,31 +317,8 @@ export default function Home() {
         />
 
         <div className="relative mx-auto max-w-5xl px-6 sm:px-8 py-24 sm:py-32 space-y-32 sm:space-y-40">
-          {/* ─── FEATURED PROJECTS ─── */}
-          <SectionWrapper id="projects" number="01" title="Featured Projects">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {featuredProjects.map((project, i) => (
-                <ProjectCard key={project.title} project={project} index={i} />
-              ))}
-            </div>
-            <motion.div
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.3 }}
-              className="mt-8"
-            >
-              <Link
-                href="/projects"
-                className="inline-flex items-center gap-2 text-sm text-neutral-500 hover:text-emerald-400 transition-colors"
-              >
-                View all projects <ArrowRight size={14} />
-              </Link>
-            </motion.div>
-          </SectionWrapper>
-
           {/* ─── SKILLS ─── */}
-          <SectionWrapper id="skills" number="02" title="Skills & Technologies">
+          <SectionWrapper id="skills" number="01" title="Skills & Technologies">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <SkillColumn
                 icon={<Code2 size={20} />}
@@ -380,7 +336,7 @@ export default function Home() {
           </SectionWrapper>
 
           {/* ─── EXPERIENCE ─── */}
-          <SectionWrapper id="experience" number="03" title="Experience">
+          <SectionWrapper id="experience" number="02" title="Experience">
             <div className="space-y-0">
               {experiences.map((exp, i) => (
                 <ExperienceCard key={exp.company} experience={exp} index={i} />
@@ -391,7 +347,7 @@ export default function Home() {
           {/* ─── EDUCATION & CERTIFICATIONS ─── */}
           <SectionWrapper
             id="education"
-            number="04"
+            number="03"
             title="Education & Certifications"
           >
             <div className="space-y-6">
@@ -477,7 +433,7 @@ export default function Home() {
           </SectionWrapper>
 
           {/* ─── CONTACT ─── */}
-          <SectionWrapper id="contact" number="05" title="Get in Touch">
+          <SectionWrapper id="contact" number="04" title="Get in Touch">
             <motion.p
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -599,72 +555,6 @@ function SectionWrapper({
       </div>
       {children}
     </motion.section>
-  );
-}
-
-function ProjectCard({
-  project,
-  index,
-}: {
-  project: (typeof featuredProjects)[number];
-  index: number;
-}) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 24 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.5, delay: index * 0.1 }}
-      className="group relative rounded-2xl border border-neutral-800/60 bg-neutral-950/40 hover:border-emerald-500/30 transition-all duration-500 overflow-hidden"
-    >
-      {/* Hover glow */}
-      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-500/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
-      <div className="relative p-6 sm:p-8 h-full flex flex-col justify-between gap-6">
-        <div className="space-y-4">
-          <h3 className="text-xl font-semibold tracking-tight group-hover:text-emerald-300 transition-colors duration-300">
-            {project.title}
-          </h3>
-          <p className="text-neutral-400 text-sm leading-relaxed">
-            {project.description}
-          </p>
-        </div>
-
-        <div className="space-y-4">
-          <div className="flex flex-wrap gap-2">
-            {project.tech.map((t) => (
-              <span
-                key={t}
-                className="rounded-full border border-neutral-800 px-2.5 py-0.5 text-xs text-neutral-500 group-hover:border-neutral-700 transition-colors"
-              >
-                {t}
-              </span>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-4">
-            <a
-              href={project.github}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1.5 text-sm text-neutral-500 hover:text-emerald-400 transition-colors"
-            >
-              <Github size={14} /> Source
-            </a>
-            {project.live && (
-              <a
-                href={project.live}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1.5 text-sm text-neutral-500 hover:text-emerald-400 transition-colors"
-              >
-                <ExternalLink size={14} /> Live
-              </a>
-            )}
-          </div>
-        </div>
-      </div>
-    </motion.div>
   );
 }
 
