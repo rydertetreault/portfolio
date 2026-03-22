@@ -1,30 +1,23 @@
-"use client";
-
-import React from "react";
-import { motion } from "framer-motion";
+import { notFound } from "next/navigation";
 import Link from "next/link";
-import { useParams } from "next/navigation";
 import { ArrowLeft, ArrowUpRight, Github } from "lucide-react";
 import { projects } from "@/data/projects";
+import FadeIn from "@/components/FadeIn";
 
-export default function ProjectDetail() {
-  const { slug } = useParams<{ slug: string }>();
+export function generateStaticParams() {
+  return projects.map((p) => ({ slug: p.slug }));
+}
+
+export default async function ProjectDetail({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
   const project = projects.find((p) => p.slug === slug);
 
   if (!project) {
-    return (
-      <main className="min-h-screen bg-[#0a0a0a] text-neutral-200 flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <p className="text-2xl font-semibold">Project not found</p>
-          <Link
-            href="/projects"
-            className="text-sm text-emerald-400 hover:text-emerald-300 transition-colors"
-          >
-            Back to projects
-          </Link>
-        </div>
-      </main>
-    );
+    notFound();
   }
 
   return (
@@ -35,21 +28,7 @@ export default function ProjectDetail() {
         <div className="absolute -bottom-52 -right-52 h-[560px] w-[560px] rounded-full bg-[rgba(34,197,94,0.08)] blur-[140px]" />
       </div>
 
-      {/* Grain Texture */}
-      <div
-        className="pointer-events-none absolute inset-0 opacity-[0.06] mix-blend-overlay"
-        style={{
-          backgroundImage:
-            "url(data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.35'/%3E%3C/svg%3E)",
-        }}
-      />
-
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
-        className="relative mx-auto max-w-3xl px-6 sm:px-10 lg:px-12 py-16 sm:py-20"
-      >
+      <div className="relative mx-auto max-w-3xl px-6 sm:px-10 lg:px-12 py-16 sm:py-20">
         {/* Back link */}
         <Link
           href="/projects"
@@ -60,12 +39,7 @@ export default function ProjectDetail() {
         </Link>
 
         {/* Title block */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="space-y-4 mb-12"
-        >
+        <FadeIn className="space-y-4 mb-12">
           <span className="text-[11px] tracking-[0.25em] text-neutral-500 uppercase">
             {project.category}
           </span>
@@ -115,27 +89,41 @@ export default function ProjectDetail() {
               </a>
             )}
           </div>
-        </motion.div>
+        </FadeIn>
 
         <div className="h-px w-full bg-neutral-800/60 mb-12" />
 
         {/* Case study sections */}
         <div className="space-y-16">
-          <CaseSection
-            title="PROBLEM"
-            content={project.problem}
-            delay={0.15}
-          />
-          <CaseSection
-            title="APPROACH"
-            content={project.approach}
-            delay={0.2}
-          />
-          <CaseSection
-            title="RESULT"
-            content={project.result}
-            delay={0.25}
-          />
+          <FadeIn delay={0.05} className="space-y-4">
+            <h2 className="text-sm text-neutral-500 tracking-[0.35em]">
+              PROBLEM
+            </h2>
+            <div className="h-px w-full bg-neutral-800/40" />
+            <p className="text-neutral-300 text-base sm:text-lg leading-relaxed max-w-2xl">
+              {project.problem}
+            </p>
+          </FadeIn>
+
+          <FadeIn delay={0.1} className="space-y-4">
+            <h2 className="text-sm text-neutral-500 tracking-[0.35em]">
+              APPROACH
+            </h2>
+            <div className="h-px w-full bg-neutral-800/40" />
+            <p className="text-neutral-300 text-base sm:text-lg leading-relaxed max-w-2xl">
+              {project.approach}
+            </p>
+          </FadeIn>
+
+          <FadeIn delay={0.15} className="space-y-4">
+            <h2 className="text-sm text-neutral-500 tracking-[0.35em]">
+              RESULT
+            </h2>
+            <div className="h-px w-full bg-neutral-800/40" />
+            <p className="text-neutral-300 text-base sm:text-lg leading-relaxed max-w-2xl">
+              {project.result}
+            </p>
+          </FadeIn>
         </div>
 
         {/* Footer */}
@@ -148,33 +136,7 @@ export default function ProjectDetail() {
             Back to all projects
           </Link>
         </div>
-      </motion.div>
+      </div>
     </main>
-  );
-}
-
-function CaseSection({
-  title,
-  content,
-  delay,
-}: {
-  title: string;
-  content: string;
-  delay: number;
-}) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 18 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-80px" }}
-      transition={{ duration: 0.5, delay, ease: "easeOut" }}
-      className="space-y-4"
-    >
-      <h2 className="text-sm text-neutral-500 tracking-[0.35em]">{title}</h2>
-      <div className="h-px w-full bg-neutral-800/40" />
-      <p className="text-neutral-300 text-base sm:text-lg leading-relaxed max-w-2xl">
-        {content}
-      </p>
-    </motion.div>
   );
 }
