@@ -96,7 +96,7 @@ export default function HeroSection() {
           }`}
           style={{ transitionDelay: "500ms" }}
         >
-          I build secure, scalable systems and software — with a focus on
+          I build secure, scalable systems and software with a focus on
           cybersecurity engineering and infrastructure defense.
         </p>
 

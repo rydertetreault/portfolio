@@ -1,69 +1,137 @@
 "use client";
 
 import React, { useRef, useState, useEffect } from "react";
-import Link from "next/link";
-import { ArrowUpRight, Github } from "lucide-react";
 import {
-  projects,
-  categories,
-  type Category,
-  type Project,
-} from "@/data/projects";
+  ArrowUpRight,
+  Github,
+  Star,
+  GitFork,
+  Calendar,
+  Globe,
+  Terminal,
+  Bot,
+  Cpu,
+  Code2,
+  Database,
+  Shield,
+  Gamepad2,
+  Smartphone,
+} from "lucide-react";
+import type { GitHubRepo } from "@/lib/github";
 
-export default function ProjectsGrid() {
-  const [active, setActive] = useState<Category>("All");
+function formatRepoName(name: string): string {
+  return name
+    .replace(/[-_]/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function formatDateRange(created: string, pushed: string): string {
+  const fmt = (d: string) =>
+    new Date(d).toLocaleDateString("en-US", {
+      month: "short",
+      year: "numeric",
+    });
+  const start = fmt(created);
+  const end = fmt(pushed);
+  return start === end ? start : `${start} - ${end}`;
+}
+
+function getProjectIcon(repo: GitHubRepo) {
+  const topics = repo.topics.map((t) => t.toLowerCase());
+  const name = repo.name.toLowerCase();
+  const lang = repo.language?.toLowerCase() ?? "";
+
+  // Check topics/name first for specific matches
+  if (topics.some((t) => ["bot", "discord", "chatbot", "automation"].includes(t)) || name.includes("bot"))
+    return Bot;
+  if (topics.some((t) => ["security", "cybersecurity", "infosec", "cyber"].includes(t)))
+    return Shield;
+  if (topics.some((t) => ["game", "gamedev", "unity", "godot"].includes(t)))
+    return Gamepad2;
+  if (topics.some((t) => ["mobile", "ios", "android", "react-native", "flutter"].includes(t)))
+    return Smartphone;
+  if (topics.some((t) => ["database", "sql", "postgres", "mongodb", "data"].includes(t)))
+    return Database;
+  if (topics.some((t) => ["web", "website", "frontend", "react", "nextjs", "portfolio"].includes(t)) || name.includes("portfolio") || name.includes("website"))
+    return Globe;
+  if (topics.some((t) => ["cli", "terminal", "shell", "bash", "devops"].includes(t)))
+    return Terminal;
+
+  // Fall back to language
+  if (["typescript", "javascript", "html", "css"].includes(lang)) return Globe;
+  if (["python", "shell", "bash"].includes(lang)) return Terminal;
+  if (["c", "c++", "rust", "go", "assembly"].includes(lang)) return Cpu;
+  if (["java", "kotlin"].includes(lang)) return Code2;
+  if (["swift"].includes(lang)) return Smartphone;
+
+  return Code2;
+}
+
+export default function ProjectsGrid({ repos }: { repos: GitHubRepo[] }) {
+  const [active, setActive] = useState("All");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     requestAnimationFrame(() => setMounted(true));
   }, []);
 
+  const languages = [
+    "All",
+    ...Array.from(
+      new Set(repos.map((r) => r.language).filter(Boolean) as string[])
+    ),
+  ];
+
   const filtered =
     active === "All"
-      ? projects
-      : projects.filter((p) => p.category === active);
+      ? repos
+      : repos.filter((r) => r.language === active);
 
   return (
     <>
-      {/* Category Filters */}
+      {/* Language Filters */}
       <div className="flex flex-wrap gap-3 mb-12">
-        {categories.map((cat) => (
+        {languages.map((lang) => (
           <button
-            key={cat}
-            onClick={() => setActive(cat)}
+            key={lang}
+            onClick={() => setActive(lang)}
             className={[
               "rounded-full border px-4 py-1.5 text-sm transition-all duration-300 cursor-pointer",
-              active === cat
+              active === lang
                 ? "border-emerald-400/60 bg-emerald-400/10 text-emerald-300"
                 : "border-neutral-800 bg-transparent text-neutral-400 hover:border-neutral-600 hover:text-neutral-200",
             ].join(" ")}
           >
-            {cat}
+            {lang}
           </button>
         ))}
       </div>
 
-      {/* Bento Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:auto-rows-fr">
-        {filtered.map((project, i) => (
-          <BentoCard
-            key={project.slug}
-            project={project}
-            index={i}
-            mounted={mounted}
-          />
-        ))}
-      </div>
+      {/* Grid */}
+      {filtered.length === 0 ? (
+        <p className="text-neutral-500 text-center py-20">No repos found.</p>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {filtered.map((repo, i) => (
+            <RepoCard
+              key={repo.name}
+              repo={repo}
+              index={i}
+              mounted={mounted}
+            />
+          ))}
+        </div>
+      )}
     </>
   );
 }
 
-function BentoCard({
-  project,
+function RepoCard({
+  repo,
   index,
   mounted,
 }: {
-  project: Project;
+  repo: GitHubRepo;
   index: number;
   mounted: boolean;
 }) {
@@ -81,7 +149,7 @@ function BentoCard({
     const rect = ref.current.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width;
     const y = (e.clientY - rect.top) / rect.height;
-    setTilt({ x: (y - 0.5) * -14, y: (x - 0.5) * 14 });
+    setTilt({ x: (y - 0.5) * -10, y: (x - 0.5) * 10 });
   };
 
   const resetTilt = () => {
@@ -89,21 +157,16 @@ function BentoCard({
     setHovering(false);
   };
 
-  const colSpan =
-    project.size === "large"
-      ? "md:col-span-2"
-      : project.size === "medium"
-        ? "lg:col-span-1"
-        : "";
+  const Icon = getProjectIcon(repo);
 
   return (
     <div
-      className={`${colSpan} transition-all duration-500 ease-out ${
+      className={`transition-all duration-500 ease-out ${
         mounted
           ? "opacity-100 translate-y-0 scale-100"
           : "opacity-0 translate-y-5 scale-[0.97]"
       }`}
-      style={{ transitionDelay: `${index * 60}ms` }}
+      style={{ transitionDelay: `${index * 80}ms` }}
     >
       <div
         ref={ref}
@@ -116,76 +179,122 @@ function BentoCard({
             ? "transform 0.1s ease-out"
             : "transform 0.4s ease-out",
         }}
-        className="relative h-full rounded-2xl border border-neutral-800/80 bg-neutral-950/50 overflow-hidden group"
+        className="relative rounded-2xl border border-neutral-800/80 bg-neutral-950/50 overflow-hidden group"
       >
         {/* Spotlight glare */}
         {hovering && (
           <div
-            className="pointer-events-none absolute inset-0 opacity-[0.07] transition-opacity duration-300"
+            className="pointer-events-none absolute inset-0 z-10 opacity-[0.06] transition-opacity duration-300"
             style={{
-              background: `radial-gradient(circle at ${(tilt.y / 14 + 0.5) * 100}% ${(-tilt.x / 14 + 0.5) * 100}%, rgba(255,255,255,0.8), transparent 60%)`,
+              background: `radial-gradient(circle at ${(tilt.y / 10 + 0.5) * 100}% ${(-tilt.x / 10 + 0.5) * 100}%, rgba(255,255,255,0.8), transparent 60%)`,
             }}
           />
         )}
 
-        <Link
-          href={`/projects/${project.slug}`}
-          className="block p-6 sm:p-8 h-full"
-        >
-          <div className="flex flex-col justify-between h-full gap-6">
-            <div className="space-y-4">
-              <span className="inline-block text-[11px] tracking-[0.25em] text-neutral-500 uppercase">
-                {project.category}
-              </span>
-              <h2 className="text-xl sm:text-2xl font-semibold tracking-tight group-hover:text-emerald-300 transition-colors duration-300">
-                {project.title}
-              </h2>
-              <p className="text-neutral-400 text-sm sm:text-base leading-relaxed">
-                {project.tagline}
-              </p>
-            </div>
+        {/* Preview Area */}
+        <div className="relative h-40 overflow-hidden bg-neutral-900/80">
+          {/* Dot grid pattern */}
+          <div
+            className="absolute inset-0 opacity-[0.06]"
+            style={{
+              backgroundImage:
+                "radial-gradient(circle, rgba(255,255,255,0.5) 1px, transparent 1px)",
+              backgroundSize: "20px 20px",
+            }}
+          />
+          {/* Accent line */}
+          <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-neutral-700/50 to-transparent" />
 
-            <div className="space-y-4">
-              <div className="flex flex-wrap gap-2">
-                {project.tech.map((t) => (
-                  <span
-                    key={t}
-                    className="rounded-full border border-neutral-800 px-2.5 py-0.5 text-xs text-neutral-400"
-                  >
-                    {t}
-                  </span>
-                ))}
-              </div>
-
-              <div className="flex items-center gap-3">
-                {project.github && (
-                  <span
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      window.open(project.github, "_blank");
-                    }}
-                    className="text-neutral-500 hover:text-emerald-400 transition-colors cursor-pointer"
-                  >
-                    <Github size={16} />
-                  </span>
-                )}
-                {project.live && (
-                  <span
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      window.open(project.live, "_blank");
-                    }}
-                    className="text-neutral-500 hover:text-emerald-400 transition-colors cursor-pointer"
-                  >
-                    <ArrowUpRight size={16} />
-                  </span>
-                )}
-              </div>
-            </div>
+          {/* Icon */}
+          <div className="absolute top-6 right-6 sm:top-8 sm:right-8">
+            <Icon
+              size={48}
+              strokeWidth={1}
+              className="text-neutral-700 group-hover:text-neutral-600 transition-colors duration-300"
+            />
           </div>
-        </Link>
+
+          {/* Language + name overlay */}
+          <div className="relative h-full flex flex-col justify-end p-6 sm:p-8">
+            {repo.language && (
+              <span className="text-[11px] tracking-[0.2em] text-neutral-500 uppercase mb-2">
+                {repo.language}
+              </span>
+            )}
+            <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight group-hover:text-emerald-300 transition-colors duration-300">
+              {formatRepoName(repo.name)}
+            </h2>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 sm:p-8 pt-5 space-y-5">
+          {repo.description && (
+            <p className="text-neutral-400 text-sm sm:text-base leading-relaxed">
+              {repo.description}
+            </p>
+          )}
+
+          {/* Time + Stats */}
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-neutral-500">
+            <span className="flex items-center gap-1.5">
+              <Calendar size={13} />
+              {formatDateRange(repo.created_at, repo.pushed_at)}
+            </span>
+            {repo.stargazers_count > 0 && (
+              <span className="flex items-center gap-1">
+                <Star size={13} />
+                {repo.stargazers_count}
+              </span>
+            )}
+            {repo.forks_count > 0 && (
+              <span className="flex items-center gap-1">
+                <GitFork size={13} />
+                {repo.forks_count}
+              </span>
+            )}
+          </div>
+
+          {/* Topics */}
+          {repo.topics.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {repo.topics.map((topic) => (
+                <span
+                  key={topic}
+                  className="rounded-full border border-neutral-800 px-2.5 py-0.5 text-xs text-neutral-400"
+                >
+                  {topic}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Action Links */}
+          <div className="flex items-center gap-3 pt-1">
+            {repo.html_url && (
+              <a
+                href={repo.html_url}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900/60 px-4 py-2 text-sm text-neutral-300 hover:border-emerald-400/50 hover:text-emerald-300 transition-all duration-200"
+              >
+                <Github size={15} />
+                GitHub
+              </a>
+            )}
+            {repo.homepage && (
+              <a
+                href={repo.homepage}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900/60 px-4 py-2 text-sm text-neutral-300 hover:border-emerald-400/50 hover:text-emerald-300 transition-all duration-200"
+              >
+                <ArrowUpRight size={15} />
+                Live Site
+              </a>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -22,10 +22,40 @@ export default async function ProjectDetail({
 
   return (
     <main className="relative min-h-screen text-neutral-200 bg-[#0a0a0a]">
-      {/* Glow Background */}
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-40 -left-40 h-[520px] w-[520px] rounded-full bg-[rgba(34,197,94,0.12)] blur-[120px]" />
-        <div className="absolute -bottom-52 -right-52 h-[560px] w-[560px] rounded-full bg-[rgba(34,197,94,0.08)] blur-[140px]" />
+      {/* Diagonal gradient bands */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div
+          className="absolute -top-full left-[10%] w-[300px] h-[300%]"
+          style={{
+            transform: "rotate(-38deg)",
+            background:
+              "linear-gradient(90deg, transparent, rgba(34,197,94,0.05), transparent)",
+          }}
+        />
+        <div
+          className="absolute -top-full right-[20%] w-[220px] h-[300%]"
+          style={{
+            transform: "rotate(-38deg)",
+            background:
+              "linear-gradient(90deg, transparent, rgba(34,197,94,0.035), transparent)",
+          }}
+        />
+        <div
+          className="absolute -top-full left-[30%] w-px h-[300%]"
+          style={{
+            transform: "rotate(-38deg)",
+            background:
+              "linear-gradient(180deg, transparent 10%, rgba(34,197,94,0.20) 50%, transparent 90%)",
+          }}
+        />
+        <div
+          className="absolute -top-full right-[35%] w-px h-[300%]"
+          style={{
+            transform: "rotate(-38deg)",
+            background:
+              "linear-gradient(180deg, transparent 15%, rgba(34,197,94,0.12) 50%, transparent 85%)",
+          }}
+        />
       </div>
 
       <div className="relative mx-auto max-w-3xl px-6 sm:px-10 lg:px-12 py-16 sm:py-20">
