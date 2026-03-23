@@ -91,7 +91,7 @@ const skills = [
 
 export default function ResumePage() {
   return (
-    <main className="relative min-h-screen text-neutral-200 bg-[#0a0a0a]">
+    <main className="relative min-h-screen text-foreground bg-background">
       {/* Diagonal gradient bands (dimmed) */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden opacity-50">
         <div
@@ -134,38 +134,38 @@ export default function ResumePage() {
           <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight">
             Ryder Tetreault
           </h1>
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-neutral-400">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-text-muted">
             <span className="flex items-center gap-1.5">
-              <MapPin size={14} className="text-neutral-500" />
+              <MapPin size={14} className="text-text-faint" />
               Augusta, GA
             </span>
             <span className="flex items-center gap-1.5">
-              <Phone size={14} className="text-neutral-500" />
+              <Phone size={14} className="text-text-faint" />
               (706) 627-6492
             </span>
             <a
               href="mailto:rydertetreault@gmail.com"
-              className="flex items-center gap-1.5 hover:text-emerald-400 transition-colors"
+              className="flex items-center gap-1.5 hover:text-accent transition-colors"
             >
-              <Mail size={14} className="text-neutral-500" />
+              <Mail size={14} className="text-text-faint" />
               rydertetreault@gmail.com
             </a>
             <a
               href="https://rydertetreault.dev"
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-1.5 hover:text-emerald-400 transition-colors"
+              className="flex items-center gap-1.5 hover:text-accent transition-colors"
             >
-              <Globe size={14} className="text-neutral-500" />
+              <Globe size={14} className="text-text-faint" />
               rydertetreault.dev
             </a>
             <a
               href="https://github.com/rydertetreault"
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-1.5 hover:text-emerald-400 transition-colors"
+              className="flex items-center gap-1.5 hover:text-accent transition-colors"
             >
-              <Github size={14} className="text-neutral-500" />
+              <Github size={14} className="text-text-faint" />
               github.com/rydertetreault
             </a>
           </div>
@@ -180,18 +180,18 @@ export default function ResumePage() {
                   <h3 className="text-base font-semibold">
                     Bachelor of Computer Science and Software Engineering
                   </h3>
-                  <p className="text-sm text-neutral-500">Auburn University</p>
+                  <p className="text-sm text-text-faint">Auburn University</p>
                 </div>
-                <span className="text-sm text-neutral-600 shrink-0">December 2025</span>
+                <span className="text-sm text-text-faint shrink-0">December 2025</span>
               </div>
               <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
                 <div>
                   <h3 className="text-base font-semibold">
                     Certification in Cyber Defense
                   </h3>
-                  <p className="text-sm text-neutral-500">Auburn University</p>
+                  <p className="text-sm text-text-faint">Auburn University</p>
                 </div>
-                <span className="text-sm text-neutral-600 shrink-0">May 2026</span>
+                <span className="text-sm text-text-faint shrink-0">May 2026</span>
               </div>
             </div>
           </ResumeSection>
@@ -204,9 +204,9 @@ export default function ResumePage() {
                   <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 mb-1">
                     <div>
                       <h3 className="text-base font-semibold">{exp.role}</h3>
-                      <p className="text-sm text-emerald-400/70">{exp.company}</p>
+                      <p className="text-sm text-accent">{exp.company}</p>
                     </div>
-                    <div className="text-sm text-neutral-600 shrink-0 text-right">
+                    <div className="text-sm text-text-faint shrink-0 text-right">
                       <p>{exp.date}</p>
                       <p>{exp.location}</p>
                     </div>
@@ -215,7 +215,7 @@ export default function ResumePage() {
                     {exp.bullets.map((b, i) => (
                       <li
                         key={i}
-                        className="text-sm text-neutral-400 leading-relaxed pl-4 relative before:absolute before:left-0 before:top-[9px] before:h-1 before:w-1 before:rounded-full before:bg-neutral-700"
+                        className="text-sm text-text-muted leading-relaxed pl-4 relative before:absolute before:left-0 before:top-[9px] before:h-1 before:w-1 before:rounded-full before:bg-text-faint"
                       >
                         {b}
                       </li>
@@ -234,7 +234,7 @@ export default function ResumePage() {
                   <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 mb-1">
                     <div>
                       <h3 className="text-base font-semibold">{proj.name}</h3>
-                      <p className="text-sm text-neutral-500">
+                      <p className="text-sm text-text-faint">
                         {proj.context}
                         {proj.link && (
                           <>
@@ -243,7 +243,7 @@ export default function ResumePage() {
                               href={`https://${proj.link}`}
                               target="_blank"
                               rel="noreferrer"
-                              className="text-emerald-400/70 hover:text-emerald-400 transition-colors"
+                              className="text-accent hover:text-accent transition-colors"
                             >
                               {proj.link}
                             </a>
@@ -251,7 +251,7 @@ export default function ResumePage() {
                         )}
                       </p>
                     </div>
-                    <span className="text-sm text-neutral-600 shrink-0">
+                    <span className="text-sm text-text-faint shrink-0">
                       {proj.date}
                     </span>
                   </div>
@@ -259,7 +259,7 @@ export default function ResumePage() {
                     {proj.bullets.map((b, i) => (
                       <li
                         key={i}
-                        className="text-sm text-neutral-400 leading-relaxed pl-4 relative before:absolute before:left-0 before:top-[9px] before:h-1 before:w-1 before:rounded-full before:bg-neutral-700"
+                        className="text-sm text-text-muted leading-relaxed pl-4 relative before:absolute before:left-0 before:top-[9px] before:h-1 before:w-1 before:rounded-full before:bg-text-faint"
                       >
                         {b}
                       </li>
@@ -276,9 +276,9 @@ export default function ResumePage() {
               <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 mb-1">
                 <div>
                   <h3 className="text-base font-semibold">{cyber.title}</h3>
-                  <p className="text-sm text-neutral-500">{cyber.context}</p>
+                  <p className="text-sm text-text-faint">{cyber.context}</p>
                 </div>
-                <span className="text-sm text-neutral-600 shrink-0">
+                <span className="text-sm text-text-faint shrink-0">
                   {cyber.date}
                 </span>
               </div>
@@ -286,7 +286,7 @@ export default function ResumePage() {
                 {cyber.bullets.map((b, i) => (
                   <li
                     key={i}
-                    className="text-sm text-neutral-400 leading-relaxed pl-4 relative before:absolute before:left-0 before:top-[9px] before:h-1 before:w-1 before:rounded-full before:bg-neutral-700"
+                    className="text-sm text-text-muted leading-relaxed pl-4 relative before:absolute before:left-0 before:top-[9px] before:h-1 before:w-1 before:rounded-full before:bg-text-faint"
                   >
                     {b}
                   </li>
@@ -300,10 +300,10 @@ export default function ResumePage() {
             <div className="space-y-3">
               {skills.map((s) => (
                 <div key={s.label} className="flex flex-col sm:flex-row gap-1 sm:gap-0">
-                  <span className="text-sm font-medium text-neutral-300 sm:w-48 shrink-0">
+                  <span className="text-sm font-medium text-foreground sm:w-48 shrink-0">
                     {s.label}
                   </span>
-                  <span className="text-sm text-neutral-400">{s.value}</span>
+                  <span className="text-sm text-text-muted">{s.value}</span>
                 </div>
               ))}
             </div>
@@ -326,11 +326,11 @@ function ResumeSection({
   return (
     <section>
       <div className="flex items-center gap-3 mb-6">
-        <div className="text-emerald-400">{icon}</div>
-        <h2 className="text-xs text-neutral-500 tracking-[0.3em] font-medium uppercase">
+        <div className="text-accent">{icon}</div>
+        <h2 className="text-xs text-text-faint tracking-[0.3em] font-medium uppercase">
           {title}
         </h2>
-        <div className="flex-1 h-px bg-neutral-800/60" />
+        <div className="flex-1 h-px bg-border-theme" />
       </div>
       {children}
     </section>

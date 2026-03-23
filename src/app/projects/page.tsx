@@ -5,7 +5,7 @@ export default async function ProjectsPage() {
   const repos = await fetchGitHubRepos();
 
   return (
-    <main className="relative min-h-screen text-neutral-200 bg-[#0a0a0a]">
+    <main className="relative min-h-screen text-foreground bg-background">
       {/* Diagonal gradient bands (dimmed) */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden opacity-50">
         <div
@@ -48,7 +48,7 @@ export default async function ProjectsPage() {
           <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight">
             Projects
           </h1>
-          <p className="text-neutral-400 text-lg max-w-xl">
+          <p className="text-text-muted text-lg max-w-xl">
             A collection of things I&apos;ve built.
           </p>
         </div>

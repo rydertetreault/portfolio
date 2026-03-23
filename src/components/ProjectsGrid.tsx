@@ -98,8 +98,8 @@ export default function ProjectsGrid({ repos }: { repos: GitHubRepo[] }) {
             className={[
               "rounded-full border px-4 py-1.5 text-sm transition-all duration-300 cursor-pointer",
               active === lang
-                ? "border-emerald-400/60 bg-emerald-400/10 text-emerald-300"
-                : "border-neutral-800 bg-transparent text-neutral-400 hover:border-neutral-600 hover:text-neutral-200",
+                ? "border-accent bg-accent-subtle text-accent"
+                : "border-border-theme bg-transparent text-text-muted hover:border-text-faint hover:text-foreground",
             ].join(" ")}
           >
             {lang}
@@ -109,7 +109,7 @@ export default function ProjectsGrid({ repos }: { repos: GitHubRepo[] }) {
 
       {/* Grid */}
       {filtered.length === 0 ? (
-        <p className="text-neutral-500 text-center py-20">No repos found.</p>
+        <p className="text-text-faint text-center py-20">No repos found.</p>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {filtered.map((repo, i) => (
@@ -179,7 +179,7 @@ function RepoCard({
             ? "transform 0.1s ease-out"
             : "transform 0.4s ease-out",
         }}
-        className="relative rounded-2xl border border-neutral-800/80 bg-neutral-950/50 overflow-hidden group"
+        className="relative rounded-2xl border border-border-theme bg-surface-alt overflow-hidden group"
       >
         {/* Spotlight glare */}
         {hovering && (
@@ -192,7 +192,7 @@ function RepoCard({
         )}
 
         {/* Preview Area */}
-        <div className="relative h-40 overflow-hidden bg-neutral-900/80">
+        <div className="relative h-40 overflow-hidden bg-surface-alt">
           {/* Dot grid pattern */}
           <div
             className="absolute inset-0 opacity-[0.06]"
@@ -203,25 +203,25 @@ function RepoCard({
             }}
           />
           {/* Accent line */}
-          <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-neutral-700/50 to-transparent" />
+          <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border-theme to-transparent" />
 
           {/* Icon */}
           <div className="absolute top-6 right-6 sm:top-8 sm:right-8">
             <Icon
               size={48}
               strokeWidth={1}
-              className="text-neutral-700 group-hover:text-neutral-600 transition-colors duration-300"
+              className="text-text-faint group-hover:text-text-muted transition-colors duration-300"
             />
           </div>
 
           {/* Language + name overlay */}
           <div className="relative h-full flex flex-col justify-end p-6 sm:p-8">
             {repo.language && (
-              <span className="text-[11px] tracking-[0.2em] text-neutral-500 uppercase mb-2">
+              <span className="text-[11px] tracking-[0.2em] text-text-faint uppercase mb-2">
                 {repo.language}
               </span>
             )}
-            <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight group-hover:text-emerald-300 transition-colors duration-300">
+            <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight group-hover:text-accent-hover transition-colors duration-300">
               {formatRepoName(repo.name)}
             </h2>
           </div>
@@ -230,13 +230,13 @@ function RepoCard({
         {/* Content */}
         <div className="p-6 sm:p-8 pt-5 space-y-5">
           {repo.description && (
-            <p className="text-neutral-400 text-sm sm:text-base leading-relaxed">
+            <p className="text-text-muted text-sm sm:text-base leading-relaxed">
               {repo.description}
             </p>
           )}
 
           {/* Time + Stats */}
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-neutral-500">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-text-faint">
             <span className="flex items-center gap-1.5">
               <Calendar size={13} />
               {formatDateRange(repo.created_at, repo.pushed_at)}
@@ -261,7 +261,7 @@ function RepoCard({
               {repo.topics.map((topic) => (
                 <span
                   key={topic}
-                  className="rounded-full border border-neutral-800 px-2.5 py-0.5 text-xs text-neutral-400"
+                  className="rounded-full border border-border-theme px-2.5 py-0.5 text-xs text-text-muted"
                 >
                   {topic}
                 </span>
@@ -276,7 +276,7 @@ function RepoCard({
                 href={repo.html_url}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900/60 px-4 py-2 text-sm text-neutral-300 hover:border-emerald-400/50 hover:text-emerald-300 transition-all duration-200"
+                className="inline-flex items-center gap-2 rounded-lg border border-border-theme bg-surface-alt px-4 py-2 text-sm text-foreground hover:border-accent hover:text-accent-hover transition-all duration-200"
               >
                 <Github size={15} />
                 GitHub
@@ -287,7 +287,7 @@ function RepoCard({
                 href={repo.homepage}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900/60 px-4 py-2 text-sm text-neutral-300 hover:border-emerald-400/50 hover:text-emerald-300 transition-all duration-200"
+                className="inline-flex items-center gap-2 rounded-lg border border-border-theme bg-surface-alt px-4 py-2 text-sm text-foreground hover:border-accent hover:text-accent-hover transition-all duration-200"
               >
                 <ArrowUpRight size={15} />
                 Live Site

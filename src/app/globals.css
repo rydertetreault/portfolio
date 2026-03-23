@@ -1,12 +1,55 @@
 @import "tailwindcss";
 
-:root {
+:root,
+:root.light {
+  --background: #f5f5f5;
+  --foreground: #171717;
+  --surface: rgba(245, 245, 245, 0.95);
+  --surface-alt: rgba(255, 255, 255, 0.60);
+  --border: rgba(212, 212, 212, 0.60);
+  --text-muted: #525252;
+  --text-faint: #737373;
+  --accent: #059669;
+  --accent-hover: #047857;
+  --accent-subtle: rgba(5, 150, 105, 0.10);
+  --scrollbar-track: #f5f5f5;
+  --scrollbar-thumb: #d4d4d4;
+  --scrollbar-thumb-hover: #a3a3a3;
+  --shadow-color: rgba(0, 0, 0, 0.08);
+  --gradient-accent-opacity: 0.08;
+  --dot-grid-opacity: 0.06;
+}
+
+:root.dark {
   --background: #0a0a0a;
   --foreground: #ededed;
+  --surface: rgba(10, 10, 10, 0.95);
+  --surface-alt: rgba(5, 5, 5, 0.40);
+  --border: rgba(38, 38, 38, 0.60);
+  --text-muted: #a3a3a3;
+  --text-faint: #737373;
+  --accent: #34d399;
+  --accent-hover: #6ee7b7;
+  --accent-subtle: rgba(52, 211, 153, 0.10);
+  --scrollbar-track: #0a0a0a;
+  --scrollbar-thumb: #262626;
+  --scrollbar-thumb-hover: #404040;
+  --shadow-color: rgba(0, 0, 0, 0.20);
+  --gradient-accent-opacity: 0.05;
+  --dot-grid-opacity: 0.04;
 }
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-alt: var(--surface-alt);
+  --color-border-theme: var(--border);
+  --color-text-muted: var(--text-muted);
+  --color-text-faint: var(--text-faint);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-subtle: var(--accent-subtle);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -31,23 +74,23 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #0a0a0a;
+  background: var(--scrollbar-track);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #262626;
+  background: var(--scrollbar-thumb);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #404040;
+  background: var(--scrollbar-thumb-hover);
 }
 
 /* ─── Selection ─── */
 
 ::selection {
-  background: rgba(16, 185, 129, 0.25);
-  color: #ededed;
+  background: var(--accent-subtle);
+  color: var(--foreground);
 }
 
 /* ─── Page fade-in ─── */
@@ -65,4 +108,10 @@ body {
 
 .animate-fade-in {
   animation: fade-in 0.5s ease-out;
+}
+/* ─── Theme transition ─── */
+
+.theme-transitioning,
+.theme-transitioning * {
+  transition: background-color 300ms ease, color 300ms ease, border-color 300ms ease !important;
 }

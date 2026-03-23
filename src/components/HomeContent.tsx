@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import type { GitHubRepo } from "@/lib/github";
 
+
 /* ═══════════════════════════════════════════
    DATA
    ═══════════════════════════════════════════ */
@@ -171,7 +172,7 @@ export default function HomeContent({ repos }: { repos: GitHubRepo[] }) {
   const featuredRepos = repos.slice(0, 4);
 
   return (
-    <main className="relative h-screen text-neutral-200 bg-[#0a0a0a] overflow-hidden animate-fade-in">
+    <main className="relative h-screen text-foreground bg-background overflow-hidden animate-fade-in">
       {/* Diagonal gradient bands */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden opacity-50">
         <div
@@ -214,7 +215,7 @@ export default function HomeContent({ repos }: { repos: GitHubRepo[] }) {
           <div className="space-y-10">
             {/* Profile + Name */}
             <div className="space-y-6">
-              <div className="h-24 w-24 rounded-full overflow-hidden border border-neutral-700 bg-neutral-800">
+              <div className="h-24 w-24 rounded-full overflow-hidden border border-border-theme bg-surface-alt">
                 <Image
                   src="/profile.jpg"
                   alt="Ryder Tetreault"
@@ -229,10 +230,10 @@ export default function HomeContent({ repos }: { repos: GitHubRepo[] }) {
                 <h1 className="text-4xl xl:text-5xl font-semibold tracking-tight">
                   Ryder Tetreault
                 </h1>
-                <p className="text-emerald-400/80 text-base font-medium">
+                <p className="text-accent text-base font-medium">
                   Software Engineer · Cyber Defense
                 </p>
-                <p className="text-neutral-500 text-sm leading-relaxed max-w-xs">
+                <p className="text-text-faint text-sm leading-relaxed max-w-xs">
                   Building secure, scalable systems and software with a focus on
                   cybersecurity engineering and infrastructure defense.
                 </p>
@@ -260,7 +261,7 @@ export default function HomeContent({ repos }: { repos: GitHubRepo[] }) {
                     ].join(" ")}
                   >
                     <span
-                      className="h-px bg-neutral-500 transition-all duration-300"
+                      className="h-px bg-text-faint transition-all duration-300"
                       style={{
                         width: isActive ? 64 : 28,
                         opacity: isActive ? 1 : 0.5,
@@ -270,8 +271,8 @@ export default function HomeContent({ repos }: { repos: GitHubRepo[] }) {
                       className="text-xs tracking-[0.3em] font-medium transition-colors duration-300"
                       style={{
                         color: isActive
-                          ? "rgb(229 229 229)"
-                          : "rgb(115 115 115)",
+                          ? "var(--foreground)"
+                          : "var(--text-faint)",
                       }}
                     >
                       {s.label}
@@ -287,7 +288,7 @@ export default function HomeContent({ repos }: { repos: GitHubRepo[] }) {
                 href="https://github.com/rydertetreault"
                 target="_blank"
                 rel="noreferrer"
-                className="text-neutral-500 hover:text-emerald-400 transition-colors"
+                className="text-text-faint hover:text-accent transition-colors"
                 aria-label="GitHub"
               >
                 <Github size={18} />
@@ -296,14 +297,14 @@ export default function HomeContent({ repos }: { repos: GitHubRepo[] }) {
                 href="https://www.linkedin.com/in/ryder-tetreault"
                 target="_blank"
                 rel="noreferrer"
-                className="text-neutral-500 hover:text-emerald-400 transition-colors"
+                className="text-text-faint hover:text-accent transition-colors"
                 aria-label="LinkedIn"
               >
                 <Linkedin size={18} />
               </a>
               <a
                 href="mailto:rydertetreault@gmail.com"
-                className="text-neutral-500 hover:text-emerald-400 transition-colors"
+                className="text-text-faint hover:text-accent transition-colors"
                 aria-label="Email"
               >
                 <Mail size={18} />
@@ -319,7 +320,7 @@ export default function HomeContent({ repos }: { repos: GitHubRepo[] }) {
         >
           {/* Mobile header (shown only on small screens) */}
           <div className="lg:hidden mb-16 space-y-6">
-            <div className="h-20 w-20 rounded-full overflow-hidden border border-neutral-700 bg-neutral-800">
+            <div className="h-20 w-20 rounded-full overflow-hidden border border-border-theme bg-surface-alt">
               <Image
                 src="/profile.jpg"
                 alt="Ryder Tetreault"
@@ -333,25 +334,25 @@ export default function HomeContent({ repos }: { repos: GitHubRepo[] }) {
               <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight">
                 Ryder Tetreault
               </h1>
-              <p className="text-emerald-400/80 text-base font-medium">
+              <p className="text-accent text-base font-medium">
                 Software Engineer · Cyber Defense
               </p>
-              <p className="text-neutral-500 text-sm leading-relaxed max-w-xs">
+              <p className="text-text-faint text-sm leading-relaxed max-w-xs">
                 Building secure, scalable systems and software with a focus on
                 cybersecurity engineering and infrastructure defense.
               </p>
             </div>
             <div className="flex items-center gap-5">
-              <a href="https://github.com/rydertetreault" target="_blank" rel="noreferrer" className="text-neutral-500 hover:text-emerald-400 transition-colors" aria-label="GitHub"><Github size={18} /></a>
-              <a href="https://www.linkedin.com/in/ryder-tetreault" target="_blank" rel="noreferrer" className="text-neutral-500 hover:text-emerald-400 transition-colors" aria-label="LinkedIn"><Linkedin size={18} /></a>
-              <a href="mailto:rydertetreault@gmail.com" className="text-neutral-500 hover:text-emerald-400 transition-colors" aria-label="Email"><Mail size={18} /></a>
+              <a href="https://github.com/rydertetreault" target="_blank" rel="noreferrer" className="text-text-faint hover:text-accent transition-colors" aria-label="GitHub"><Github size={18} /></a>
+              <a href="https://www.linkedin.com/in/ryder-tetreault" target="_blank" rel="noreferrer" className="text-text-faint hover:text-accent transition-colors" aria-label="LinkedIn"><Linkedin size={18} /></a>
+              <a href="mailto:rydertetreault@gmail.com" className="text-text-faint hover:text-accent transition-colors" aria-label="Email"><Mail size={18} /></a>
             </div>
           </div>
 
           <div className="max-w-2xl space-y-24 sm:space-y-28 lg:space-y-32">
             {/* ─── ABOUT ─── */}
             <Section id="about" title="ABOUT">
-              <p className="text-neutral-300 text-lg leading-relaxed">
+              <p className="text-foreground text-lg leading-relaxed">
                 I&apos;m a Computer Science & Software Engineering graduate from
                 Auburn University. My work focuses on systems design, distributed
                 infrastructure, and cybersecurity engineering with long-term goals
@@ -377,7 +378,7 @@ export default function HomeContent({ repos }: { repos: GitHubRepo[] }) {
               </div>
               <Link
                 href="/projects"
-                className="inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-emerald-400 transition-colors mt-6 group"
+                className="inline-flex items-center gap-2 text-sm text-text-muted hover:text-accent transition-colors mt-6 group"
               >
                 View all projects
                 <ArrowRight
@@ -403,18 +404,19 @@ export default function HomeContent({ repos }: { repos: GitHubRepo[] }) {
               </div>
             </Section>
 
+
             {/* ─── EDUCATION & CERTIFICATIONS ─── */}
             <Section id="education" title="EDUCATION & CERTIFICATIONS">
               <div className="space-y-5">
-                <div className="rounded-2xl border border-neutral-800/60 bg-neutral-950/40 p-6">
+                <div className="rounded-2xl border border-border-theme bg-surface-alt p-6">
                   <div className="flex items-start gap-4">
-                    <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 shrink-0">
+                    <div className="p-2.5 rounded-xl bg-accent-subtle text-accent shrink-0">
                       <GraduationCap size={18} />
                     </div>
                     <div>
-                      <p className="text-sm text-neutral-500 mb-1">Dec 2025</p>
+                      <p className="text-sm text-text-faint mb-1">Dec 2025</p>
                       <h3 className="text-lg font-semibold">Auburn University</h3>
-                      <p className="text-neutral-400 text-sm mt-1">
+                      <p className="text-text-muted text-sm mt-1">
                         B.S. Computer Science & Software Engineering
                       </p>
                     </div>
@@ -422,9 +424,9 @@ export default function HomeContent({ repos }: { repos: GitHubRepo[] }) {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <div className="rounded-2xl border border-neutral-800/60 bg-neutral-950/40 p-6">
+                  <div className="rounded-2xl border border-border-theme bg-surface-alt p-6">
                     <div className="flex items-start gap-4">
-                      <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 shrink-0">
+                      <div className="p-2.5 rounded-xl bg-accent-subtle text-accent shrink-0">
                         <Award size={18} />
                       </div>
                       <div>
@@ -434,14 +436,14 @@ export default function HomeContent({ repos }: { repos: GitHubRepo[] }) {
                             In Progress
                           </span>
                         </div>
-                        <p className="text-neutral-500 text-sm">Preparing for certification exam</p>
+                        <p className="text-text-faint text-sm">Preparing for certification exam</p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="rounded-2xl border border-neutral-800/60 bg-neutral-950/40 p-6">
+                  <div className="rounded-2xl border border-border-theme bg-surface-alt p-6">
                     <div className="flex items-start gap-4">
-                      <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 shrink-0">
+                      <div className="p-2.5 rounded-xl bg-accent-subtle text-accent shrink-0">
                         <BookOpen size={18} />
                       </div>
                       <div>
@@ -451,7 +453,7 @@ export default function HomeContent({ repos }: { repos: GitHubRepo[] }) {
                             In Progress
                           </span>
                         </div>
-                        <p className="text-neutral-500 text-sm">Auburn University · Expected May 2026</p>
+                        <p className="text-text-faint text-sm">Auburn University · Expected May 2026</p>
                       </div>
                     </div>
                   </div>
@@ -461,23 +463,23 @@ export default function HomeContent({ repos }: { repos: GitHubRepo[] }) {
 
             {/* ─── RESUME ─── */}
             <Section id="resume" title="RESUME">
-              <p className="text-neutral-400 text-base leading-relaxed mb-4">
+              <p className="text-text-muted text-base leading-relaxed mb-4">
                 A full breakdown of my experience, projects, certifications, and
                 technical skills.
               </p>
               <Link
                 href="/resume"
-                className="inline-flex items-center gap-3 border border-neutral-800 hover:border-emerald-500/40 bg-neutral-950/40 hover:bg-emerald-500/5 px-5 py-3 rounded-xl transition-all duration-300 group"
+                className="inline-flex items-center gap-3 border border-border-theme hover:border-accent bg-surface-alt hover:bg-accent-subtle px-5 py-3 rounded-xl transition-all duration-300 group"
               >
-                <FileText size={16} className="text-neutral-500 group-hover:text-emerald-400 transition-colors" />
+                <FileText size={16} className="text-text-faint group-hover:text-accent transition-colors" />
                 <span className="text-sm">View full resume</span>
-                <ArrowRight size={14} className="text-neutral-500 group-hover:text-emerald-400 group-hover:translate-x-1 transition-all" />
+                <ArrowRight size={14} className="text-text-faint group-hover:text-accent group-hover:translate-x-1 transition-all" />
               </Link>
             </Section>
 
             {/* ─── CONTACT ─── */}
             <Section id="contact" title="CONTACT">
-              <p className="text-neutral-400 text-lg mb-8 max-w-lg leading-relaxed">
+              <p className="text-text-muted text-lg mb-8 max-w-lg leading-relaxed">
                 Interested in working together or just want to connect? Feel
                 free to reach out.
               </p>
@@ -487,25 +489,25 @@ export default function HomeContent({ repos }: { repos: GitHubRepo[] }) {
                   href="https://github.com/rydertetreault"
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-3 border border-neutral-800 hover:border-emerald-500/40 bg-neutral-950/40 hover:bg-emerald-500/5 px-5 py-3 rounded-xl transition-all duration-300 group"
+                  className="inline-flex items-center gap-3 border border-border-theme hover:border-accent bg-surface-alt hover:bg-accent-subtle px-5 py-3 rounded-xl transition-all duration-300 group"
                 >
-                  <Github size={16} className="text-neutral-500 group-hover:text-emerald-400 transition-colors" />
+                  <Github size={16} className="text-text-faint group-hover:text-accent transition-colors" />
                   <span className="text-sm">GitHub</span>
                 </a>
                 <a
                   href="https://www.linkedin.com/in/ryder-tetreault"
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-3 border border-neutral-800 hover:border-emerald-500/40 bg-neutral-950/40 hover:bg-emerald-500/5 px-5 py-3 rounded-xl transition-all duration-300 group"
+                  className="inline-flex items-center gap-3 border border-border-theme hover:border-accent bg-surface-alt hover:bg-accent-subtle px-5 py-3 rounded-xl transition-all duration-300 group"
                 >
-                  <Linkedin size={16} className="text-neutral-500 group-hover:text-emerald-400 transition-colors" />
+                  <Linkedin size={16} className="text-text-faint group-hover:text-accent transition-colors" />
                   <span className="text-sm">LinkedIn</span>
                 </a>
                 <a
                   href="mailto:rydertetreault@gmail.com"
-                  className="inline-flex items-center gap-3 border border-neutral-800 hover:border-emerald-500/40 bg-neutral-950/40 hover:bg-emerald-500/5 px-5 py-3 rounded-xl transition-all duration-300 group"
+                  className="inline-flex items-center gap-3 border border-border-theme hover:border-accent bg-surface-alt hover:bg-accent-subtle px-5 py-3 rounded-xl transition-all duration-300 group"
                 >
-                  <Mail size={16} className="text-neutral-500 group-hover:text-emerald-400 transition-colors" />
+                  <Mail size={16} className="text-text-faint group-hover:text-accent transition-colors" />
                   <span className="text-sm">rydertetreault@gmail.com</span>
                 </a>
               </div>
@@ -514,13 +516,13 @@ export default function HomeContent({ repos }: { repos: GitHubRepo[] }) {
             {/* Spacer + footer */}
             <div className="h-[15vh]" />
 
-            <footer className="border-t border-neutral-800/40 pt-8 pb-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <p className="text-xs text-neutral-600">
+            <footer className="border-t border-border-theme pt-8 pb-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <p className="text-xs text-text-faint">
                 &copy; 2026 Ryder Tetreault. Built with Next.js & Tailwind CSS.
               </p>
               <div className="flex items-center gap-4">
-                <a href="https://github.com/rydertetreault" target="_blank" rel="noreferrer" className="text-neutral-600 hover:text-neutral-400 transition-colors" aria-label="GitHub"><Github size={14} /></a>
-                <a href="https://www.linkedin.com/in/ryder-tetreault" target="_blank" rel="noreferrer" className="text-neutral-600 hover:text-neutral-400 transition-colors" aria-label="LinkedIn"><Linkedin size={14} /></a>
+                <a href="https://github.com/rydertetreault" target="_blank" rel="noreferrer" className="text-text-faint hover:text-text-muted transition-colors" aria-label="GitHub"><Github size={14} /></a>
+                <a href="https://www.linkedin.com/in/ryder-tetreault" target="_blank" rel="noreferrer" className="text-text-faint hover:text-text-muted transition-colors" aria-label="LinkedIn"><Linkedin size={14} /></a>
               </div>
             </footer>
           </div>
@@ -546,10 +548,10 @@ function Section({
   return (
     <section id={id} className="space-y-8">
       <div className="space-y-3">
-        <h2 className="text-xs text-neutral-500 tracking-[0.3em] font-medium">
+        <h2 className="text-xs text-text-faint tracking-[0.3em] font-medium">
           {title}
         </h2>
-        <div className="h-px w-full bg-neutral-800/60" />
+        <div className="h-px w-full bg-border-theme" />
       </div>
       {children}
     </section>
@@ -566,9 +568,9 @@ function SkillColumn({
   skills: string[];
 }) {
   return (
-    <div className="rounded-2xl border border-neutral-800/60 bg-neutral-950/40 p-6">
+    <div className="rounded-2xl border border-border-theme bg-surface-alt p-6">
       <div className="flex items-center gap-3 mb-5">
-        <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
+        <div className="p-2 rounded-lg bg-accent-subtle text-accent">
           {icon}
         </div>
         <h3 className="text-base font-semibold">{title}</h3>
@@ -577,7 +579,7 @@ function SkillColumn({
         {skills.map((skill) => (
           <span
             key={skill}
-            className="rounded-lg border border-neutral-800 bg-neutral-900/50 px-3 py-1.5 text-sm text-neutral-300 hover:border-emerald-500/30 hover:text-emerald-300 transition-colors duration-300 cursor-default"
+            className="rounded-lg border border-border-theme bg-surface-alt px-3 py-1.5 text-sm text-foreground hover:border-accent hover:text-accent-hover transition-colors duration-300 cursor-default"
           >
             {skill}
           </span>
@@ -593,19 +595,19 @@ function ExperienceCard({
   experience: (typeof experiences)[number];
 }) {
   return (
-    <div className="group relative pl-8 border-l-2 border-neutral-800 hover:border-emerald-500/50 transition-colors duration-500 py-8 first:pt-0 last:pb-0">
-      <div className="absolute left-[-5px] top-8 first:top-0 w-2 h-2 rounded-full bg-neutral-700 group-hover:bg-emerald-400 transition-colors duration-300 ring-4 ring-[#0a0a0a]" />
-      <p className="text-sm text-neutral-500 mb-2">{experience.date}</p>
+    <div className="group relative pl-8 border-l-2 border-border-theme hover:border-accent transition-colors duration-500 py-8 first:pt-0 last:pb-0">
+      <div className="absolute left-[-5px] top-8 first:top-0 w-2 h-2 rounded-full bg-text-faint group-hover:bg-accent transition-colors duration-300 ring-4 ring-background" />
+      <p className="text-sm text-text-faint mb-2">{experience.date}</p>
       <h3 className="text-xl font-semibold mb-1">{experience.company}</h3>
-      <p className="text-emerald-400/80 text-sm mb-3">{experience.role}</p>
-      <p className="text-neutral-400 text-sm leading-relaxed max-w-lg">
+      <p className="text-accent text-sm mb-3">{experience.role}</p>
+      <p className="text-text-muted text-sm leading-relaxed max-w-lg">
         {experience.description}
       </p>
       <a
         href={experience.url}
         target="_blank"
         rel="noreferrer"
-        className="inline-flex items-center gap-1.5 text-sm text-neutral-500 hover:text-emerald-400 transition-colors mt-3"
+        className="inline-flex items-center gap-1.5 text-sm text-text-faint hover:text-accent transition-colors mt-3"
       >
         Visit <ExternalLink size={12} />
       </a>
@@ -623,7 +625,7 @@ function FeaturedProjectCard({ repo }: { repo: GitHubRepo }) {
       href={repo.html_url}
       target="_blank"
       rel="noreferrer"
-      className="group block rounded-2xl border border-neutral-800/60 bg-neutral-950/40 p-6 hover:border-emerald-500/30 transition-all duration-300"
+      className="group block rounded-2xl border border-border-theme bg-surface-alt p-6 hover:border-accent transition-all duration-300"
     >
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-2 min-w-0">
@@ -634,16 +636,16 @@ function FeaturedProjectCard({ repo }: { repo: GitHubRepo }) {
                 style={{ backgroundColor: langColor }}
               />
             )}
-            <h3 className="text-base font-semibold group-hover:text-emerald-300 transition-colors truncate">
+            <h3 className="text-base font-semibold group-hover:text-accent-hover transition-colors truncate">
               {formatRepoName(repo.name)}
             </h3>
           </div>
           {repo.description && (
-            <p className="text-neutral-500 text-sm leading-relaxed">
+            <p className="text-text-faint text-sm leading-relaxed">
               {repo.description}
             </p>
           )}
-          <div className="flex items-center gap-4 text-xs text-neutral-600 pt-1">
+          <div className="flex items-center gap-4 text-xs text-text-faint pt-1">
             <span className="flex items-center gap-1">
               <Calendar size={12} />
               {formatDateRange(repo.created_at, repo.pushed_at)}
@@ -658,7 +660,7 @@ function FeaturedProjectCard({ repo }: { repo: GitHubRepo }) {
         </div>
         <Github
           size={16}
-          className="text-neutral-600 group-hover:text-emerald-400 transition-colors shrink-0 mt-1"
+          className="text-text-faint group-hover:text-accent transition-colors shrink-0 mt-1"
         />
       </div>
     </a>

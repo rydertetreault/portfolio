@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const sectionItems = [
   { id: "experience", label: "Experience" },
@@ -56,8 +57,8 @@ export default function NavBar() {
     <nav
       className={`fixed top-0 left-0 right-0 z-50 backdrop-blur-2xl transition-all duration-500 ${
         scrolled
-          ? "bg-[#0a0a0a]/80 border-b border-neutral-800/40 shadow-lg shadow-black/20"
-          : "bg-[#0a0a0a]/60"
+          ? "bg-surface border-b border-border-theme shadow-lg shadow-[var(--shadow-color)]"
+          : "bg-surface"
       }`}
     >
       <div className="mx-auto max-w-6xl px-6 sm:px-8 flex items-center justify-end h-16 pt-[env(safe-area-inset-top)]">
@@ -68,8 +69,8 @@ export default function NavBar() {
               onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
               className={`text-sm transition-colors duration-300 cursor-pointer ${
                 !activeSection
-                  ? "text-emerald-400"
-                  : "text-neutral-500 hover:text-neutral-200"
+                  ? "text-accent"
+                  : "text-text-faint hover:text-foreground"
               }`}
             >
               Overview
@@ -77,7 +78,7 @@ export default function NavBar() {
           ) : (
             <Link
               href="/"
-              className="text-sm text-neutral-500 hover:text-neutral-200 transition-colors duration-300"
+              className="text-sm text-text-faint hover:text-foreground transition-colors duration-300"
             >
               Overview
             </Link>
@@ -89,8 +90,8 @@ export default function NavBar() {
                 onClick={() => handleSectionClick(item.id)}
                 className={`text-sm transition-colors duration-300 cursor-pointer ${
                   activeSection === item.id
-                    ? "text-emerald-400"
-                    : "text-neutral-500 hover:text-neutral-200"
+                    ? "text-accent"
+                    : "text-text-faint hover:text-foreground"
                 }`}
               >
                 {item.label}
@@ -99,7 +100,7 @@ export default function NavBar() {
               <Link
                 key={item.id}
                 href={`/#${item.id}`}
-                className="text-sm text-neutral-500 hover:text-neutral-200 transition-colors duration-300"
+                className="text-sm text-text-faint hover:text-foreground transition-colors duration-300"
               >
                 {item.label}
               </Link>
@@ -109,8 +110,8 @@ export default function NavBar() {
             href="/projects"
             className={`text-sm transition-colors duration-300 ${
               isProjects
-                ? "text-emerald-400"
-                : "text-neutral-500 hover:text-neutral-200"
+                ? "text-accent"
+                : "text-text-faint hover:text-foreground"
             }`}
           >
             Projects
@@ -119,18 +120,19 @@ export default function NavBar() {
             href="/resume"
             className={`text-sm transition-colors duration-300 ${
               isResume
-                ? "text-emerald-400"
-                : "text-neutral-500 hover:text-neutral-200"
+                ? "text-accent"
+                : "text-text-faint hover:text-foreground"
             }`}
           >
             Resume
           </Link>
+          <ThemeToggle className="text-text-faint hover:text-accent" />
         </div>
 
         {/* Mobile hamburger */}
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="md:hidden text-neutral-400 hover:text-neutral-200 transition-colors cursor-pointer"
+          className="md:hidden text-text-muted hover:text-foreground transition-colors cursor-pointer"
           aria-label="Toggle menu"
         >
           {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
@@ -139,7 +141,7 @@ export default function NavBar() {
 
       {/* Mobile dropdown */}
       <div
-        className={`md:hidden border-t border-neutral-800/40 bg-[#0a0a0a]/95 backdrop-blur-2xl grid transition-[grid-template-rows,opacity] duration-300 ease-in-out ${
+        className={`md:hidden border-t border-border-theme bg-surface backdrop-blur-2xl grid transition-[grid-template-rows,opacity] duration-300 ease-in-out ${
           mobileMenuOpen
             ? "grid-rows-[1fr] opacity-100"
             : "grid-rows-[0fr] opacity-0"
@@ -155,8 +157,8 @@ export default function NavBar() {
                 }}
                 className={`block w-full text-left py-3 text-sm transition-colors cursor-pointer ${
                   !activeSection
-                    ? "text-emerald-400"
-                    : "text-neutral-400 hover:text-emerald-400"
+                    ? "text-accent"
+                    : "text-text-muted hover:text-accent"
                 }`}
               >
                 Overview
@@ -165,7 +167,7 @@ export default function NavBar() {
               <Link
                 href="/"
                 onClick={() => setMobileMenuOpen(false)}
-                className="block w-full text-left py-3 text-sm text-neutral-400 hover:text-emerald-400 transition-colors"
+                className="block w-full text-left py-3 text-sm text-text-muted hover:text-accent transition-colors"
               >
                 Overview
               </Link>
@@ -177,8 +179,8 @@ export default function NavBar() {
                   onClick={() => handleSectionClick(item.id)}
                   className={`block w-full text-left py-3 text-sm transition-colors cursor-pointer ${
                     activeSection === item.id
-                      ? "text-emerald-400"
-                      : "text-neutral-400 hover:text-emerald-400"
+                      ? "text-accent"
+                      : "text-text-muted hover:text-accent"
                   }`}
                 >
                   {item.label}
@@ -188,7 +190,7 @@ export default function NavBar() {
                   key={item.id}
                   href={`/#${item.id}`}
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block w-full text-left py-3 text-sm text-neutral-400 hover:text-emerald-400 transition-colors"
+                  className="block w-full text-left py-3 text-sm text-text-muted hover:text-accent transition-colors"
                 >
                   {item.label}
                 </Link>
@@ -199,8 +201,8 @@ export default function NavBar() {
               onClick={() => setMobileMenuOpen(false)}
               className={`block w-full text-left py-3 text-sm transition-colors ${
                 isProjects
-                  ? "text-emerald-400"
-                  : "text-neutral-400 hover:text-emerald-400"
+                  ? "text-accent"
+                  : "text-text-muted hover:text-accent"
               }`}
             >
               Projects
@@ -210,12 +212,15 @@ export default function NavBar() {
               onClick={() => setMobileMenuOpen(false)}
               className={`block w-full text-left py-3 text-sm transition-colors ${
                 isResume
-                  ? "text-emerald-400"
-                  : "text-neutral-400 hover:text-emerald-400"
+                  ? "text-accent"
+                  : "text-text-muted hover:text-accent"
               }`}
             >
               Resume
             </Link>
+            <div className="py-3">
+              <ThemeToggle className="text-text-muted hover:text-accent" />
+            </div>
           </div>
         </div>
       </div>
