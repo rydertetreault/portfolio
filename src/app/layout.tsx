@@ -36,20 +36,13 @@ export const metadata: Metadata = {
     "full stack developer",
     "portfolio",
   ],
+  manifest: "/site.webmanifest",
   openGraph: {
     title: "Ryder Tetreault | Software Engineer & Cyber Defense",
     description:
       "Software engineer and cybersecurity specialist building secure, scalable systems.",
     url: "https://rydertetreault.dev",
     siteName: "Ryder Tetreault",
-    images: [
-      {
-        url: "/og.png",
-        width: 1200,
-        height: 630,
-        alt: "Ryder Tetreault | Software Engineer & Cyber Defense",
-      },
-    ],
     type: "website",
   },
   twitter: {
@@ -57,7 +50,6 @@ export const metadata: Metadata = {
     title: "Ryder Tetreault | Software Engineer & Cyber Defense",
     description:
       "Software engineer and cybersecurity specialist building secure, scalable systems.",
-    images: ["/og.png"],
   },
 };
 
