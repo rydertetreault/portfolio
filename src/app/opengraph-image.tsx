@@ -19,7 +19,7 @@ export default function Image() {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          background: 'linear-gradient(135deg, #0a0a0a 0%, #062e1f 100%)',
+          backgroundColor: '#1c1c1c',
           position: 'relative',
         }}
       >
