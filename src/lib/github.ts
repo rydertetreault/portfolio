@@ -40,6 +40,61 @@ const manualProjects: GitHubRepo[] = [
   },
 ];
 
+export type GitHubStats = {
+  totalRepos: number;
+  totalCommits: number;
+};
+
+export async function fetchGitHubStats(): Promise<GitHubStats> {
+  const headers: HeadersInit = {
+    Accept: "application/vnd.github+json",
+  };
+
+  if (process.env.GITHUB_TOKEN) {
+    headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+  }
+
+  // Fetch repos for count
+  const reposRes = await fetch(
+    `https://api.github.com/users/${GITHUB_USERNAME}/repos?per_page=100`,
+    { headers, next: { revalidate: 3600 } }
+  );
+
+  if (!reposRes.ok) {
+    return { totalRepos: 0, totalCommits: 0 };
+  }
+
+  const repos: GitHubRepo[] = await reposRes.json();
+  const ownedRepos = repos.filter((r) => !r.fork);
+
+  // Fetch commit counts in parallel (contributor stats for each repo)
+  const commitCounts = await Promise.all(
+    ownedRepos.map(async (repo) => {
+      try {
+        const res = await fetch(
+          `https://api.github.com/repos/${GITHUB_USERNAME}/${repo.name}/contributors?per_page=1&anon=true`,
+          { headers, next: { revalidate: 3600 } }
+        );
+        if (!res.ok) return 0;
+        const contributors = await res.json();
+        if (!Array.isArray(contributors)) return 0;
+        const me = contributors.find(
+          (c: { login?: string }) =>
+            c.login?.toLowerCase() === GITHUB_USERNAME.toLowerCase()
+        );
+        return me?.contributions ?? 0;
+      } catch {
+        return 0;
+      }
+    })
+  );
+
+  return {
+    totalRepos: ownedRepos.length,
+    totalCommits: commitCounts.reduce((sum, c) => sum + c, 0),
+  };
+}
+
 export async function fetchGitHubRepos(): Promise<GitHubRepo[]> {
   const headers: HeadersInit = {
     Accept: "application/vnd.github+json",
