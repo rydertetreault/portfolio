@@ -31,7 +31,10 @@ export default function ThemeProvider({
   }, []);
 
   const toggleTheme = () => {
-    const next = theme === "dark" ? "light" : "dark";
+    const current = document.documentElement.classList.contains("dark")
+      ? "dark"
+      : "light";
+    const next = current === "dark" ? "light" : "dark";
     setTheme(next);
     document.documentElement.classList.remove("light", "dark");
     document.documentElement.classList.add(next);
