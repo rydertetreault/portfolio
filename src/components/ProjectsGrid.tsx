@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useState, useEffect } from "react";
+import Link from "next/link";
 import {
   ArrowUpRight,
   Github,
@@ -16,6 +17,7 @@ import {
   Shield,
   Gamepad2,
   Smartphone,
+  ScrollText,
 } from "lucide-react";
 import type { GitHubRepo } from "@/lib/github";
 
@@ -292,6 +294,15 @@ function RepoCard({
                 <ArrowUpRight size={15} />
                 Live Site
               </a>
+            )}
+            {repo.name === "SnapShift" && (
+              <Link
+                href="/projects/snapshift/privacy-policy"
+                className="inline-flex items-center gap-2 rounded-lg border border-border-theme bg-surface-alt px-4 py-2 text-sm text-foreground hover:border-accent hover:text-accent-hover transition-all duration-200"
+              >
+                <ScrollText size={15} />
+                Privacy Policy
+              </Link>
             )}
           </div>
         </div>
