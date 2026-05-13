@@ -440,9 +440,6 @@ export default function HomeContent({ repos }: { repos: GitHubRepo[] }) {
                       <div>
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
                           <h3 className="text-base font-semibold">Cyber Defense Certificate</h3>
-                          <span className="text-[10px] tracking-wider uppercase px-2 py-0.5 rounded-full bg-accent-subtle text-accent border border-accent/20">
-                            Completed
-                          </span>
                         </div>
                         <p className="text-text-faint text-sm">Auburn University · May 2026</p>
                       </div>
