@@ -20,24 +20,15 @@ const repoOverrides: Record<string, Partial<GitHubRepo>> = {
     description:
       "A hockey team website with match results, player stats, roster management, game highlights, records, news, and a media gallery. Built for tracking seasons and showcasing the team.",
   },
+  SnapShift: {
+    description:
+      "A mobile app that lets you photograph or upload your work schedule and automatically extracts shift information into a calendar view using OCR. All data stays on your device.",
+    topics: ["mobile", "react-native", "expo", "ocr", "schedule"],
+  },
 };
 
 /** Non-GitHub projects to include alongside repos */
 const manualProjects: GitHubRepo[] = [
-  {
-    name: "SnapShift",
-    description:
-      "A mobile app that lets you photograph or upload your work schedule and automatically extracts shift information into a calendar view using OCR. All data stays on your device.",
-    html_url: "https://github.com/rydertetreault/SnapShift",
-    homepage: null,
-    language: "TypeScript",
-    topics: ["mobile", "react-native", "expo", "ocr", "schedule"],
-    stargazers_count: 0,
-    forks_count: 0,
-    fork: false,
-    created_at: "2026-03-26T00:00:00Z",
-    pushed_at: "2026-05-01T00:00:00Z",
-  },
   {
     name: "analytics-api",
     description:
