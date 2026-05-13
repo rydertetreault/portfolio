@@ -21,23 +21,7 @@ import {
   LifeBuoy,
 } from "lucide-react";
 import type { GitHubRepo } from "@/lib/github";
-
-function formatRepoName(name: string): string {
-  return name
-    .replace(/[-_]/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-function formatDateRange(created: string, pushed: string): string {
-  const fmt = (d: string) =>
-    new Date(d).toLocaleDateString("en-US", {
-      month: "short",
-      year: "numeric",
-    });
-  const start = fmt(created);
-  const end = fmt(pushed);
-  return start === end ? start : `${start} - ${end}`;
-}
+import { formatRepoName, formatDateRange } from "@/lib/utils";
 
 function getProjectIcon(repo: GitHubRepo) {
   const topics = repo.topics.map((t) => t.toLowerCase());

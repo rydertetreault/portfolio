@@ -19,6 +19,7 @@ import {
   FileText,
 } from "lucide-react";
 import type { GitHubRepo } from "@/lib/github";
+import { formatRepoName, formatDateRange } from "@/lib/utils";
 
 
 /* ═══════════════════════════════════════════
@@ -97,23 +98,6 @@ const languageColors: Record<string, string> = {
   Shell: "#89e051",
 };
 
-function formatRepoName(name: string): string {
-  return name
-    .replace(/[-_]/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-function formatDateRange(created: string, pushed: string): string {
-  const fmt = (d: string) =>
-    new Date(d).toLocaleDateString("en-US", {
-      month: "short",
-      year: "numeric",
-    });
-  const start = fmt(created);
-  const end = fmt(pushed);
-  return start === end ? start : `${start} - ${end}`;
-}
-
 /* ═══════════════════════════════════════════
    PAGE
    ═══════════════════════════════════════════ */
@@ -162,6 +146,13 @@ export default function HomeContent({ repos }: { repos: GitHubRepo[] }) {
       }
 
       setActiveId(current);
+
+      // Notify NavBar of inner-div scroll position and active section
+      window.dispatchEvent(
+        new CustomEvent("portfolio-scroll", {
+          detail: { scrollTop: container.scrollTop, activeId: current },
+        })
+      );
     };
 
     onScroll();
@@ -518,7 +509,7 @@ export default function HomeContent({ repos }: { repos: GitHubRepo[] }) {
 
             <footer className="border-t border-border-theme pt-8 pb-4 flex flex-col sm:flex-row items-center justify-between gap-4">
               <p className="text-xs text-text-faint">
-                &copy; 2026 Ryder Tetreault. Built with Next.js & Tailwind CSS.
+                &copy; 2025 Ryder Tetreault. Built with Next.js & Tailwind CSS.
               </p>
               <div className="flex items-center gap-4">
                 <a href="https://github.com/rydertetreault" target="_blank" rel="noreferrer" className="text-text-faint hover:text-text-muted transition-colors" aria-label="GitHub"><Github size={14} /></a>

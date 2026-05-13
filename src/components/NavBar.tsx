@@ -24,29 +24,25 @@ export default function NavBar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => {
-      setScrolled(window.scrollY > 60);
-
-      if (isHome) {
-        let current = "";
-        for (const { id } of sectionItems) {
-          const el = document.getElementById(id);
-          if (el && el.getBoundingClientRect().top <= window.innerHeight * 0.3) {
-            current = id;
-          }
-        }
-        setActiveSection(current);
-      }
-    };
-
-    window.addEventListener("scroll", onScroll, { passive: true });
-    onScroll();
-    return () => window.removeEventListener("scroll", onScroll);
+    if (isHome) {
+      // Home page scrolls inside an inner div, not window.
+      // HomeContent dispatches 'portfolio-scroll' so we can track it here.
+      const onInnerScroll = (e: Event) => {
+        const { scrollTop, activeId } = (e as CustomEvent<{ scrollTop: number; activeId: string }>).detail;
+        setScrolled(scrollTop > 60);
+        setActiveSection(activeId ?? "");
+      };
+      window.addEventListener("portfolio-scroll", onInnerScroll);
+      return () => window.removeEventListener("portfolio-scroll", onInnerScroll);
+    } else {
+      // Non-home pages scroll normally on window.
+      const onScroll = () => setScrolled(window.scrollY > 60);
+      window.addEventListener("scroll", onScroll, { passive: true });
+      onScroll();
+      return () => window.removeEventListener("scroll", onScroll);
+    }
   }, [isHome]);
 
-  useEffect(() => {
-    if (!isHome) setScrolled(true);
-  }, [isHome]);
 
   const handleSectionClick = (id: string) => {
     setMobileMenuOpen(false);
