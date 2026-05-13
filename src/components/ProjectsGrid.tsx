@@ -18,6 +18,7 @@ import {
   Gamepad2,
   Smartphone,
   ScrollText,
+  LifeBuoy,
 } from "lucide-react";
 import type { GitHubRepo } from "@/lib/github";
 
@@ -296,13 +297,22 @@ function RepoCard({
               </a>
             )}
             {repo.name === "SnapShift" && (
-              <Link
-                href="/projects/snapshift/privacy-policy"
-                className="inline-flex items-center gap-2 rounded-lg border border-border-theme bg-surface-alt px-4 py-2 text-sm text-foreground hover:border-accent hover:text-accent-hover transition-all duration-200"
-              >
-                <ScrollText size={15} />
-                Privacy Policy
-              </Link>
+              <>
+                <Link
+                  href="/projects/snapshift/privacy-policy"
+                  className="inline-flex items-center gap-2 rounded-lg border border-border-theme bg-surface-alt px-4 py-2 text-sm text-foreground hover:border-accent hover:text-accent-hover transition-all duration-200"
+                >
+                  <ScrollText size={15} />
+                  Privacy Policy
+                </Link>
+                <Link
+                  href="/projects/snapshift/support"
+                  className="inline-flex items-center gap-2 rounded-lg border border-border-theme bg-surface-alt px-4 py-2 text-sm text-foreground hover:border-accent hover:text-accent-hover transition-all duration-200"
+                >
+                  <LifeBuoy size={15} />
+                  Support
+                </Link>
+              </>
             )}
           </div>
         </div>
