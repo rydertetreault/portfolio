@@ -69,7 +69,7 @@ export default function SnapShiftPrivacyPolicy() {
           </h1>
 
           <p className="text-text-muted text-sm">
-            Effective Date: April 9, 2026
+            Effective Date: May 18, 2026
           </p>
         </FadeIn>
 
@@ -100,7 +100,7 @@ export default function SnapShiftPrivacyPolicy() {
               information about you, your identity, your location, your
               contacts, or your device. The app does not include analytics,
               advertising, or user tracking of any kind. We do not operate any
-              server that stores your data.
+              database that retains your schedule data.
             </p>
           </FadeIn>
 
@@ -111,11 +111,16 @@ export default function SnapShiftPrivacyPolicy() {
             <div className="h-px w-full bg-border-theme" />
             <div className="space-y-4 text-foreground text-base sm:text-lg leading-relaxed max-w-2xl">
               <p>
-                All schedule events you create or import — including shift
-                times, event titles, and categories — are stored exclusively on
+                All schedule events you create or import (including shift
+                times, event titles, and categories) are stored exclusively on
                 your device in local app storage. This data does not leave your
                 device, is not synced to any server we control, and is not
                 accessible to us or any other party.
+              </p>
+              <p>
+                If you grant SnapShift access to your iPhone Calendar, events
+                read from your selected calendars are likewise stored only on
+                your device. They are never transmitted off the device.
               </p>
               <p>
                 When you delete the app, all stored schedule data is deleted
@@ -131,17 +136,18 @@ export default function SnapShiftPrivacyPolicy() {
             <div className="h-px w-full bg-border-theme" />
             <div className="space-y-4 text-foreground text-base sm:text-lg leading-relaxed max-w-2xl">
               <p>
-                SnapShift uses one third-party service in order to function:
+                SnapShift uses three third-party services to provide its core
+                features:
               </p>
               <p>
                 <span className="font-semibold">
                   OCR.space (text recognition).
                 </span>{" "}
                 When you upload or take a photo of a schedule, the image is
-                transmitted to OCR.space&apos;s servers so their optical
+                first sent to OCR.space&apos;s servers so their optical
                 character recognition system can extract the text from it. The
                 image and extracted text are processed by OCR.space according to
-                their own privacy policy, which is available on their website at{" "}
+                their own privacy policy, available at{" "}
                 <a
                   href="https://ocr.space"
                   target="_blank"
@@ -154,8 +160,28 @@ export default function SnapShiftPrivacyPolicy() {
                 any server we control.
               </p>
               <p>
-                By uploading a schedule screenshot, you consent to the image
-                being processed by OCR.space for the purpose of text extraction.
+                <span className="font-semibold">
+                  Google Gemini API (AI-assisted reading).
+                </span>{" "}
+                If our local parser cannot recognize a schedule&apos;s format,
+                the image is forwarded to Google&apos;s Gemini API for reading.
+                We send only the image and a short prompt. The image is not
+                retained by SnapShift after the response is returned.
+                Google&apos;s data handling for Gemini API requests is governed
+                by their published policies.
+              </p>
+              <p>
+                <span className="font-semibold">
+                  Resend (optional screenshot reports).
+                </span>{" "}
+                When parsing fails entirely, you can tap &quot;Send screenshot
+                to improve&quot; to email the image to the developer for review.
+                We use Resend to deliver these emails. Reports are retained only
+                as long as needed for triage, then deleted.
+              </p>
+              <p>
+                By using these features, you consent to the corresponding image
+                transmissions for the purpose of text extraction.
               </p>
             </div>
           </FadeIn>
@@ -172,6 +198,29 @@ export default function SnapShiftPrivacyPolicy() {
               read, or transmit any other photos from your library, and it does
               not save photos back to your library.
             </p>
+          </FadeIn>
+
+          <FadeIn delay={0.275} className="space-y-4">
+            <h2 className="text-sm text-text-faint tracking-[0.35em]">
+              IPHONE CALENDAR ACCESS
+            </h2>
+            <div className="h-px w-full bg-border-theme" />
+            <div className="space-y-4 text-foreground text-base sm:text-lg leading-relaxed max-w-2xl">
+              <p>
+                If you grant SnapShift access to your iPhone Calendar in
+                Settings, the app reads events from the calendars you select.
+                These events stay on your device and are never sent anywhere.
+              </p>
+              <p>
+                If you also enable &quot;Save SnapShift events to iPhone
+                Calendar,&quot; SnapShift creates a dedicated calendar named
+                &quot;SnapShift&quot; in the iPhone Calendar app and writes
+                shifts and events there. You can delete that calendar at any
+                time from the iPhone Calendar app to remove all SnapShift
+                entries, or revoke calendar access entirely from iPhone Settings
+                under SnapShift.
+              </p>
+            </div>
           </FadeIn>
 
           <FadeIn delay={0.3} className="space-y-4">
