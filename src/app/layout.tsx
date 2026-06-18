@@ -24,12 +24,16 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://rydertetreault.dev"),
-  title: "Ryder Tetreault | Software Engineer & Cyber Defense",
+  title: "Ryder Tetreault | AI Integration & Cyber Defense",
   description:
-    "Software engineer and cybersecurity specialist building secure, scalable systems. Auburn University CS graduate focused on systems engineering and infrastructure defense.",
+    "Software engineer focused on integrating AI into real products, with a foundation in cybersecurity and infrastructure defense. Auburn University CS graduate building with language models, semantic search, and AI-driven automation.",
   keywords: [
     "Ryder Tetreault",
     "software engineer",
+    "AI integration",
+    "AI engineer",
+    "LLM integration",
+    "semantic search",
     "cybersecurity",
     "cyber defense",
     "Auburn University",
@@ -38,18 +42,18 @@ export const metadata: Metadata = {
   ],
   manifest: "/site.webmanifest",
   openGraph: {
-    title: "Ryder Tetreault | Software Engineer & Cyber Defense",
+    title: "Ryder Tetreault | AI Integration & Cyber Defense",
     description:
-      "Software engineer and cybersecurity specialist building secure, scalable systems.",
+      "Software engineer focused on integrating AI into real products, with a foundation in cybersecurity.",
     url: "https://rydertetreault.dev",
     siteName: "Ryder Tetreault",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Ryder Tetreault | Software Engineer & Cyber Defense",
+    title: "Ryder Tetreault | AI Integration & Cyber Defense",
     description:
-      "Software engineer and cybersecurity specialist building secure, scalable systems.",
+      "Software engineer focused on integrating AI into real products, with a foundation in cybersecurity.",
   },
 };
 

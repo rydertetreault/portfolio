@@ -87,7 +87,7 @@ export default function HeroSection() {
           }`}
           style={{ transitionDelay: "400ms" }}
         >
-          Software Engineer · Cyber Defense
+          Software Engineer · AI · Cyber Defense
         </p>
 
         <p
@@ -96,8 +96,9 @@ export default function HeroSection() {
           }`}
           style={{ transitionDelay: "500ms" }}
         >
-          I build secure, scalable systems and software with a focus on
-          cybersecurity engineering and infrastructure defense.
+          AI-native software, security-minded engineering. I build products
+          where AI does real work, grounded in cybersecurity and
+          infrastructure defense.
         </p>
 
         <div

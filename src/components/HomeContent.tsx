@@ -8,9 +8,10 @@ import {
   Linkedin,
   Mail,
   ExternalLink,
+  Lock,
   Shield,
   Code2,
-  Award,
+  Sparkles,
   BookOpen,
   GraduationCap,
   ArrowRight,
@@ -20,6 +21,7 @@ import {
 } from "lucide-react";
 import type { GitHubRepo } from "@/lib/github";
 import { formatRepoName, formatDateRange } from "@/lib/utils";
+import AppleIcon from "@/components/icons/AppleIcon";
 
 
 /* ═══════════════════════════════════════════
@@ -35,20 +37,32 @@ type SectionId =
   | "resume"
   | "contact";
 
-const softwareSkills = [
-  "Python",
-  "Java",
-  "C",
-  "C++",
-  "SQL",
+const aiSkills = [
+  "OpenAI API",
+  "Anthropic / Claude",
+  "Embeddings",
+  "Vector Search",
+  "Semantic Search",
+  "RAG",
+  "Whisper / Transcription",
+  "Prompt Engineering",
+  "Agent Workflows",
+  "AI-Augmented Development",
+];
+
+const engineeringSkills = [
+  "TypeScript",
   "JavaScript",
+  "Python",
   "React",
+  "Next.js",
   "Node.js",
+  "SQL",
+  "REST APIs",
   "Docker",
   "AWS",
   "Linux",
   "Git",
-  "REST APIs",
   "Distributed Systems",
 ];
 
@@ -160,7 +174,15 @@ export default function HomeContent({ repos }: { repos: GitHubRepo[] }) {
     return () => container.removeEventListener("scroll", onScroll);
   }, [sections]);
 
-  const featuredRepos = repos.slice(0, 4);
+  const FEATURED_NAMES = [
+    "media-library",
+    "analytics-api",
+    "SnapShift",
+    "bardownski-website",
+  ] as const;
+  const featuredRepos = FEATURED_NAMES
+    .map((name) => repos.find((r) => r.name === name))
+    .filter((r): r is GitHubRepo => !!r);
 
   return (
     <main className="relative h-screen text-foreground bg-background overflow-hidden animate-fade-in">
@@ -222,11 +244,12 @@ export default function HomeContent({ repos }: { repos: GitHubRepo[] }) {
                   Ryder Tetreault
                 </h1>
                 <p className="text-accent text-base font-medium">
-                  Software Engineer · Cyber Defense
+                  Software Engineer · AI · Cyber Defense
                 </p>
                 <p className="text-text-faint text-sm leading-relaxed max-w-xs">
-                  Building secure, scalable systems and software with a focus on
-                  cybersecurity engineering and infrastructure defense.
+                  AI-native software, security-minded engineering. I build
+                  products where AI does real work, grounded in cybersecurity
+                  and infrastructure defense.
                 </p>
               </div>
             </div>
@@ -326,11 +349,12 @@ export default function HomeContent({ repos }: { repos: GitHubRepo[] }) {
                 Ryder Tetreault
               </h1>
               <p className="text-accent text-base font-medium">
-                Software Engineer · Cyber Defense
+                Software Engineer · AI · Cyber Defense
               </p>
               <p className="text-text-faint text-sm leading-relaxed max-w-xs">
-                Building secure, scalable systems and software with a focus on
-                cybersecurity engineering and infrastructure defense.
+                AI-native software, security-minded engineering. I build
+                products where AI does real work, grounded in cybersecurity
+                and infrastructure defense.
               </p>
             </div>
             <div className="flex items-center gap-5">
@@ -345,9 +369,16 @@ export default function HomeContent({ repos }: { repos: GitHubRepo[] }) {
             <Section id="about" title="ABOUT">
               <p className="text-foreground text-lg leading-relaxed">
                 I&apos;m a Computer Science & Software Engineering graduate from
-                Auburn University. My work focuses on systems design, distributed
-                infrastructure, and cybersecurity engineering with long-term goals
-                in Systems Engineering and Enterprise Architecture.
+                Auburn University with a Cyber Defense certificate, focused on
+                integrating AI into the products I build. Most of my recent work
+                has been bringing language models, semantic search, and AI-driven
+                automation into real applications, from media archives that
+                transcribe and tag themselves to analytics platforms that surface
+                insight instead of just metrics. I treat AI as a first-class part
+                of the toolchain: a collaborator I use daily to design and ship,
+                and a layer I integrate into systems so they get smarter as
+                they&apos;re used. My cybersecurity background grounds how I
+                design and reason about every system I touch.
               </p>
             </Section>
 
@@ -381,11 +412,16 @@ export default function HomeContent({ repos }: { repos: GitHubRepo[] }) {
 
             {/* ─── SKILLS ─── */}
             <Section id="skills" title="SKILLS">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <SkillColumn
+                  icon={<Sparkles size={18} />}
+                  title="AI Integration"
+                  skills={aiSkills}
+                />
                 <SkillColumn
                   icon={<Code2 size={18} />}
-                  title="Software Engineering"
-                  skills={softwareSkills}
+                  title="Engineering"
+                  skills={engineeringSkills}
                 />
                 <SkillColumn
                   icon={<Shield size={18} />}
@@ -414,35 +450,17 @@ export default function HomeContent({ repos }: { repos: GitHubRepo[] }) {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <div className="rounded-2xl border border-border-theme bg-surface-alt p-6">
-                    <div className="flex items-start gap-4">
-                      <div className="p-2.5 rounded-xl bg-accent-subtle text-accent shrink-0">
-                        <Award size={18} />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <h3 className="text-base font-semibold">CompTIA Security+</h3>
-                          <span className="text-[10px] tracking-wider uppercase px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                            In Progress
-                          </span>
-                        </div>
-                        <p className="text-text-faint text-sm">Preparing for certification exam</p>
-                      </div>
+                <div className="rounded-2xl border border-border-theme bg-surface-alt p-6">
+                  <div className="flex items-start gap-4">
+                    <div className="p-2.5 rounded-xl bg-accent-subtle text-accent shrink-0">
+                      <BookOpen size={18} />
                     </div>
-                  </div>
-
-                  <div className="rounded-2xl border border-border-theme bg-surface-alt p-6">
-                    <div className="flex items-start gap-4">
-                      <div className="p-2.5 rounded-xl bg-accent-subtle text-accent shrink-0">
-                        <BookOpen size={18} />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <h3 className="text-base font-semibold">Cyber Defense Certificate</h3>
-                        </div>
-                        <p className="text-text-faint text-sm">Auburn University · May 2026</p>
-                      </div>
+                    <div>
+                      <p className="text-sm text-text-faint mb-1">May 2026</p>
+                      <h3 className="text-lg font-semibold">Cyber Defense Certificate</h3>
+                      <p className="text-text-muted text-sm mt-1">
+                        Auburn University
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -534,7 +552,7 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section id={id} className="space-y-8">
+    <section id={id} className="space-y-8 scroll-mt-24">
       <div className="space-y-3">
         <h2 className="text-xs text-text-faint tracking-[0.3em] font-medium">
           {title}
@@ -604,53 +622,76 @@ function ExperienceCard({
 }
 
 function FeaturedProjectCard({ repo }: { repo: GitHubRepo }) {
-  const langColor = repo.language
-    ? languageColors[repo.language] || "#8b8b8b"
-    : "#22c55e";
+  // Pick the link target: App Store > Live Site (homepage) > nothing if private.
+  let href: string | null = null;
+  let LinkIcon: React.ComponentType<{ size?: number; className?: string }> | null = null;
 
-  return (
-    <a
-      href={repo.html_url}
-      target="_blank"
-      rel="noreferrer"
-      className="group block rounded-2xl border border-border-theme bg-surface-alt p-6 hover:border-accent transition-all duration-300"
-    >
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-2 min-w-0">
-          <div className="flex items-center gap-3">
-            {repo.language && (
-              <span
-                className="inline-block h-2.5 w-2.5 rounded-full shrink-0"
-                style={{ backgroundColor: langColor }}
-              />
-            )}
-            <h3 className="text-base font-semibold group-hover:text-accent-hover transition-colors truncate">
-              {formatRepoName(repo.name)}
-            </h3>
-          </div>
-          {repo.description && (
-            <p className="text-text-faint text-sm leading-relaxed">
-              {repo.description}
-            </p>
+  if (repo.appStore) {
+    href = repo.appStore;
+    LinkIcon = AppleIcon;
+  } else if (!repo.private && repo.homepage) {
+    href = repo.homepage;
+    LinkIcon = ExternalLink;
+  }
+
+  const inner = (
+    <div className="flex items-start justify-between gap-4">
+      <div className="space-y-2 min-w-0">
+        <div className="flex items-center gap-3">
+          {repo.language && (
+            <span
+              className="inline-block h-2.5 w-2.5 rounded-full shrink-0"
+              style={{ backgroundColor: "#a3e635" }}
+            />
           )}
-          <div className="flex items-center gap-4 text-xs text-text-faint pt-1">
-            <span className="flex items-center gap-1">
-              <Calendar size={12} />
-              {formatDateRange(repo.created_at, repo.pushed_at)}
-            </span>
-            {repo.stargazers_count > 0 && (
-              <span className="flex items-center gap-1">
-                <Star size={12} />
-                {repo.stargazers_count}
-              </span>
-            )}
-          </div>
+          <h3 className="text-base font-semibold group-hover:text-accent-hover transition-colors truncate">
+            {formatRepoName(repo.name)}
+          </h3>
         </div>
-        <Github
+        {repo.subtitle && (
+          <p className="text-text-faint text-xs">
+            {repo.subtitle}
+          </p>
+        )}
+        {repo.description && (
+          <p className="text-text-faint text-sm leading-relaxed">
+            {repo.description}
+          </p>
+        )}
+        <div className="flex items-center gap-4 text-xs text-text-faint pt-1">
+          <span className="flex items-center gap-1">
+            <Calendar size={12} />
+            {formatDateRange(repo.created_at, repo.pushed_at)}
+          </span>
+          {repo.stargazers_count > 0 && (
+            <span className="flex items-center gap-1">
+              <Star size={12} />
+              {repo.stargazers_count}
+            </span>
+          )}
+        </div>
+      </div>
+      {LinkIcon ? (
+        <LinkIcon
           size={16}
           className="text-text-faint group-hover:text-accent transition-colors shrink-0 mt-1"
         />
-      </div>
+      ) : repo.private ? (
+        <Lock
+          size={16}
+          className="text-text-faint shrink-0 mt-1"
+        />
+      ) : null}
+    </div>
+  );
+
+  const className = `group block rounded-2xl border border-border-theme bg-surface-alt p-6 transition-all duration-300 ${href ? "hover:border-accent" : "cursor-default"}`;
+
+  return href ? (
+    <a href={href} target="_blank" rel="noreferrer" className={className}>
+      {inner}
     </a>
+  ) : (
+    <div className={className}>{inner}</div>
   );
 }

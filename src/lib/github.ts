@@ -33,8 +33,9 @@ const repoOverrides: Record<string, Partial<GitHubRepo>> = {
     description:
       "An iOS app that turns a photo of your work schedule into a calendar using on-device OCR. All data stays on your device.",
     longDescription:
-      "SnapShift is an iOS app I designed, built, and shipped to the App Store. Take or upload a photo of your work schedule and it extracts your shifts using on-device OCR, then drops them straight into a clean calendar view.\n\nNo accounts, no cloud sync, no analytics — every event is stored locally on your device. The app is built around the idea that something as personal as your weekly schedule shouldn't require signing up for anything or handing your data to a server.",
+      "SnapShift is an iOS app I designed, built, and shipped to the App Store. Take or upload a photo of your work schedule and it extracts your shifts using on-device OCR, then drops them straight into a clean calendar view.\n\nNo accounts, no cloud sync, no analytics. Every event is stored locally on your device. The app is built around the idea that something as personal as your weekly schedule shouldn't require signing up for anything or handing your data to a server.",
     topics: ["ios", "swift", "ocr", "schedule", "mobile"],
+    homepage: null,
     appStore:
       "https://apps.apple.com/us/app/snapshift-schedule-scanner/id6769178607",
     screenshots: [
@@ -45,11 +46,18 @@ const repoOverrides: Record<string, Partial<GitHubRepo>> = {
       "/projects/snapshift/05.png",
     ],
   },
+  "JRP-Bot": {
+    description:
+      "A Discord bot that acts as judge, oracle, and community enforcer, with real sentencing, jail time, an appeals system, and personality-driven interactions.",
+    longDescription:
+      "A Discord community I'm part of needed automated moderation, entertainment, and governance enforcement that felt unique and engaging rather than generic.\n\nBuilt with Discord.js and Node.js. Implemented a custom sentencing system with jail time, appeals processes, and community leaderboards. Added oracle-style question answering and personality-driven interactions.\n\nThe result is an active, engaging community bot that handles moderation, entertainment, and governance in a way that keeps users engaged and the community self-regulating.",
+    screenshots: ["/projects/jrp-bot/01.png"],
+  },
 };
 
 /** Categorize specific GitHub repos. Defaults to "Personal" when not listed. */
 const categoryOverrides: Record<string, ProjectCategory> = {
-  // (empty for now — all current GitHub repos default to Personal.
+  // (empty for now. All current GitHub repos default to Personal.
   // Add entries here later if any GH-sourced repo should be Professional.)
 };
 
@@ -57,14 +65,14 @@ const categoryOverrides: Record<string, ProjectCategory> = {
 const manualProjects: GitHubRepo[] = [
   {
     name: "media-library",
-    subtitle: "Ram Dass Love Serve Remember Foundation",
+    subtitle: "Maha Media · Ram Dass Love Serve Remember Foundation",
     description:
-      "A custom digital media library giving a non-profit's team a single home for decades of archival audio, video, images, and documents — with AI-powered transcription, tagging, and semantic search.",
+      "A custom digital media library giving a non-profit's team a single home for decades of archival audio, video, images, and documents, with AI-powered transcription, tagging, and semantic search.",
     longDescription:
-      "A custom digital media library built for the Ram Dass Love Serve Remember Foundation to give their team a single home for decades of archival audio, video, images, and documents.\n\nUsers can browse and search the entire archive from a clean, gallery-style interface — filtering by type, collection, rights, or any custom tag the team cares about. Opening an asset reveals a rich detail view with a built-in player, auto-generated transcripts, thumbnails, and editable metadata. Behind the scenes, AI quietly handles the slow work: transcribing recordings, suggesting tags, extracting key topics and people, and making everything semantically searchable so staff can find a specific quote or moment in seconds rather than hours.\n\nAdmins get tools for managing users and teams, configuring metadata fields, tracking rights, organizing collections, and generating share links for collaborators outside the organization.\n\nMy role: Frontend developer and UI/UX designer — I designed the interface and built out most of the client-side experience.",
+      "A custom digital media library built for the Ram Dass Love Serve Remember Foundation to give their team a single home for decades of archival audio, video, images, and documents.\n\nUsers can browse and search the entire archive from a clean, gallery-style interface, filtering by type, collection, rights, or any custom tag the team cares about. Opening an asset reveals a rich detail view with a built-in player, auto-generated transcripts, thumbnails, and editable metadata. Behind the scenes, AI quietly handles the slow work: transcribing recordings, suggesting tags, extracting key topics and people, and making everything semantically searchable so staff can find a specific quote or moment in seconds rather than hours.\n\nAdmins get tools for managing users and teams, configuring metadata fields, tracking rights, organizing collections, and generating share links for collaborators outside the organization.\n\nMy role: Frontend developer and UI/UX designer. I designed the interface and built out most of the client-side experience.",
     category: "Professional",
     language: "TypeScript",
-    topics: ["react", "typescript", "ui-ux", "ai", "archival", "media"],
+    topics: ["react", "typescript", "ui/ux", "ai", "archival", "media"],
     screenshots: ["/projects/media-library/cover.png"],
     private: true,
     html_url: "",
@@ -77,13 +85,21 @@ const manualProjects: GitHubRepo[] = [
   },
   {
     name: "analytics-api",
+    subtitle: "Maha Media · Be Here Now Network",
     description:
       "Frontend design for the Be Here Now Network's internal analytics dashboard. Built the UI for visualizing Google Analytics 4 site metrics and YouTube channel analytics in a unified reporting platform.",
+    longDescription:
+      "An internal analytics dashboard I designed and built the frontend for at Maha Media for the Be Here Now Network. It pulls Google Analytics 4 site metrics together with YouTube channel analytics into a single, unified reporting platform so the team can see content performance, audience trends, and traffic in one place.\n\nMy role: Frontend developer. I designed the dashboard layout, built the data visualization components, and shaped how site and channel data are presented side by side.\n\nNumbers in the screenshots below are blurred to protect client data.",
     category: "Professional",
+    screenshots: [
+      "/projects/analytics-api/01.png",
+      "/projects/analytics-api/02.png",
+    ],
+    private: true,
     html_url: "",
     homepage: null,
     language: "TypeScript",
-    topics: ["analytics", "google-analytics", "youtube", "dashboard", "maha-media"],
+    topics: ["analytics", "google analytics", "youtube", "dashboard", "maha media"],
     stargazers_count: 0,
     forks_count: 0,
     fork: false,

@@ -43,7 +43,7 @@ const faqs: Faq[] = [
       <>
         Mostly yes. Viewing, creating, editing, and deleting events all work
         offline. The only feature that needs an internet connection is the OCR
-        step — your schedule image is sent to an OCR service to extract text,
+        step. Your schedule image is sent to an OCR service to extract text,
         then the result comes back to your device.
       </>
     ),

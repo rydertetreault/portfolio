@@ -2,7 +2,7 @@ import { ImageResponse } from 'next/og';
 
 export const runtime = 'edge';
 
-export const alt = 'Ryder Tetreault | Software Engineer & Cyber Defense';
+export const alt = 'Ryder Tetreault | AI Integration & Cyber Defense';
 
 export const size = { width: 1200, height: 630 };
 
@@ -52,7 +52,7 @@ export default function Image() {
             fontWeight: 400,
           }}
         >
-          Software Engineer & Cyber Defense
+          Software Engineer · AI · Cyber Defense
         </div>
 
         <div
