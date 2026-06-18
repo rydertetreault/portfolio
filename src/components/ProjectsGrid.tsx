@@ -2,6 +2,8 @@
 
 import React, { useRef, useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowUpRight,
   Github,
@@ -19,9 +21,13 @@ import {
   Smartphone,
   ScrollText,
   LifeBuoy,
+  ChevronDown,
+  Lock,
 } from "lucide-react";
-import type { GitHubRepo } from "@/lib/github";
+import type { GitHubRepo, ProjectCategory } from "@/lib/github";
 import { formatRepoName, formatDateRange } from "@/lib/utils";
+import Lightbox from "@/components/Lightbox";
+import AppleIcon from "@/components/icons/AppleIcon";
 
 function getProjectIcon(repo: GitHubRepo) {
   const topics = repo.topics.map((t) => t.toLowerCase());
@@ -54,58 +60,71 @@ function getProjectIcon(repo: GitHubRepo) {
   return Code2;
 }
 
+const categories: readonly (ProjectCategory | "All")[] = [
+  "All",
+  "Personal",
+  "Professional",
+] as const;
+
 export default function ProjectsGrid({ repos }: { repos: GitHubRepo[] }) {
-  const [active, setActive] = useState("All");
+  const [active, setActive] = useState<ProjectCategory | "All">("All");
   const [mounted, setMounted] = useState(false);
+  const [expandedName, setExpandedName] = useState<string | null>(null);
 
   useEffect(() => {
     requestAnimationFrame(() => setMounted(true));
   }, []);
 
-  const languages = [
-    "All",
-    ...Array.from(
-      new Set(repos.map((r) => r.language).filter(Boolean) as string[])
-    ),
-  ];
-
   const filtered =
     active === "All"
       ? repos
-      : repos.filter((r) => r.language === active);
+      : repos.filter((r) => (r.category ?? "Personal") === active);
 
   return (
     <>
-      {/* Language Filters */}
+      {/* Category Filters */}
       <div className="flex flex-wrap gap-3 mb-12">
-        {languages.map((lang) => (
+        {categories.map((cat) => (
           <button
-            key={lang}
-            onClick={() => setActive(lang)}
+            key={cat}
+            onClick={() => {
+              setActive(cat);
+              setExpandedName(null);
+            }}
             className={[
               "rounded-full border px-4 py-1.5 text-sm transition-all duration-300 cursor-pointer",
-              active === lang
+              active === cat
                 ? "border-accent bg-accent-subtle text-accent"
                 : "border-border-theme bg-transparent text-text-muted hover:border-text-faint hover:text-foreground",
             ].join(" ")}
           >
-            {lang}
+            {cat}
           </button>
         ))}
       </div>
 
       {/* Grid */}
       {filtered.length === 0 ? (
-        <p className="text-text-faint text-center py-20">No repos found.</p>
+        <p className="text-text-faint text-center py-20">No projects found.</p>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
           {filtered.map((repo, i) => (
-            <RepoCard
+            <div
               key={repo.name}
-              repo={repo}
-              index={i}
-              mounted={mounted}
-            />
+              className={expandedName === repo.name ? "md:col-span-2" : ""}
+            >
+              <RepoCard
+                repo={repo}
+                index={i}
+                mounted={mounted}
+                expanded={expandedName === repo.name}
+                onToggle={() =>
+                  setExpandedName((prev) =>
+                    prev === repo.name ? null : repo.name
+                  )
+                }
+              />
+            </div>
           ))}
         </div>
       )}
@@ -117,22 +136,27 @@ function RepoCard({
   repo,
   index,
   mounted,
+  expanded,
+  onToggle,
 }: {
   repo: GitHubRepo;
   index: number;
   mounted: boolean;
+  expanded: boolean;
+  onToggle: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [hovering, setHovering] = useState(false);
   const [isTouch, setIsTouch] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   useEffect(() => {
     setIsTouch(window.matchMedia("(pointer: coarse)").matches);
   }, []);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (isTouch || !ref.current) return;
+    if (isTouch || !ref.current || expanded) return;
     const rect = ref.current.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width;
     const y = (e.clientY - rect.top) / rect.height;
@@ -157,19 +181,31 @@ function RepoCard({
     >
       <div
         ref={ref}
+        role="button"
+        tabIndex={0}
+        aria-expanded={expanded}
+        onClick={onToggle}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onToggle();
+          }
+        }}
         onMouseMove={handleMouseMove}
         onMouseEnter={() => setHovering(true)}
         onMouseLeave={resetTilt}
         style={{
-          transform: `perspective(800px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
+          transform: expanded
+            ? "none"
+            : `perspective(800px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
           transition: hovering
             ? "transform 0.1s ease-out"
             : "transform 0.4s ease-out",
         }}
-        className="relative rounded-2xl border border-border-theme bg-surface-alt overflow-hidden group"
+        className="relative rounded-2xl border border-border-theme bg-surface-alt overflow-hidden group cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
       >
         {/* Spotlight glare */}
-        {hovering && (
+        {hovering && !expanded && (
           <div
             className="pointer-events-none absolute inset-0 z-10 opacity-[0.06] transition-opacity duration-300"
             style={{
@@ -211,6 +247,11 @@ function RepoCard({
             <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight group-hover:text-accent-hover transition-colors duration-300">
               {formatRepoName(repo.name)}
             </h2>
+            {repo.subtitle && (
+              <p className="text-xs sm:text-sm text-text-faint mt-1.5">
+                {repo.subtitle}
+              </p>
+            )}
           </div>
         </div>
 
@@ -244,7 +285,10 @@ function RepoCard({
 
           {/* Topics */}
           {repo.topics.length > 0 && (
-            <div className="flex flex-wrap gap-2">
+            <div
+              className="flex flex-wrap gap-2"
+              onClick={(e) => e.stopPropagation()}
+            >
               {repo.topics.map((topic) => (
                 <span
                   key={topic}
@@ -257,18 +301,41 @@ function RepoCard({
           )}
 
           {/* Action Links */}
-          <div className="flex items-center gap-3 pt-1">
-            {repo.html_url && (
+          <div
+            className="flex flex-wrap items-center gap-3 pt-1"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {repo.private ? (
+              <span className="inline-flex items-center gap-2 rounded-lg border border-border-theme bg-surface-alt px-4 py-2 text-sm text-text-muted">
+                <Lock size={14} />
+                Private repo
+              </span>
+            ) : (
+              repo.html_url && (
+                <a
+                  href={repo.html_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 rounded-lg border border-border-theme bg-surface-alt px-4 py-2 text-sm text-foreground hover:border-accent hover:text-accent-hover transition-all duration-200"
+                >
+                  <Github size={15} />
+                  GitHub
+                </a>
+              )
+            )}
+
+            {repo.appStore && (
               <a
-                href={repo.html_url}
+                href={repo.appStore}
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex items-center gap-2 rounded-lg border border-border-theme bg-surface-alt px-4 py-2 text-sm text-foreground hover:border-accent hover:text-accent-hover transition-all duration-200"
               >
-                <Github size={15} />
-                GitHub
+                <AppleIcon size={15} />
+                App Store
               </a>
             )}
+
             {repo.homepage && (
               <a
                 href={repo.homepage}
@@ -280,6 +347,7 @@ function RepoCard({
                 Live Site
               </a>
             )}
+
             {repo.name === "SnapShift" && (
               <>
                 <Link
@@ -299,7 +367,128 @@ function RepoCard({
               </>
             )}
           </div>
+
+          {/* Expand chevron */}
+          {repo.longDescription && (
+            <div className="flex justify-end pt-1">
+              <motion.span
+                animate={{ rotate: expanded ? 180 : 0 }}
+                transition={{ duration: 0.25 }}
+                className="text-text-faint group-hover:text-text-muted transition-colors"
+                aria-hidden="true"
+              >
+                <ChevronDown size={18} />
+              </motion.span>
+            </div>
+          )}
         </div>
+
+        {/* Expanded content */}
+        <AnimatePresence initial={false}>
+          {expanded && repo.longDescription && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.35, ease: "easeOut" }}
+              className="overflow-hidden border-t border-border-theme"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6 sm:p-8 space-y-6">
+                <div className="space-y-3 text-text-muted text-sm sm:text-base leading-relaxed">
+                  {repo.longDescription.split("\n\n").map((para, i) => (
+                    <p key={i}>{para}</p>
+                  ))}
+                </div>
+
+                {repo.screenshots && repo.screenshots.length > 0 && (
+                  <ScreenshotGallery
+                    screenshots={repo.screenshots}
+                    projectName={formatRepoName(repo.name)}
+                    isPrivate={!!repo.private}
+                    onOpen={(i) => setLightboxIndex(i)}
+                  />
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {repo.screenshots && (
+        <Lightbox
+          images={repo.screenshots}
+          index={lightboxIndex}
+          alt={formatRepoName(repo.name)}
+          onClose={() => setLightboxIndex(null)}
+          onIndexChange={(i) => setLightboxIndex(i)}
+        />
+      )}
+    </div>
+  );
+}
+
+function ScreenshotGallery({
+  screenshots,
+  projectName,
+  isPrivate,
+  onOpen,
+}: {
+  screenshots: string[];
+  projectName: string;
+  isPrivate: boolean;
+  onOpen: (i: number) => void;
+}) {
+  // Heuristic: phone screenshots live under /snapshift/ (portrait).
+  // Otherwise assume landscape.
+  const isPortrait = (src: string) =>
+    /\/snapshift\//i.test(src) || /phone|mobile/i.test(src);
+
+  const firstPortrait = isPortrait(screenshots[0]);
+
+  return (
+    <div className="space-y-3">
+      {isPrivate && (
+        <p className="text-xs text-text-faint italic">
+          Interface only — client content redacted for privacy.
+        </p>
+      )}
+      <div
+        className={
+          firstPortrait
+            ? "flex flex-wrap gap-4"
+            : "grid grid-cols-1 sm:grid-cols-2 gap-4"
+        }
+      >
+        {screenshots.map((src, i) => {
+          const portrait = isPortrait(src);
+          return (
+            <button
+              key={src}
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpen(i);
+              }}
+              className={[
+                "group/shot relative overflow-hidden rounded-xl border border-border-theme bg-surface-alt",
+                "hover:border-accent transition-all duration-200 cursor-zoom-in",
+                portrait ? "w-[120px] sm:w-[140px]" : "w-full",
+              ].join(" ")}
+              aria-label={`Open ${projectName} screenshot ${i + 1}`}
+            >
+              <div className={portrait ? "aspect-[9/19.5]" : "aspect-[16/9]"}>
+                <Image
+                  src={src}
+                  alt={`${projectName} screenshot ${i + 1}`}
+                  width={portrait ? 280 : 1600}
+                  height={portrait ? 600 : 900}
+                  className="h-full w-full object-cover group-hover/shot:scale-[1.02] transition-transform duration-300"
+                  unoptimized
+                />
+              </div>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
