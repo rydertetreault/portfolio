@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
@@ -18,6 +19,11 @@ export default function Lightbox({
   onIndexChange: (i: number) => void;
   alt: string;
 }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     if (index === null) return;
     const onKey = (e: KeyboardEvent) => {
@@ -30,7 +36,9 @@ export default function Lightbox({
     return () => window.removeEventListener("keydown", onKey);
   }, [index, images.length, onClose, onIndexChange]);
 
-  return (
+  if (!mounted) return null;
+
+  const overlay = (
     <AnimatePresence>
       {index !== null && (
         <motion.div
@@ -38,7 +46,7 @@ export default function Lightbox({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 sm:p-10"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 sm:p-10"
           onClick={onClose}
           role="dialog"
           aria-modal="true"
@@ -108,4 +116,6 @@ export default function Lightbox({
       )}
     </AnimatePresence>
   );
+
+  return createPortal(overlay, document.body);
 }
