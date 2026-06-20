@@ -81,20 +81,28 @@ const cyberSkills = [
 
 const experiences = [
   {
-    date: "2026 - Present",
-    company: "Proxima Aerospace",
-    role: "Software Engineering Intern",
+    date: "Jun 2026 - Present",
+    company: "Praxis AI",
+    role: "Engineering Intern",
     description:
-      "Developing Python systems for retrieving and processing satellite and astrodynamics data from REST APIs. Supporting distributed data pipelines for mission-critical operations.",
-    url: "https://proximaaerospace.com",
+      "Contributing to UI/UX front-end, platform integrity, and AI infrastructure initiatives. Conducting security and functionality audits across integrations and data flows, helping develop and red-team PraxisShield™ (AI security framework), and supporting Praxis AI agents as a Forward Deployed Engineer (FDE).",
+    url: "https://praxis-ai.com",
   },
   {
-    date: "2026 - Present",
+    date: "Feb 2026 - Present",
     company: "Maha Media",
     role: "Software Developer",
     description:
       "Supporting backend web systems, technical operations, and scalable digital platform infrastructure for media and content delivery.",
     url: "https://mahamedia.us",
+  },
+  {
+    date: "Jan 2026 - Mar 2026",
+    company: "Proxima Aerospace",
+    role: "Software Engineering Intern",
+    description:
+      "Developing Python systems for retrieving and processing satellite and astrodynamics data from REST APIs. Supporting distributed data pipelines for mission-critical operations.",
+    url: "https://proximaaerospace.com",
   },
 ];
 
