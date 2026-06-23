@@ -171,6 +171,27 @@ export default function SnapShiftSupport() {
           </div>
         </FadeIn>
 
+        {/* Tip the developer */}
+        <FadeIn delay={0.08} className="space-y-4 mb-16">
+          <h2 className="text-sm text-text-faint tracking-[0.35em]">
+            TIP THE DEVELOPER
+          </h2>
+          <div className="h-px w-full bg-border-theme" />
+          <div className="space-y-3 text-foreground text-base sm:text-lg leading-relaxed max-w-2xl pt-3">
+            <p>
+              SnapShift is free and will stay free. If it&apos;s saving you
+              time, a small tip helps cover server costs and continued
+              development.
+            </p>
+            <Link
+              href="/projects/snapshift/tip"
+              className="inline-flex items-center gap-2 text-accent hover:text-accent-hover transition-colors font-medium"
+            >
+              Send a tip →
+            </Link>
+          </div>
+        </FadeIn>
+
         {/* FAQ */}
         <FadeIn delay={0.1} className="space-y-4">
           <h2 className="text-sm text-text-faint tracking-[0.35em]">
