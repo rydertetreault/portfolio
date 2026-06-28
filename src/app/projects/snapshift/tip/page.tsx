@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, ExternalLink, Heart } from "lucide-react";
+import { ArrowLeft, ExternalLink, Heart, Info } from "lucide-react";
 import FadeIn from "@/components/FadeIn";
 
 export const metadata: Metadata = {
@@ -15,6 +15,8 @@ type TipOption = {
   href: string;
   // Subtle visual accent per option.
   tint: string;
+  // Optional note shown beneath the handle (e.g. Venmo phone confirmation).
+  note?: string;
 };
 
 const tipOptions: TipOption[] = [
@@ -23,6 +25,7 @@ const tipOptions: TipOption[] = [
     handle: "@rydertetreault",
     href: "https://venmo.com/u/rydertetreault",
     tint: "rgba(0, 132, 255, 0.10)",
+    note: "Venmo may ask for the last 4 digits of my phone number to confirm. They are 6492.",
   },
   {
     label: "Cash App",
@@ -146,6 +149,26 @@ export default function SnapShiftTip() {
                   Opens {opt.label} {opt.label === "Venmo" ? "" : "in"} a new
                   tab.
                 </div>
+                {opt.note && (
+                  <div
+                    className="relative mt-4 flex items-start gap-2 rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-foreground"
+                    role="note"
+                  >
+                    <Info
+                      size={16}
+                      className="text-text-muted flex-shrink-0 mt-0.5"
+                      aria-hidden
+                    />
+                    <span>
+                      Venmo may ask for the last 4 digits of my phone number to
+                      confirm. They are{" "}
+                      <strong className="font-semibold text-foreground">
+                        6492
+                      </strong>
+                      .
+                    </span>
+                  </div>
+                )}
               </a>
             ))}
           </div>
