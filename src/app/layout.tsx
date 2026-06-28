@@ -48,12 +48,21 @@ export const metadata: Metadata = {
     url: "https://rydertetreault.dev",
     siteName: "Ryder Tetreault",
     type: "website",
+    images: [
+      {
+        url: "/portfolio-preview.png",
+        width: 1731,
+        height: 909,
+        alt: "Ryder Tetreault portfolio preview",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Ryder Tetreault | AI Integration & Cyber Defense",
     description:
       "Software engineer focused on integrating AI into real products, with a foundation in cybersecurity.",
+    images: ["/portfolio-preview.png"],
   },
 };
 
