@@ -151,7 +151,7 @@ export default function SnapShiftTip() {
                 </div>
                 {opt.note && (
                   <div
-                    className="relative mt-4 flex items-start gap-2 rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-foreground"
+                    className="relative mt-4 flex items-start gap-2 rounded-lg border border-black/10 bg-black/[0.04] px-3 py-2 text-sm text-foreground dark:border-white/15 dark:bg-white/5"
                     role="note"
                   >
                     <Info
