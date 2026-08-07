@@ -252,8 +252,8 @@ function AiVisual({ p }: { p: MotionValue<number> }) {
         <span>Embedding query → 12,400 transcript segments…</span>
       </Item>
       {[
-        ["Ep. 214 — Letting Go of the Shore", "0.94", 0.32],
-        ["Ep. 178 — The River Doesn't Wait", "0.91", 0.345],
+        ["Ep. 214: Letting Go of the Shore", "0.94", 0.32],
+        ["Ep. 178: The River Doesn't Wait", "0.91", 0.345],
       ].map(([title, score, at]) => (
         <Item key={title as string} p={p} at={at as number}>
           <div className="rounded-xl border border-border-theme bg-surface-alt/80 px-4 py-3 backdrop-blur">
@@ -311,7 +311,7 @@ function CyberVisual({ p }: { p: MotionValue<number> }) {
     [0.71, "$", "./audit --target api.internal"],
     [0.735, "scan", "TLS 1.3 enforced ✓ · CSP, HSTS ✓"],
     [0.76, "warn", "rate limiting missing on /auth"],
-    [0.785, "fix", "middleware applied — 429 after 20 req/min"],
+    [0.785, "fix", "middleware applied: 429 after 20 req/min"],
     [0.81, "$", "status: hardened ✓"],
   ];
   return (
@@ -404,7 +404,7 @@ export default function ScrollStory() {
           p={p}
           range={C1}
           chapter={CHAPTERS[0]}
-          lead="Language models, embeddings, and RAG wired into real products — archives that transcribe and tag themselves, search that understands meaning."
+          lead="Language models, embeddings, and RAG wired into real products. Archives that transcribe and tag themselves, search that understands meaning."
         >
           <AiVisual p={p} />
         </Chapter>
@@ -422,7 +422,7 @@ export default function ScrollStory() {
           p={p}
           range={C3}
           chapter={CHAPTERS[2]}
-          lead="A cyber defense foundation shapes every system I touch — audit, harden, verify."
+          lead="A cyber defense foundation shapes every system I touch. Audit, harden, verify."
         >
           <CyberVisual p={p} />
         </Chapter>
