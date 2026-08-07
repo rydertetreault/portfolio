@@ -9,7 +9,7 @@ import {
   useReducedMotion,
   type MotionValue,
 } from "framer-motion";
-import { Sparkles, Code2, ShieldCheck, ChevronDown, Search } from "lucide-react";
+import { MessageSquareText, Code2, ShieldCheck, ChevronDown, Search } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════
    Cinematic pinned scroll-story (Omega ClearSpace / DappaSol
@@ -29,7 +29,7 @@ const C2: [number, number] = [0.44, 0.64]; // Engineering
 const C3: [number, number] = [0.66, 0.9]; // Cyber
 
 const CHAPTERS = [
-  { n: "01", title: "AI Integration", icon: Sparkles },
+  { n: "01", title: "AI Integration", icon: MessageSquareText },
   { n: "02", title: "Engineering", icon: Code2 },
   { n: "03", title: "Cyber Defense", icon: ShieldCheck },
 ] as const;
@@ -244,16 +244,16 @@ function AiVisual({ p }: { p: MotionValue<number> }) {
     <div className="flex flex-col gap-3 text-sm">
       <Item p={p} at={0.26} className="self-end max-w-[85%]">
         <div className="rounded-2xl rounded-br-md border border-border-theme bg-accent-subtle px-4 py-2.5 text-foreground">
-          Find every episode about impermanence
+          What has Ryder built?
         </div>
       </Item>
       <Item p={p} at={0.29} className="flex items-center gap-2 text-xs text-text-faint">
         <Search size={13} className="text-accent" />
-        <span>Embedding query → 12,400 transcript segments…</span>
+        <span>Embedding query → searching rydertetreault.dev…</span>
       </Item>
       {[
-        ["Ep. 214: Letting Go of the Shore", "0.94", 0.32],
-        ["Ep. 178: The River Doesn't Wait", "0.91", 0.345],
+        ["Projects · Media Library: self-transcribing AI archive", "0.96", 0.32],
+        ["Experience · AI-driven analytics that surface insight", "0.92", 0.345],
       ].map(([title, score, at]) => (
         <Item key={title as string} p={p} at={at as number}>
           <div className="rounded-xl border border-border-theme bg-surface-alt/80 px-4 py-3 backdrop-blur">
@@ -265,7 +265,7 @@ function AiVisual({ p }: { p: MotionValue<number> }) {
         </Item>
       ))}
       <Item p={p} at={0.37} className="flex flex-wrap gap-2">
-        {["RAG", "Vector search", "Whisper", "Auto-tagging"].map((t) => (
+        {["RAG", "Vector search", "Embeddings", "Semantic search"].map((t) => (
           <span
             key={t}
             className="rounded-full border border-border-theme bg-accent-subtle px-3 py-1 text-xs text-accent"
@@ -404,7 +404,7 @@ export default function ScrollStory() {
           p={p}
           range={C1}
           chapter={CHAPTERS[0]}
-          lead="Language models, embeddings, and RAG wired into real products. Archives that transcribe and tag themselves, search that understands meaning."
+          lead="Language models, embeddings, and RAG wired into real products. Ask a question in plain English, get answers grounded in your own data."
         >
           <AiVisual p={p} />
         </Chapter>
