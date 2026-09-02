@@ -2,19 +2,11 @@
 
 import { Sun, Moon } from "lucide-react";
 import { useTheme } from "./ThemeProvider";
-import { useEffect, useState } from "react";
 
 export default function ThemeToggle({ className = "" }: { className?: string }) {
+  // `theme` comes from useSyncExternalStore with a fixed server snapshot, so the
+  // server and hydrating client always agree; React then corrects it on the client.
   const { theme, toggleTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return <div className={`w-[18px] h-[18px] ${className}`} />;
-  }
 
   return (
     <button

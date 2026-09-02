@@ -9,6 +9,7 @@ import LiveDecode from "./LiveDecode";
 import AsciiCorruption, { corruptionBus } from "./AsciiCorruption";
 import IntroStage, { type IntroEvent } from "./intro/IntroStage";
 import ScanReadout, { type ReadoutLine } from "./intro/ScanReadout";
+import ThemeToggle from "./ThemeToggle";
 import { loadFaceData, type FaceData } from "./intro/face-data";
 
 /* ═══════════════════════════════════════════════════════════
@@ -317,6 +318,12 @@ export default function AsciiFace({ onIntroDone }: AsciiFaceProps = {}) {
             <ScanReadout key="readout" lines={lines} counterRef={counterRef} barRef={barRef} />
           )}
         </AnimatePresence>
+
+        {/* Theme toggle: the site nav is hidden while the intro is up, so
+            expose light/dark switching directly on the overlay. */}
+        {phase !== "done" && (
+          <ThemeToggle className="absolute top-6 right-6 z-40 text-text-faint hover:text-accent sm:right-10" />
+        )}
 
         {/* Skip */}
         {phase !== "done" && (

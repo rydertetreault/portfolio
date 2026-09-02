@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
+import { normalizePathname } from "@/lib/utils";
 import "@/components/ascii-ui/deeplink.css";
 
 const sectionItems = [
@@ -15,7 +16,8 @@ const sectionItems = [
 ];
 
 export default function NavBar() {
-  const pathname = usePathname();
+  // Normalised: Vercel prerenders "/" as "/index" on the server, "/" in the browser.
+  const pathname = normalizePathname(usePathname());
   const isHome = pathname === "/";
   const isProjects = pathname.startsWith("/projects");
   const isResume = pathname.startsWith("/resume");

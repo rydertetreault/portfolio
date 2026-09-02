@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
+import { normalizePathname } from "@/lib/utils";
 import { AsciiFieldEngine } from "./engine";
 import { asciiFieldStore } from "./store";
 import { DEFAULT_CONFIG, type AsciiFieldConfig } from "./config";
@@ -69,7 +70,7 @@ export default function AsciiBackground({
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const backdropRef = useRef<HTMLCanvasElement>(null);
-  const pathname = usePathname();
+  const pathname = normalizePathname(usePathname());
   const routePreset = presetForPath(pathname, routePresets);
   // Routes outside the map (e.g. legal pages with opaque backgrounds) get no canvas at all.
   const active = preset !== undefined || routePreset !== null;
@@ -168,6 +169,7 @@ export default function AsciiBackground({
       if (!engine) return;
       const c = { ...DEFAULT_CONFIG.colors, ...config?.colors };
       engine.setColors(readVar(c.loVar, "#7a7a7a"), readVar(c.hiVar, "#ffffff"));
+      engine.setGain(parseFloat(readVar("--ascii-gain", "1")));
       engine.setBackdropColor(readVar("--background", "#050505"));
     };
 

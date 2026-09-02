@@ -93,6 +93,8 @@ export class AsciiFieldEngine {
   private charIndex = new Map<string, number>();
   private loColor = "#7a7a7a";
   private hiColor = "#ffffff";
+  /** Theme-level opacity multiplier on preset brightness (light mode needs more). */
+  private gain = 1;
 
   // Cell buffers
   private nBuf = new Float32Array(0); // near density (pre-shading) for gradients
@@ -218,6 +220,14 @@ export class AsciiFieldEngine {
   setParamsImmediate(p: FieldParams): void {
     this.target = p;
     this.cur = { ...p };
+    if (this.staticMode) this.renderStatic();
+  }
+
+  /** Theme brightness gain (from the `--ascii-gain` CSS variable); clamped to [0.25, 3]. */
+  setGain(gain: number): void {
+    const g = Number.isFinite(gain) ? Math.min(3, Math.max(0.25, gain)) : 1;
+    if (g === this.gain) return;
+    this.gain = g;
     if (this.staticMode) this.renderStatic();
   }
 
@@ -1092,7 +1102,7 @@ export class AsciiFieldEngine {
     const levels = Math.round(p.levels);
     const banded = levels > 0;
     const gamma = p.levelGamma;
-    const brightness = p.brightness;
+    const brightness = Math.min(1, p.brightness * this.gain);
     const qMask = this.qMask;
     const thin = banded ? 0 : cfg.thinBelow; // bands stay solid, no dithering
     // Accent palette: (a) optional patch colouring of peak/mid cells, (b) short strips.

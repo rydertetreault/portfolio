@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { normalizePathname } from "@/lib/utils";
 import { asciiFieldStore } from "@/components/ascii-field/store";
 import { corruptText, wipeText, decodePage } from "./corrupt";
 import "./terminal.css";
@@ -49,7 +50,7 @@ const TERMINAL_SCRIPT = (href: string) => ({
 
 export default function PageTransition() {
   const router = useRouter();
-  const pathname = usePathname();
+  const pathname = normalizePathname(usePathname());
   const busy = useRef(false);
   const pathWaiters = useRef<{ target: string; resolve: () => void }[]>([]);
 
