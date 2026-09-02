@@ -35,6 +35,9 @@ const KIND_POINTER = 2;
  *  collapse – CRT-style: the field squashes to a bright centre line, then a dot (holds)
  *  expand   – the reverse of collapse
  */
+/** Max rows a traced contour may move per column (steeper = contour ended). */
+const TRACE_MAX_JUMP = 4;
+
 export type FxKind = "cover" | "reveal" | "collapse" | "expand";
 
 function smoothstep(e0: number, e1: number, x: number): number {
@@ -552,11 +555,14 @@ export class AsciiFieldEngine {
   }
 
   /**
-   * Walk along the edge of `band` starting at (col,row): at each step pick the
-   * neighbouring row that stays on the band boundary, so the path follows the
-   * contour line. `prev` (last frame's rows per step) adds hysteresis so the path
-   * only moves when the contour does. The result is median-smoothed to remove
-   * single-cell jaggies. Returns the path as parallel col/row arrays.
+   * Walk along the edge of `band` starting at (col,row), one column per step.
+   * Every step lands on a real edge cell of the *same* band (a `band` cell whose
+   * neighbour on `side` is not `band`), searching up to `TRACE_MAX_JUMP` rows so
+   * steep contours are followed instead of hopping onto an adjacent band. The path
+   * stops when the contour leaves that window. `prev` (last frame's rows per step)
+   * is only a tie-breaker between valid edge cells, so the accent never sits off
+   * the contour just to stay put. No post-smoothing: the path is the contour.
+   * Returns the path as parallel col/row arrays (one entry per column).
    */
   private tracePath(
     col: number,
@@ -580,35 +586,39 @@ export class AsciiFieldEngine {
       outCols.push(c);
       outRows.push(r);
       const nc = c + dir;
-      let best = 0;
-      let bestScore = Infinity;
+      if (nc < 0 || nc >= this.cols) break;
       const want = prev && prev.length > i + 1 ? prev[i + 1] : Number.NaN;
-      for (let dr = -1; dr <= 1; dr++) {
-        const b = this.bandAt(nc, r + dr, levels);
-        if (b < 0) continue;
-        const onEdge = this.bandAt(nc, r + dr + side, levels) !== band;
-        let score = Math.abs(b - band) * 10 + (onEdge ? 0 : 4) + (dr === lastDr ? 0 : 0.6) + hash2(nc, r + dr) * 0.3;
-        if (!Number.isNaN(want)) score += Math.abs(r + dr - want) * 2.5; // stick to last frame's path
+      let best = Number.NaN;
+      let bestScore = Infinity;
+      for (let dr = -TRACE_MAX_JUMP; dr <= TRACE_MAX_JUMP; dr++) {
+        const nr = r + dr;
+        if (this.bandAt(nc, nr, levels) !== band) continue;
+        if (this.bandAt(nc, nr + side, levels) === band) continue; // interior, not the edge
+        // The contour must be continuous between the two columns: the cells spanned by
+        // the jump belong to `band` in one column or the other.
+        if (!this.edgeContinuous(c, nc, r, nr, band, levels)) continue;
+        let score = Math.abs(dr) + (dr === lastDr ? 0 : 0.25);
+        if (!Number.isNaN(want)) score += Math.abs(nr - want) * 0.5; // prefer last frame's rows (tie-break)
         if (score < bestScore) {
           bestScore = score;
           best = dr;
         }
       }
-      if (bestScore >= 20) break; // contour ended
+      if (Number.isNaN(best)) break; // contour ended / left the window
       c = nc;
       r += best;
       lastDr = best;
     }
-    // Median-of-3 on the rows: removes one-cell spikes without moving the curve.
-    if (outRows.length >= 3) {
-      const src = outRows.slice();
-      for (let i = 1; i < src.length - 1; i++) {
-        const a = src[i - 1];
-        const b = src[i];
-        const cc = src[i + 1];
-        outRows[i] = Math.max(Math.min(a, b), Math.min(Math.max(a, b), cc));
-      }
+  }
+
+  /** Cells between rows r0 and r1 (exclusive) are `band` in column a or column b. */
+  private edgeContinuous(a: number, b: number, r0: number, r1: number, band: number, levels: number): boolean {
+    const lo = Math.min(r0, r1) + 1;
+    const hi = Math.max(r0, r1) - 1;
+    for (let r = lo; r <= hi; r++) {
+      if (this.bandAt(a, r, levels) !== band && this.bandAt(b, r, levels) !== band) return false;
     }
+    return true;
   }
 
   /** Path quality: how many bends it has and how often it reverses (zigzags). */
@@ -627,13 +637,30 @@ export class AsciiFieldEngine {
     return { bends, zigzags };
   }
 
-  /** Materialise a path into cell indices (optionally two cells thick). */
-  private stampPath(cols: number[], rows: number[], thick: number, side: -1 | 1, out: number[]): void {
+  /**
+   * Materialise a path into cell indices (optionally two cells thick). Where the
+   * contour jumps several rows between columns, the vertical run of `band` cells
+   * spanning the jump is filled in so the accent stays a continuous line.
+   */
+  private stampPath(cols: number[], rows: number[], thick: number, side: -1 | 1, out: number[], band = -1, levels = 0): void {
     out.length = 0;
+    const W = this.cols;
     for (let i = 0; i < cols.length; i++) {
-      out.push(rows[i] * this.cols + cols[i]);
-      const r2 = rows[i] - side;
-      if (thick === 2 && r2 >= 0 && r2 < this.rows) out.push(r2 * this.cols + cols[i]);
+      const c = cols[i];
+      const r = rows[i];
+      out.push(r * W + c);
+      const r2 = r - side;
+      if (thick === 2 && r2 >= 0 && r2 < this.rows) out.push(r2 * W + c);
+      if (band >= 0 && i > 0) {
+        const pc = cols[i - 1];
+        const pr = rows[i - 1];
+        const lo = Math.min(pr, r) + 1;
+        const hi = Math.max(pr, r) - 1;
+        for (let k = lo; k <= hi; k++) {
+          if (this.bandAt(pc, k, levels) === band) out.push(k * W + pc);
+          else if (this.bandAt(c, k, levels) === band) out.push(k * W + c);
+        }
+      }
     }
   }
 
@@ -1163,7 +1190,7 @@ export class AsciiFieldEngine {
         pathR.splice(to);
         pathC.splice(0, Math.min(from, pathC.length));
         pathR.splice(0, Math.min(from, pathR.length));
-        this.stampPath(pathC, pathR, st.thick, st.side, traced);
+        this.stampPath(pathC, pathR, st.thick, st.side, traced, st.band, levels);
       }
       for (let i = 0; i < traced.length; i++) {
         stripPal[traced[i]] = st.pal;
@@ -1200,7 +1227,7 @@ export class AsciiFieldEngine {
           const usePrev = prev.length > 0 && prev[0] === best ? prev : null;
           this.tracePath(pc, best, b, side, dir, n, levels, usePrev, pathC, pathR);
           this.cursorPrev[slot] = pathR.slice();
-          this.stampPath(pathC, pathR, 1, side, traced);
+          this.stampPath(pathC, pathR, 1, side, traced, b, levels);
           for (let i = 0; i < traced.length; i++) {
             const env = this.pointerStrength * (1 - (i / n) * 0.85);
             if (env > stripEnv[traced[i]] || !stripPal[traced[i]]) {
