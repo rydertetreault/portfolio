@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import ThemeProvider from "@/components/ThemeProvider";
 import NavBar from "@/components/NavBar";
+import { AsciiBackground } from "@/components/ascii-field";
+import PageTransition from "@/components/ascii-ui/PageTransition";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -85,6 +87,11 @@ export default function RootLayout({
       >
         <ThemeProvider>
           <Analytics />
+          {/* Persistent ASCII plasma/topography field: one canvas for the whole site,
+              morphs per route and fires a shockwave on navigation (never remounts). */}
+          <AsciiBackground quietZoneSelector="[data-ascii-quiet]" />
+          {/* Link-click choreography: cloud sweep / terminal collapse, driven by the field */}
+          <PageTransition />
           <NavBar />
           {children}
         </ThemeProvider>

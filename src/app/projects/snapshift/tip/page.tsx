@@ -45,7 +45,7 @@ export default function SnapShiftTip() {
           style={{
             transform: "rotate(-38deg)",
             background:
-              "linear-gradient(90deg, transparent, rgba(34,197,94,0.05), transparent)",
+              "linear-gradient(90deg, transparent, rgba(163,230,53,0.05), transparent)",
           }}
         />
         <div
@@ -53,7 +53,7 @@ export default function SnapShiftTip() {
           style={{
             transform: "rotate(-38deg)",
             background:
-              "linear-gradient(90deg, transparent, rgba(34,197,94,0.035), transparent)",
+              "linear-gradient(90deg, transparent, rgba(163,230,53,0.035), transparent)",
           }}
         />
         <div
@@ -61,7 +61,7 @@ export default function SnapShiftTip() {
           style={{
             transform: "rotate(-38deg)",
             background:
-              "linear-gradient(180deg, transparent 10%, rgba(34,197,94,0.20) 50%, transparent 90%)",
+              "linear-gradient(180deg, transparent 10%, rgba(163,230,53,0.20) 50%, transparent 90%)",
           }}
         />
         <div
@@ -69,7 +69,7 @@ export default function SnapShiftTip() {
           style={{
             transform: "rotate(-38deg)",
             background:
-              "linear-gradient(180deg, transparent 15%, rgba(34,197,94,0.12) 50%, transparent 85%)",
+              "linear-gradient(180deg, transparent 15%, rgba(163,230,53,0.12) 50%, transparent 85%)",
           }}
         />
       </div>

@@ -38,7 +38,7 @@ export default function Image() {
           style={{
             width: 60,
             height: 3,
-            backgroundColor: '#34d399',
+            backgroundColor: '#a3e635',
             borderRadius: 2,
             marginTop: 24,
             marginBottom: 24,

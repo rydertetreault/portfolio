@@ -1,0 +1,18 @@
+/* While a section deep link (/#experience …) is arriving, the homepage intro must
+   not flash: keep the field and nav visible and hide the intro overlay until
+   HomeShell has switched to skip mode. Set by NavBar, cleared by HomeContent. */
+html.ascii-deeplink body[data-intro-active] canvas.ascii-field-canvas {
+  opacity: 1 !important;
+}
+html.ascii-deeplink body[data-intro-active] nav {
+  opacity: 1;
+  pointer-events: auto;
+}
+html.ascii-deeplink body > div.fixed.inset-0.z-\[100\] {
+  visibility: hidden !important;
+}
+/* No fade on the field while the guard is up (the intro rule would otherwise
+   transition it back from 0 once its flag drops). */
+html.ascii-deeplink canvas.ascii-field-canvas {
+  transition: none !important;
+}

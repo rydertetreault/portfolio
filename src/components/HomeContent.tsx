@@ -22,6 +22,7 @@ import {
 import type { GitHubRepo } from "@/lib/github";
 import { formatRepoName, formatDateRange } from "@/lib/utils";
 import AppleIcon from "@/components/icons/AppleIcon";
+import { revealSection } from "@/components/ascii-ui/corrupt";
 
 
 /* ═══════════════════════════════════════════
@@ -182,6 +183,111 @@ export default function HomeContent({ repos }: { repos: GitHubRepo[] }) {
     return () => container.removeEventListener("scroll", onScroll);
   }, [sections]);
 
+  /* Deep links (/#experience etc. from other pages): jump straight past the pinned
+     intro and scroll the inner panel to the section, instead of landing on the top
+     of the homepage. Also handles hash changes while already on the page. */
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+    const ids = new Set<string>(sections.map((s) => s.id));
+
+    const goTo = (id: string, smooth: boolean) => {
+      if (!id || !ids.has(id)) return false;
+      const target = document.getElementById(id);
+      const main = container.closest("main");
+      if (!target || !main) return false;
+      // 1. Skip the intro: put the (h-screen) main at the top of the viewport.
+      //    (offsetTop ignores in-flight entrance transforms, so retries don't jitter.)
+      const mainTop = (main as HTMLElement).offsetTop;
+      if (Math.abs(window.scrollY - mainTop) > 2) window.scrollTo({ top: mainTop, behavior: "instant" });
+      // 2. Scroll the inner panel so the section sits just below the fixed nav.
+      const navH = document.querySelector("nav")?.getBoundingClientRect().height ?? 64;
+      const offset = target.getBoundingClientRect().top - container.getBoundingClientRect().top - navH - 32;
+      if (Math.abs(offset) > 3) {
+        container.scrollTo({ top: container.scrollTop + offset, behavior: smooth ? "smooth" : "instant" });
+      }
+      return true;
+    };
+    const goToHash = (smooth: boolean) =>
+      goTo(decodeURIComponent(window.location.hash.replace(/^#/, "")), smooth);
+
+    // Section load-in: blocks appear one at a time, decoding out of corruption,
+    // some glitching. The field itself is left alone (no row-tear, no shockwave).
+    // The deep-link guard (html.ascii-deeplink, set by NavBar) keeps the field visible
+    // while the intro shell is still flagged; release it only once that flag is gone,
+    // otherwise the field snaps to 0 and fades back in (a "fade to black").
+    const releaseDeepLink = () => {
+      const t0 = performance.now();
+      const tick = () => {
+        if (!document.body.hasAttribute("data-intro-active") || performance.now() - t0 > 3000) {
+          document.documentElement.classList.remove("ascii-deeplink");
+        } else {
+          requestAnimationFrame(tick);
+        }
+      };
+      requestAnimationFrame(tick);
+    };
+    const loadIn = (id: string) => {
+      const target = document.getElementById(id);
+      if (!target) return;
+      releaseDeepLink();
+      void revealSection(target);
+    };
+    // On-page: wait for the smooth scroll to land before loading the section in,
+    // otherwise the blocks decode while still off-screen.
+    const loadInWhenSettled = (id: string) => {
+      const target = document.getElementById(id);
+      if (!target) return;
+      const navH = document.querySelector("nav")?.getBoundingClientRect().height ?? 64;
+      const wanted = navH + 32;
+      let last = Number.NaN;
+      let stable = 0;
+      const t0 = performance.now();
+      const tick = () => {
+        const top = target.getBoundingClientRect().top;
+        const arrived = Math.abs(top - wanted) < 6;
+        stable = Math.abs(top - last) < 1 ? stable + 1 : 0;
+        last = top;
+        if (arrived || stable >= 3 || performance.now() - t0 > 1200) loadIn(id);
+        else requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    };
+
+    // On arrival via deep link: layout can still settle (fonts, intro sizing) → retry briefly.
+    if (window.location.hash) {
+      if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+      let tries = 0;
+      let started = false;
+      const attempt = () => {
+        const ok = goToHash(false);
+        if (ok && !started) {
+          // Hide + load in immediately on the first successful scroll; later
+          // attempts only re-correct the scroll position as layout settles.
+          started = true;
+          loadIn(decodeURIComponent(window.location.hash.slice(1)));
+        }
+        if (++tries < 4) setTimeout(attempt, 120);
+      };
+      requestAnimationFrame(attempt);
+    }
+
+    const onHashChange = () => {
+      if (goToHash(true)) loadInWhenSettled(decodeURIComponent(window.location.hash.slice(1)));
+    };
+    // On-page tab clicks (NavBar) dispatch this instead of touching the hash.
+    const onGoto = (e: Event) => {
+      const id = (e as CustomEvent<{ id: string }>).detail?.id;
+      if (goTo(id, true)) loadInWhenSettled(id);
+    };
+    window.addEventListener("hashchange", onHashChange);
+    window.addEventListener("portfolio-goto", onGoto);
+    return () => {
+      window.removeEventListener("hashchange", onHashChange);
+      window.removeEventListener("portfolio-goto", onGoto);
+    };
+  }, [sections]);
+
   const FEATURED_NAMES = [
     "media-library",
     "analytics-api",
@@ -193,46 +299,13 @@ export default function HomeContent({ repos }: { repos: GitHubRepo[] }) {
     .filter((r): r is GitHubRepo => !!r);
 
   return (
-    <main className="relative h-screen text-foreground bg-background overflow-hidden animate-fade-in">
-      {/* Diagonal gradient bands */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden opacity-50">
-        <div
-          className="absolute -top-full left-[10%] w-[300px] h-[300%]"
-          style={{
-            transform: "rotate(-38deg)",
-            background:
-              "linear-gradient(90deg, transparent, rgba(34,197,94,0.05), transparent)",
-          }}
-        />
-        <div
-          className="absolute -top-full right-[20%] w-[220px] h-[300%]"
-          style={{
-            transform: "rotate(-38deg)",
-            background:
-              "linear-gradient(90deg, transparent, rgba(34,197,94,0.035), transparent)",
-          }}
-        />
-        <div
-          className="absolute -top-full left-[30%] w-px h-[300%]"
-          style={{
-            transform: "rotate(-38deg)",
-            background:
-              "linear-gradient(180deg, transparent 10%, rgba(34,197,94,0.20) 50%, transparent 90%)",
-          }}
-        />
-        <div
-          className="absolute -top-full right-[35%] w-px h-[300%]"
-          style={{
-            transform: "rotate(-38deg)",
-            background:
-              "linear-gradient(180deg, transparent 15%, rgba(34,197,94,0.12) 50%, transparent 85%)",
-          }}
-        />
-      </div>
-
+    <main className="relative z-10 h-screen text-foreground overflow-hidden animate-fade-in">
       <div className="relative h-full flex flex-col lg:flex-row max-w-7xl mx-auto">
         {/* ═══ LEFT PANEL (fixed, never scrolls) ═══ */}
-        <aside className="relative hidden lg:flex flex-col justify-center shrink-0 w-[420px] xl:w-[460px] h-full px-12 xl:px-16">
+        <aside
+          data-ascii-quiet="0.7"
+          className="relative hidden lg:flex flex-col justify-center shrink-0 w-[420px] xl:w-[460px] h-full px-12 xl:px-16 bg-background/45 backdrop-blur-[0.5px] border-r border-border-theme/40"
+        >
           <div className="space-y-10">
             {/* Profile + Name */}
             <div className="space-y-6">
@@ -338,7 +411,8 @@ export default function HomeContent({ repos }: { repos: GitHubRepo[] }) {
         {/* ═══ RIGHT PANEL (only this scrolls) ═══ */}
         <div
           ref={scrollRef}
-          className="relative flex-1 h-full overflow-y-auto px-6 sm:px-10 lg:px-16 py-16 sm:py-20 lg:py-24"
+          data-ascii-quiet="0.7"
+          className="relative flex-1 h-full overflow-y-auto px-6 sm:px-10 lg:px-16 py-16 sm:py-20 lg:py-24 bg-background/45 backdrop-blur-[0.5px]"
         >
           {/* Mobile header (shown only on small screens) */}
           <div className="lg:hidden mb-16 space-y-6">

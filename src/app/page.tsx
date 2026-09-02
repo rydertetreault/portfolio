@@ -1,14 +1,14 @@
 import { fetchGitHubRepos } from "@/lib/github";
-import HomeContent from "@/components/HomeContent";
-import ScrollStory from "@/components/ScrollStory";
+import HomeShell from "@/components/HomeShell";
 
 export default async function Home() {
   const repos = await fetchGitHubRepos();
   return (
     <>
-      {/* Pinned scroll-scrubbed intro timeline — ends by releasing into the site */}
-      <ScrollStory />
-      <HomeContent repos={repos} />
+      {/* Client shell coordinates the auto-play intro (hands → face scan)
+          with the real homepage. The intro provides its own bottom-30%
+          ASCII pattern derived from hand.jpg; no ambient waveform. */}
+      <HomeShell repos={repos} />
     </>
   );
 }

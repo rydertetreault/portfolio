@@ -39,3 +39,17 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# ascii face/hand generation: raw source media + scratch output (dev only)
+/.face-frames/
+/.face-work/
+/public/_dev-frames/
+/face.mp4
+/*.mp4
+/frameface.png
+/handofgod.png
+/hand.jpg
+/profile.jpg
+/ig portait.png
+/Screenshot *.png
+/*.webp

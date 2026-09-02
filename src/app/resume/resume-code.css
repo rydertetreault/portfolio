@@ -1,0 +1,312 @@
+/* ─────────────────────────────────────────────────────────────
+   Resume as source code: syntax palette, indent guides. Window chrome: ascii-ui/terminal.css
+   Imported by app/resume/page.tsx only.
+   ───────────────────────────────────────────────────────────── */
+
+:root,
+:root.light {
+  --code-kw: #0000ff;        /* import / export / const */
+  --code-type: #267f99;      /* Resume, void */
+  --code-fn: #795e26;        /* main(), render() */
+  --code-str: #171717;       /* string values: the actual content */
+  --code-prop: #0451a5;      /* top-level keys */
+  --code-prop2: #6f42c1;     /* nested keys */
+  --code-punc: #6b6b6b;      /* { } [ ] : , ; */
+  --code-comment: #6a8f5b;   /* // … */
+  --code-guide: rgba(0, 0, 0, 0.14);
+}
+
+:root.dark {
+  --code-kw: #569cd6;
+  --code-type: #4ec9b0;
+  --code-fn: #dcdcaa;
+  --code-str: #f2f2f2;       /* content reads white */
+  --code-prop: #9cdcfe;      /* top-level keys: light blue */
+  --code-prop2: #c4a7e7;     /* nested keys: soft lavender */
+  --code-punc: #7a7a7a;
+  --code-comment: #6a9955;
+  --code-guide: rgba(255, 255, 255, 0.12);
+}
+
+/* ── transcript ── */
+
+.tp-transcript {
+  counter-reset: line;
+  background-image: linear-gradient(to right, var(--term-gutter) 0, var(--term-gutter) 3.5rem, transparent 3.5rem);
+}
+
+.tp-transcript [data-line] {
+  position: relative;
+  display: flex;
+  counter-increment: line;
+}
+
+.tp-transcript [data-line]::before {
+  content: counter(line);
+  position: absolute;
+  left: -3.25rem;
+  width: 2.5rem;
+  text-align: right;
+  color: var(--text-faint);
+  opacity: 0.5;
+  font-variant-numeric: tabular-nums;
+}
+
+/* the line being written gets a subtle current-line highlight, like an editor */
+.tp-transcript .tp-cursor {
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  box-shadow: -3.5rem 0 0 color-mix(in srgb, var(--accent) 6%, transparent);
+}
+
+.tp-transcript .tp-cursor::before {
+  color: var(--accent);
+  opacity: 1;
+}
+
+/* VS Code-style indent guides: one per nesting level, lit on the active line */
+.tp-guide {
+  flex: none;
+  width: 2ch;
+  border-left: 1px solid var(--code-guide);
+  transition: border-color 200ms ease;
+}
+
+.tp-cursor .tp-guide {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.tp-code {
+  min-width: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.tok-kw { color: var(--code-kw); }
+.tok-type { color: var(--code-type); }
+.tok-fn { color: var(--code-fn); }
+.tok-str { color: var(--code-str); }
+.tok-prop { color: var(--code-prop); }
+.tok-prop2 { color: var(--code-prop2); }
+.tok-punc { color: var(--code-punc); }
+.tok-comment { color: var(--code-comment); font-style: italic; }
+.tok-num { color: var(--code-type); }
+.tok-section { color: var(--accent); font-style: normal; letter-spacing: 0.18em; }
+.tok-rule { color: var(--code-punc); font-style: normal; opacity: 0.7; }
+
+.tp-cursor .tp-code::after {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 0.95em;
+  margin-left: 4px;
+  vertical-align: -0.15em;
+  background: var(--accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tp-guide {
+    transition: none;
+  }
+}
+
+/* status bar: "typing… click to skip" while the transcript is being written */
+.tp-status-typing { display: none; }
+.term-window:has(.tp-typing) .tp-status-typing { display: inline; }
+.term-window:has(.tp-typing) .tp-status-ready { display: none; }
+.term-window:has(.tp-typing) .tp-transcript { cursor: pointer; }
+
+/* ── rendered preview (VS Code markdown-preview feel) ── */
+
+.md-preview {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--foreground);
+  max-width: 62rem;
+}
+
+.md-preview h1 {
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.md-preview .md-lead {
+  margin-top: 0.75rem;
+  color: var(--text-muted);
+}
+
+.md-preview .md-contact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  margin-top: 0.25rem;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.md-preview .md-contact span {
+  color: var(--text-faint);
+}
+
+.md-preview a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  text-underline-offset: 4px;
+}
+
+.md-preview a:hover {
+  text-decoration-color: var(--accent);
+}
+
+.md-preview h2 {
+  margin-top: 2.25rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* rendered headings don't show "##": a lime accent bar marks the section instead */
+.md-preview h2 {
+  position: relative;
+  padding-left: 0.9rem;
+}
+
+.md-preview h2::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.35em;
+  bottom: 0.65em;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.md-preview section {
+  margin-top: 1.25rem;
+}
+
+.md-preview h3 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.md-preview h3 em,
+.md-preview li > em {
+  margin-left: auto;
+  font-style: normal;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 12px;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
+.md-preview .md-at {
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.md-preview .md-context {
+  margin-top: 0.1rem;
+  font-size: 13px;
+  color: var(--text-faint);
+}
+
+.md-preview ul {
+  margin-top: 0.5rem;
+  padding-left: 1.4rem;
+  list-style: none;
+}
+
+.md-preview li {
+  position: relative;
+  margin: 0.3rem 0;
+  color: var(--text-muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.5rem;
+}
+
+.md-preview li strong {
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+.md-preview li::before {
+  content: "•";
+  position: absolute;
+  left: -1.1rem;
+  color: var(--accent);
+}
+
+.md-preview table {
+  margin-top: 0.75rem;
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.md-preview th,
+.md-preview td {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.md-preview th {
+  width: 12rem;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--term-bar);
+}
+
+.md-preview td {
+  color: var(--text-muted);
+}
+
+/* ── code folding ── */
+.tp-fold {
+  position: absolute;
+  left: -1.1rem;
+  width: 1rem;
+  cursor: pointer;
+  color: var(--text-faint);
+  opacity: 0.6;
+  font-size: 12px;
+  line-height: inherit;
+  transition: color 150ms ease, opacity 150ms ease;
+}
+.tp-fold:hover,
+[data-line]:hover .tp-fold {
+  color: var(--accent);
+  opacity: 1;
+}
+.tp-fold-pill {
+  margin: 0 0.25rem;
+  padding: 0 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--term-bar);
+  color: var(--text-muted);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: color 150ms ease, border-color 150ms ease;
+}
+.tp-fold-pill:hover {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+}

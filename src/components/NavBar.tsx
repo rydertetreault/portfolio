@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
+import "@/components/ascii-ui/deeplink.css";
 
 const sectionItems = [
   { id: "experience", label: "Experience" },
@@ -46,15 +47,24 @@ export default function NavBar() {
 
   const handleSectionClick = (id: string) => {
     setMobileMenuOpen(false);
-    document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+    // HomeContent scrolls the inner panel and runs the section load-in effect.
+    window.dispatchEvent(new CustomEvent("portfolio-goto", { detail: { id } }));
+  };
+
+  // Cross-page section links: flag the arrival so the homepage intro can't flash
+  // before it is skipped (see ascii-ui/deeplink.css). HomeContent clears the flag.
+  const markDeepLink = () => {
+    setMobileMenuOpen(false);
+    document.documentElement.classList.add("ascii-deeplink");
+    window.setTimeout(() => document.documentElement.classList.remove("ascii-deeplink"), 4000);
   };
 
   return (
     <nav
-      className={`fixed top-0 left-0 right-0 z-50 backdrop-blur-2xl transition-all duration-500 ${
+      className={`fixed top-0 left-0 right-0 z-50 bg-surface backdrop-blur-2xl border-b transition-[border-color,box-shadow] duration-500 ${
         scrolled
-          ? "bg-surface border-b border-border-theme shadow-lg shadow-[var(--shadow-color)]"
-          : "bg-surface"
+          ? "border-border-theme shadow-lg shadow-[var(--shadow-color)]"
+          : "border-transparent shadow-none"
       }`}
     >
       <div className="mx-auto max-w-6xl px-6 sm:px-8 flex items-center justify-end h-16 pt-[env(safe-area-inset-top)]">
@@ -62,9 +72,9 @@ export default function NavBar() {
         <div className="hidden md:flex items-center gap-8">
           {isHome ? (
             <button
-              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+              onClick={() => handleSectionClick("about")}
               className={`text-sm transition-colors duration-300 cursor-pointer ${
-                !activeSection
+                !activeSection || activeSection === "about"
                   ? "text-accent"
                   : "text-text-faint hover:text-foreground"
               }`}
@@ -73,7 +83,8 @@ export default function NavBar() {
             </button>
           ) : (
             <Link
-              href="/"
+              onClick={markDeepLink}
+                href="/#about"
               className="text-sm text-text-faint hover:text-foreground transition-colors duration-300"
             >
               Overview
@@ -147,12 +158,9 @@ export default function NavBar() {
           <div className="px-6 py-4 space-y-1">
             {isHome ? (
               <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                }}
+                onClick={() => handleSectionClick("about")}
                 className={`block w-full text-left py-3 text-sm transition-colors cursor-pointer ${
-                  !activeSection
+                  !activeSection || activeSection === "about"
                     ? "text-accent"
                     : "text-text-muted hover:text-accent"
                 }`}
@@ -161,8 +169,8 @@ export default function NavBar() {
               </button>
             ) : (
               <Link
-                href="/"
-                onClick={() => setMobileMenuOpen(false)}
+                href="/#about"
+                onClick={markDeepLink}
                 className="block w-full text-left py-3 text-sm text-text-muted hover:text-accent transition-colors"
               >
                 Overview
@@ -185,7 +193,7 @@ export default function NavBar() {
                 <Link
                   key={item.id}
                   href={`/#${item.id}`}
-                  onClick={() => setMobileMenuOpen(false)}
+                  onClick={markDeepLink}
                   className="block w-full text-left py-3 text-sm text-text-muted hover:text-accent transition-colors"
                 >
                   {item.label}

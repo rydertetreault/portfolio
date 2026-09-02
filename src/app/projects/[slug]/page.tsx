@@ -3,6 +3,8 @@ import Link from "next/link";
 import { ArrowLeft, ArrowUpRight, Github } from "lucide-react";
 import { projects } from "@/data/projects";
 import FadeIn from "@/components/FadeIn";
+import AsciiReveal from "@/components/ascii-ui/AsciiReveal";
+import { Panel, Prompt } from "@/components/ascii-ui";
 
 export function generateStaticParams() {
   return projects.map((p) => ({ slug: p.slug }));
@@ -21,62 +23,29 @@ export default async function ProjectDetail({
   }
 
   return (
-    <main className="relative min-h-screen text-foreground bg-background">
-      {/* Diagonal gradient bands */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div
-          className="absolute -top-full left-[10%] w-[300px] h-[300%]"
-          style={{
-            transform: "rotate(-38deg)",
-            background:
-              "linear-gradient(90deg, transparent, rgba(34,197,94,0.05), transparent)",
-          }}
-        />
-        <div
-          className="absolute -top-full right-[20%] w-[220px] h-[300%]"
-          style={{
-            transform: "rotate(-38deg)",
-            background:
-              "linear-gradient(90deg, transparent, rgba(34,197,94,0.035), transparent)",
-          }}
-        />
-        <div
-          className="absolute -top-full left-[30%] w-px h-[300%]"
-          style={{
-            transform: "rotate(-38deg)",
-            background:
-              "linear-gradient(180deg, transparent 10%, rgba(34,197,94,0.20) 50%, transparent 90%)",
-          }}
-        />
-        <div
-          className="absolute -top-full right-[35%] w-px h-[300%]"
-          style={{
-            transform: "rotate(-38deg)",
-            background:
-              "linear-gradient(180deg, transparent 15%, rgba(34,197,94,0.12) 50%, transparent 85%)",
-          }}
-        />
-      </div>
-
-      <div className="relative mx-auto max-w-3xl px-6 sm:px-10 lg:px-12 py-16 sm:py-20">
+    <main className="relative z-10 min-h-screen text-foreground">
+      <div className="relative mx-auto max-w-3xl px-6 sm:px-10 lg:px-12 pt-28 pb-16 sm:pt-32 sm:pb-20">
         {/* Back link */}
         <Link
           href="/projects"
-          className="inline-flex items-center gap-2 text-sm text-text-faint hover:text-accent transition-colors mb-12"
+          className="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.25em] text-text-faint hover:text-accent transition-colors mb-10"
         >
-          <ArrowLeft size={16} />
-          All projects
+          <ArrowLeft size={14} />
+          cd ..
         </Link>
 
         {/* Title block */}
         <FadeIn className="space-y-4 mb-12">
-          <span className="text-[11px] tracking-[0.25em] text-text-faint uppercase">
-            {project.category}
+          <Prompt command={`cat ~/projects/${project.slug}`} />
+          <span className="block font-mono text-[11px] tracking-[0.25em] text-text-faint uppercase">
+            <span className="text-accent">{">"}</span> {project.category}
           </span>
 
-          <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight">
-            {project.title}
-          </h1>
+          <AsciiReveal
+            as="h1"
+            text={project.title}
+            className="block text-4xl sm:text-5xl font-semibold tracking-[-0.03em]"
+          />
 
           <p className="text-text-muted text-lg leading-relaxed max-w-2xl">
             {project.description}
@@ -87,7 +56,7 @@ export default async function ProjectDetail({
             {project.tech.map((t) => (
               <span
                 key={t}
-                className="rounded-full border border-border-theme px-3 py-1 text-sm text-foreground"
+                className="border border-border-theme/60 bg-background/40 px-2.5 py-1 font-mono text-xs tracking-wider text-foreground"
               >
                 {t}
               </span>
@@ -124,9 +93,11 @@ export default async function ProjectDetail({
         <div className="h-px w-full bg-border-theme mb-12" />
 
         {/* Case study sections */}
-        <div className="space-y-16">
+        <Panel className="rounded-md px-6 py-10 sm:px-10 sm:py-12 space-y-16" quiet={0.75}>
           <FadeIn delay={0.05} className="space-y-4">
-            <h2 className="text-sm text-text-faint tracking-[0.35em]">
+            <h2 className="flex items-center gap-3 font-mono text-xs text-text-faint tracking-[0.3em]">
+              <span className="text-accent">01</span>
+              <span className="text-border-theme">{"//"}</span>
               PROBLEM
             </h2>
             <div className="h-px w-full bg-border-theme" />
@@ -136,7 +107,9 @@ export default async function ProjectDetail({
           </FadeIn>
 
           <FadeIn delay={0.1} className="space-y-4">
-            <h2 className="text-sm text-text-faint tracking-[0.35em]">
+            <h2 className="flex items-center gap-3 font-mono text-xs text-text-faint tracking-[0.3em]">
+              <span className="text-accent">02</span>
+              <span className="text-border-theme">{"//"}</span>
               APPROACH
             </h2>
             <div className="h-px w-full bg-border-theme" />
@@ -146,7 +119,9 @@ export default async function ProjectDetail({
           </FadeIn>
 
           <FadeIn delay={0.15} className="space-y-4">
-            <h2 className="text-sm text-text-faint tracking-[0.35em]">
+            <h2 className="flex items-center gap-3 font-mono text-xs text-text-faint tracking-[0.3em]">
+              <span className="text-accent">03</span>
+              <span className="text-border-theme">{"//"}</span>
               RESULT
             </h2>
             <div className="h-px w-full bg-border-theme" />
@@ -154,7 +129,7 @@ export default async function ProjectDetail({
               {project.result}
             </p>
           </FadeIn>
-        </div>
+        </Panel>
 
         {/* Footer */}
         <div className="mt-24 pt-8 border-t border-border-theme">

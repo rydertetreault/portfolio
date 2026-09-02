@@ -1,0 +1,79 @@
+/* ─────────────────────────────────────────────────────────────
+   Terminal / editor window chrome, shared by the resume editor
+   and the page-transition loading terminal.
+   ───────────────────────────────────────────────────────────── */
+
+:root,
+:root.light {
+  --term-bg: rgba(255, 255, 255, 0.72);
+  --term-bar: rgba(0, 0, 0, 0.04);
+  --term-gutter: rgba(0, 0, 0, 0.03);
+}
+
+:root.dark {
+  --term-bg: rgba(8, 8, 8, 0.82);
+  --term-bar: rgba(255, 255, 255, 0.035);
+  --term-gutter: rgba(255, 255, 255, 0.02);
+}
+
+.term-window {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--term-bg);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 30px 80px -30px rgba(0, 0, 0, 0.7),
+    0 0 0 1px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.term-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  height: 2.5rem;
+  padding: 0 0.9rem;
+  background: var(--term-bar);
+  border-bottom: 1px solid var(--border);
+}
+
+.term-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.term-dots span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--text-faint);
+  opacity: 0.45;
+}
+
+.term-dots span:first-child {
+  background: var(--accent);
+  opacity: 0.9;
+}
+
+.term-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 100%;
+  padding: 0 0.9rem;
+  border-right: 1px solid var(--border);
+  border-left: 1px solid var(--border);
+  background: var(--term-bg);
+  color: var(--foreground);
+}
+
+.term-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 0.5rem 0.9rem;
+  background: var(--term-bar);
+  border-top: 1px solid var(--border);
+  color: var(--text-faint);
+}

@@ -11,34 +11,39 @@
   --border: rgba(212, 212, 212, 0.60);
   --text-muted: #525252;
   --text-faint: #737373;
-  --accent: #059669;
-  --accent-hover: #047857;
-  --accent-subtle: rgba(5, 150, 105, 0.10);
+  --accent: #65a30d;
+  --accent-hover: #4d7c0f;
+  --accent-subtle: rgba(101, 163, 13, 0.12);
   --scrollbar-track: #f5f5f5;
   --scrollbar-thumb: #d4d4d4;
   --scrollbar-thumb-hover: #a3a3a3;
   --shadow-color: rgba(0, 0, 0, 0.08);
   --gradient-accent-opacity: 0.08;
   --dot-grid-opacity: 0.06;
+  /* ASCII cloud glyph colours (read by the canvas engine): lowlands → peaks */
+  --ascii-lo: #9a9a9a;
+  --ascii-hi: #2e2e2e;
 }
 
 :root.dark {
-  --background: #0a0a0a;
+  --background: #050505;
   --foreground: #ededed;
   --surface: rgba(10, 10, 10, 0.95);
   --surface-alt: rgba(5, 5, 5, 0.40);
   --border: rgba(38, 38, 38, 0.60);
   --text-muted: #a3a3a3;
   --text-faint: #737373;
-  --accent: #34d399;
-  --accent-hover: #6ee7b7;
-  --accent-subtle: rgba(52, 211, 153, 0.10);
+  --accent: #a3e635;
+  --accent-hover: #bef264;
+  --accent-subtle: rgba(163, 230, 53, 0.12);
   --scrollbar-track: #0a0a0a;
   --scrollbar-thumb: #262626;
   --scrollbar-thumb-hover: #404040;
   --shadow-color: rgba(0, 0, 0, 0.20);
   --gradient-accent-opacity: 0.05;
   --dot-grid-opacity: 0.04;
+  --ascii-lo: #5c5c5c;
+  --ascii-hi: #cfcfcf;
 }
 
 @theme inline {
@@ -130,3 +135,78 @@ body {
   transition: background-color 300ms ease, color 300ms ease, border-color 300ms ease !important;
 }
 
+
+/* ─── Terminal caret ─── */
+
+@keyframes caret {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+.animate-caret {
+  animation: caret 1.1s steps(1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-caret {
+    animation: none;
+  }
+}
+
+/* ─── Element glitch (sliced jitter) used by section load-ins ─── */
+
+@keyframes ascii-glitch {
+  0%   { transform: translateX(0);    clip-path: inset(0 0 0 0); }
+  15%  { transform: translateX(-3px); clip-path: inset(10% 0 58% 0); }
+  30%  { transform: translateX(2px);  clip-path: inset(46% 0 20% 0); }
+  45%  { transform: translateX(-1px); clip-path: inset(70% 0 6% 0); }
+  60%  { transform: translateX(0);    clip-path: inset(0 0 0 0); }
+  100% { transform: translateX(0);    clip-path: inset(0 0 0 0); }
+}
+
+.ascii-glitch {
+  animation: ascii-glitch 280ms steps(1, end) 1;
+  will-change: transform, clip-path;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ascii-glitch {
+    animation: none;
+  }
+}
+
+/* Page arriving under a text transition: hidden until its first decoded frame */
+html.ascii-arriving main {
+  visibility: hidden;
+}
+
+/* Homepage intro: the ASCII background field is hidden while the intro
+   overlay (hands screen) is up, and fades back in behind the overview. */
+canvas.ascii-field-canvas {
+  transition: opacity 700ms ease;
+}
+body[data-intro-active] canvas.ascii-field-canvas {
+  opacity: 0 !important;
+  transition: none; /* hide instantly; only the reveal fades */
+}
+
+/* Homepage intro: no header until the overview is revealed. The nav lives in
+   the root layout, so it is hidden via the same body flag and fades in once
+   the intro finishes. */
+body[data-intro-active] nav {
+  opacity: 0;
+  pointer-events: none;
+  transition: none;
+}
+nav {
+  /* keep NavBar's own border/shadow transitions alongside the reveal fade */
+  transition: opacity 600ms ease, border-color 500ms, box-shadow 500ms;
+}
+
+/* Homepage intro: blinking terminal caret on the convergence status line */
+.intro-caret {
+  animation: intro-caret-blink 1s steps(2, start) infinite;
+}
+@keyframes intro-caret-blink {
+  to { visibility: hidden; }
+}

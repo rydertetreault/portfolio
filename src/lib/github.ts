@@ -25,7 +25,15 @@ const GITHUB_USERNAME = "rydertetreault";
 
 /** Local overrides for GitHub repo fields (keyed by repo name) */
 const repoOverrides: Record<string, Partial<GitHubRepo>> = {
+  "fantasy-draft-assistant": {
+    description:
+      "A live ESPN fantasy-football draft operator that watches the draft board, ranks available players from real projections and ADP, and recommends picks under the 90-second clock.",
+    longDescription:
+      "Fantasy Draft Assistant runs alongside a live ESPN draft. It observes the board as picks come in, re-ranks the remaining players from ESPN projections and average draft position, and surfaces a recommendation before the 90-second timer runs out. With an explicit, session-bound grant it can also submit the pick itself.\n\nIt is built fail-closed: only exact allowlisted teams can ever be acted on, and stale state, an unknown identity, or a missing confirmation halts the operator rather than guessing.",
+  },
   "bardownski-website": {
+    longDescription:
+      "Bardownski is a full-stack site for a hockey club, built with Next.js and TypeScript. It tracks the season end to end: live match results, player statistics, roster management, records, news, highlight integration, and a media gallery.\n\nThe goal was a single place the team and its supporters could follow a season as it happens, with content the club can maintain itself.",
     description:
       "A hockey team website with match results, player stats, roster management, game highlights, records, news, and a media gallery. Built for tracking seasons and showcasing the team.",
   },
@@ -163,6 +171,58 @@ export async function fetchGitHubStats(): Promise<GitHubStats> {
   };
 }
 
+/** Strip markdown down to plain paragraphs and keep the README's intro (before the first `##`). */
+function readmeExcerpt(md: string): string | null {
+  const intro = md.split(/\n##\s/)[0];
+  if (/bootstrapped with|create-next-app|create-react-app/i.test(intro)) return null;
+  const text = intro
+    .replace(/```[\s\S]*?```/g, "")
+    .replace(/<[^>]+>/g, "")
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/^\s*#.*$/gm, "")
+    .replace(/^\s*>\s?.*$/gm, "")
+    .replace(/^\s*\|.*$/gm, "")
+    .replace(/[*_`]/g, "")
+    .replace(/[ \t]+/g, " ");
+  const paras = text
+    .split(/\n\s*\n/)
+    .map((p) => p.replace(/\s*\n\s*/g, " ").trim())
+    .filter((p) => p.length > 40);
+  if (paras.length === 0) return null;
+  const out = paras.slice(0, 2).join("\n\n");
+  return out.length >= 80 ? out.slice(0, 700) : null;
+}
+
+async function fetchReadmeExcerpt(name: string): Promise<string | null> {
+  try {
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_USERNAME}/${name}/readme`, {
+      headers: { Accept: "application/vnd.github.raw" },
+      next: { revalidate: 3600 },
+    });
+    if (!res.ok) return null;
+    return readmeExcerpt(await res.text());
+  } catch {
+    return null;
+  }
+}
+
+const MONTH = new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" });
+
+/** Every project gets a "more" section: override → README intro → details from repo metadata. */
+function detailsFallback(repo: GitHubRepo): string {
+  const parts: string[] = [];
+  if (repo.description) parts.push(repo.description);
+  const meta: string[] = [];
+  if (repo.language) meta.push(`Written primarily in ${repo.language}.`);
+  meta.push(
+    `Started ${MONTH.format(new Date(repo.created_at))}, last updated ${MONTH.format(new Date(repo.pushed_at))}.`,
+  );
+  if (repo.topics.length) meta.push(`Topics: ${repo.topics.join(", ")}.`);
+  parts.push(meta.join(" "));
+  return parts.join("\n\n");
+}
+
 export async function fetchGitHubRepos(): Promise<GitHubRepo[]> {
   const headers: HeadersInit = {
     Accept: "application/vnd.github+json",
@@ -172,13 +232,18 @@ export async function fetchGitHubRepos(): Promise<GitHubRepo[]> {
     headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
   }
 
-  const res = await fetch(
-    `https://api.github.com/users/${GITHUB_USERNAME}/repos?sort=pushed&per_page=100`,
-    {
-      headers,
+  const url = `https://api.github.com/users/${GITHUB_USERNAME}/repos?sort=pushed&per_page=100`;
+  let res = await fetch(url, { headers, next: { revalidate: 3600 } });
+
+  // A revoked/expired token gets a 401; public repos don't need auth, so retry without it
+  // rather than dropping every personal project from the site.
+  if ((res.status === 401 || res.status === 403) && headers.Authorization) {
+    console.warn("GitHub token rejected (" + res.status + "); retrying unauthenticated");
+    res = await fetch(url, {
+      headers: { Accept: "application/vnd.github+json" },
       next: { revalidate: 3600 },
-    }
-  );
+    });
+  }
 
   if (!res.ok) {
     console.error("Failed to fetch GitHub repos:", res.status);
@@ -198,6 +263,14 @@ export async function fetchGitHubRepos(): Promise<GitHubRepo[]> {
         repoOverrides[repo.name]?.category ??
         "Personal",
     }));
+
+  // Fill in long descriptions for anything the overrides don't cover.
+  await Promise.all(
+    filtered.map(async (repo) => {
+      if (repo.longDescription) return;
+      repo.longDescription = (await fetchReadmeExcerpt(repo.name)) ?? detailsFallback(repo);
+    }),
+  );
 
   return [...filtered, ...manualProjects].sort(
     (a, b) =>

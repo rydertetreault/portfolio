@@ -1,59 +1,31 @@
 import { fetchGitHubRepos } from "@/lib/github";
-import ProjectsGrid from "@/components/ProjectsGrid";
+import ProjectsList from "@/components/ProjectsList";
+import DecodeOnMount from "@/components/ascii-ui/DecodeOnMount";
 
 export default async function ProjectsPage() {
   const repos = await fetchGitHubRepos();
 
   return (
-    <main className="relative min-h-screen text-foreground bg-background">
-      {/* Diagonal gradient bands (dimmed) */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden opacity-50">
-        <div
-          className="absolute -top-full left-[10%] w-[300px] h-[300%]"
-          style={{
-            transform: "rotate(-38deg)",
-            background:
-              "linear-gradient(90deg, transparent, rgba(34,197,94,0.05), transparent)",
-          }}
-        />
-        <div
-          className="absolute -top-full right-[20%] w-[220px] h-[300%]"
-          style={{
-            transform: "rotate(-38deg)",
-            background:
-              "linear-gradient(90deg, transparent, rgba(34,197,94,0.035), transparent)",
-          }}
-        />
-        <div
-          className="absolute -top-full left-[30%] w-px h-[300%]"
-          style={{
-            transform: "rotate(-38deg)",
-            background:
-              "linear-gradient(180deg, transparent 10%, rgba(34,197,94,0.20) 50%, transparent 90%)",
-          }}
-        />
-        <div
-          className="absolute -top-full right-[35%] w-px h-[300%]"
-          style={{
-            transform: "rotate(-38deg)",
-            background:
-              "linear-gradient(180deg, transparent 15%, rgba(34,197,94,0.12) 50%, transparent 85%)",
-          }}
-        />
-      </div>
-
-      <div className="relative mx-auto max-w-6xl px-6 sm:px-10 lg:px-12 pt-28 pb-16 sm:pt-32 sm:pb-20">
-        {/* Header */}
-        <div className="mb-16 space-y-4">
-          <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight">
-            Projects
-          </h1>
-          <p className="text-text-muted text-lg max-w-xl">
-            A collection of things I&apos;ve built.
+    <main data-ascii-decode className="relative z-10 min-h-screen text-foreground">
+      {/* Text-first page: the whole thing decodes out of symbols on arrival */}
+      <DecodeOnMount />
+      <div
+        data-ascii-quiet="0.85"
+        className="relative mx-auto max-w-5xl px-6 sm:px-10 lg:px-12 pt-28 pb-16 sm:pt-32 sm:pb-20"
+      >
+        <header className="mb-10 space-y-4">
+          <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-text-faint">
+            <span className="text-accent">$</span> ls ~/projects
           </p>
-        </div>
+          <h1 className="text-5xl sm:text-6xl font-semibold tracking-[-0.03em]">Projects</h1>
+          <p className="max-w-xl text-lg text-text-muted">A collection of things I&apos;ve built.</p>
+          <p className="font-mono text-[11px] tracking-[0.25em] text-text-faint">
+            {repos.length} REPOS <span className="mx-2 text-border-theme">/</span> SORTED BY ACTIVITY{" "}
+            <span className="mx-2 text-border-theme">/</span> GITHUB API
+          </p>
+        </header>
 
-        <ProjectsGrid repos={repos} />
+        <ProjectsList repos={repos} />
       </div>
     </main>
   );
