@@ -53,3 +53,6 @@ next-env.d.ts
 /ig portait.png
 /Screenshot *.png
 /*.webp
+
+# baked README waveform output
+scripts/out/
