@@ -68,7 +68,7 @@ if (MODE === "poster") {
   quietRects = poster.quietRects;
   quiet = poster.quiet;
   quietZone = poster.quietZone;
-  log(`poster ${WIDTH}×${height}, panels x ${poster.panels.x0}–${poster.panels.x1}`);
+  log(`poster ${WIDTH}×${height}, panels x ${poster.panels.x0}–${poster.panels.x1}, split at ${poster.panels.xSplit} (left ${poster.leftW})`);
 } else {
   height = num("height", 300);
 }
@@ -103,7 +103,7 @@ for (const [name, theme] of Object.entries(THEMES)) {
   let label = "Animated ASCII topography from rydertetreault.dev";
   if (poster) {
     body += await poster.render(theme, resolve(ASSETS, "profile.jpg"));
-    label = `${content.name}: ${content.tagline}. ${content.blurb}`;
+    label = `Ryder Tetreault: ${content.tagline}. About, experience, education and contact over an animated ASCII field.`;
   }
   const svg = svgDocument({ width: WIDTH, height, style, body, label });
   const file = resolve(OUT, `ascii-${MODE}-${name}.svg`);

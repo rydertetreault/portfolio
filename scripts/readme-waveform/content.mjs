@@ -4,10 +4,8 @@
  */
 
 export const content = {
-  name: "Ryder Tetreault",
+  // Avatar, name and bio are left to GitHub's profile sidebar.
   tagline: "Software Engineer · AI · Cyber Defense",
-  blurb:
-    "AI-native software, security-minded engineering. I build products where AI does real work, grounded in cybersecurity and infrastructure defense.",
 
   links: [
     { icon: "github", label: "github.com/rydertetreault", href: "https://github.com/rydertetreault" },

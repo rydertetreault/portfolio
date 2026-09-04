@@ -66,8 +66,8 @@ export const POSTER = {
   // Tighter than the site's quietZone (28/70): the margins are narrow, so the field
   // must come back to full brightness within a few cells of the panel edge.
   quietZone: { padding: 4, feather: 36 },
-  leftW: 400, // site: 420–460 px intro panel
-  padLeft: 40,
+  leftW: null, // null = pick the split (400–560) that balances the two columns
+  padLeft: 44,
   padRight: 52,
   quiet: 0.9, // panel dimming (site: 0.7 + a 45% background wash; the wash is drawn separately)
   wash: 0.3,
@@ -76,120 +76,123 @@ export const POSTER = {
 /**
  * Lay out the content; returns everything the generator needs:
  *   height, quietRects, and a `render(theme)` producing the panel + text markup.
+ *
+ * Left panel: tagline + EXPERIENCE (timeline). Right panel: ABOUT, EDUCATION &
+ * CERTIFICATIONS, CONTACT. Avatar / name / blurb are intentionally absent: GitHub's
+ * own profile sidebar already shows them next to the README.
  */
 export async function layoutPoster(c, opts = {}) {
   const P = { ...POSTER, ...opts };
+  if (P.leftW === null) {
+    let best = null;
+    for (let w = 400; w <= 560; w += 20) {
+      const L = layoutOnce(c, { ...P, leftW: w });
+      if (!best || L.height < best.height) best = L;
+    }
+    return finish(best, c);
+  }
+  return finish(layoutOnce(c, P), c);
+}
+
+function layoutOnce(c, P) {
   const W = P.width;
   const x0 = P.marginX;
   const x1 = W - P.marginX;
   const xSplit = x0 + P.leftW;
   const top = P.marginY;
 
-  // Geometry only depends on text, not theme: compute positions once, and keep a
-  // list of draw ops that get coloured per theme.
-  const ops = []; // { kind, ... }
+  const ops = [];
   const T = (x, y, text, size, weight, color, extra = {}) => ops.push({ kind: "text", x, y, text, size, weight, color, ...extra });
-
-  /* ── left panel ── */
-  const lx = x0 + P.padLeft;
-  const lw = P.leftW - 2 * P.padLeft;
-  let ly = top + 56;
-
-  ops.push({ kind: "photo", x: lx, y: ly, size: 96 });
-  ly += 96 + 28;
-
-  T(lx, ly + 21, c.name, 42, 600, "fg", { tracking: -0.025 });
-  ly += 42 + 16;
-  T(lx, ly + 8, c.tagline, 16.5, 500, "accent");
-  ly += 16.5 + 16;
-  for (const line of wrap(c.blurb, 16, 400, lw)) {
-    T(lx, ly + 8, line, 16, 400, "faint");
-    ly += 16 * 1.65;
-  }
-  ly += 36;
-
-  for (const l of c.links) {
-    ops.push({ kind: "icon", name: l.icon, x: lx, y: ly, size: 18, color: "faint" });
-    T(lx + 18 + 14, ly + 9, l.label, 14, 400, "faint");
-    ly += 18 + 16;
-  }
-  ly += 40 - 16;
-
-  // EDUCATION & CERTIFICATIONS (section header in the site's style, compact rows)
-  T(lx, ly + 6.5, "EDUCATION & CERTIFICATIONS", 12, 500, "faint", { tracking: 0.3 });
-  ly += 12 + 12;
-  ops.push({ kind: "hline", x: lx, y: ly, w: lw, color: "border" });
-  ly += 1 + 24;
-  c.education.forEach((ed, i) => {
-    if (i > 0) ly += 24;
-    ops.push({ kind: "icon", name: ed.icon, x: lx, y: ly + 1, size: 18, color: "faint" });
-    T(lx + 30, ly + 7, ed.date, 14, 400, "faint");
-    ly += 14 + 7;
-    for (const line of wrap(ed.title, 17, 600, lw - 30)) {
-      T(lx + 30, ly + 9, line, 17, 600, "fg");
-      ly += 17 + 5;
-    }
-    for (const line of wrap(ed.sub, 14, 400, lw - 30)) {
-      T(lx + 30, ly + 7, line, 14, 400, "muted");
-      ly += 14 + 5;
-    }
-    ly -= 5;
-  });
-  const leftBottom = ly + 56;
-
-  /* ── right panel ── */
-  const rx = xSplit + P.padRight;
-  const rw = x1 - P.padRight - rx;
-  let ry = top + 56;
-
-  const sectionHeader = (title) => {
-    T(rx, ry + 6.5, title, 13, 500, "faint", { tracking: 0.3 });
-    ry += 13 + 12;
-    ops.push({ kind: "hline", x: rx, y: ry, w: rw, color: "border" });
-    ry += 1 + 28;
+  const header = (x, y, w, title, size = 13) => {
+    T(x, y + size / 2, title, size, 500, "faint", { tracking: 0.3 });
+    y += size + 12;
+    ops.push({ kind: "hline", x, y, w, color: "border" });
+    return y + 1 + 28;
   };
   const GAP = 56;
+  const PAD_TOP = 56;
 
-  // ABOUT
-  sectionHeader("ABOUT");
+  /* ── left panel: tagline + experience timeline ── */
+  const lx = x0 + P.padLeft;
+  const lw = P.leftW - 2 * P.padLeft;
+  let ly = top + PAD_TOP;
+
+  T(lx, ly + 9, c.tagline, 18, 500, "accent");
+  ly += 18 + 40;
+
+  ly = header(lx, ly, lw, "EXPERIENCE");
+  const railX = lx + 1;
+  const railTop = ly;
+  const ex = lx + 32;
+  const ew = lw - 32;
+  c.experience.forEach((e, i) => {
+    if (i > 0) ly += 24;
+    ops.push({ kind: "dot", x: railX, y: ly + 8 });
+    T(ex, ly + 8, e.date, 15, 400, "faint");
+    ly += 15 + 10;
+    for (const line of wrap(e.company, 21, 600, ew)) {
+      T(ex, ly + 11, line, 21, 600, "fg");
+      ly += 21 + 6;
+    }
+    ly += 2;
+    T(ex, ly + 8, e.role, 15, 400, "accent");
+    ly += 15 + 14;
+    for (const line of wrap(e.description, 15.5, 400, ew)) {
+      T(ex, ly + 8, line, 15.5, 400, "muted");
+      ly += 15.5 * 1.6;
+    }
+    ly -= 15.5 * 0.6;
+    if (i < c.experience.length - 1) ly += 24;
+  });
+  ops.push({ kind: "rail", x: railX, y0: railTop, y1: ly, color: "border" });
+  const leftBottom = ly + PAD_TOP;
+
+  /* ── right panel: about, education, contact ── */
+  const rx = xSplit + P.padRight;
+  const rw = x1 - P.padRight - rx;
+  let ry = top + PAD_TOP;
+
+  ry = header(rx, ry, rw, "ABOUT");
   for (const line of wrap(c.about, 16.5, 400, rw)) {
     T(rx, ry + 8, line, 16.5, 400, "muted");
     ry += 16.5 * 1.7;
   }
   ry += GAP - 16.5 * 0.7;
 
-  // EXPERIENCE (timeline: 2px rail, dot per entry, 32px indent)
-  sectionHeader("EXPERIENCE");
-  const railX = rx + 1;
-  const railTop = ry;
-  const ex = rx + 32;
-  const ew = rw - 32;
-  c.experience.forEach((e, i) => {
-    if (i > 0) ry += 24;
-    ops.push({ kind: "dot", x: railX, y: ry + 8 });
-    T(ex, ry + 8, e.date, 15, 400, "faint");
-    ry += 15 + 10;
-    T(ex, ry + 11, e.company, 21, 600, "fg");
-    ry += 21 + 8;
-    T(ex, ry + 8, e.role, 15, 400, "accent");
-    ry += 15 + 14;
-    for (const line of wrap(e.description, 15.5, 400, Math.min(ew, 512))) {
-      T(ex, ry + 8, line, 15.5, 400, "muted");
-      ry += 15.5 * 1.6;
-    }
-    ry -= 15.5 * 0.6;
-    if (i < c.experience.length - 1) ry += 24;
+  ry = header(rx, ry, rw, "EDUCATION & CERTIFICATIONS");
+  c.education.forEach((ed, i) => {
+    if (i > 0) ry += 28;
+    ops.push({ kind: "icon", name: ed.icon, x: rx, y: ry + 2, size: 18, color: "faint" });
+    T(rx + 32, ry + 8, ed.date, 15, 400, "faint");
+    ry += 15 + 8;
+    T(rx + 32, ry + 10, ed.title, 19, 600, "fg");
+    ry += 19 + 8;
+    T(rx + 32, ry + 8, ed.sub, 15, 400, "muted");
+    ry += 15;
   });
-  ops.push({ kind: "rail", x: railX, y0: railTop, y1: ry, color: "border" });
-  const rightBottom = ry + 56;
+  ry += GAP;
+
+  ry = header(rx, ry, rw, "CONTACT");
+  for (const l of c.links) {
+    ops.push({ kind: "icon", name: l.icon, x: rx, y: ry, size: 18, color: "faint" });
+    T(rx + 18 + 14, ry + 9, l.label, 15, 400, "muted");
+    ry += 18 + 18;
+  }
+  ry -= 18;
+  const rightBottom = ry + PAD_TOP;
 
   const bottom = Math.max(leftBottom, rightBottom);
   const height = Math.ceil(bottom + P.marginY);
   const panelBottom = height - P.marginY;
-
   const quietRects = [x0, top, xSplit, panelBottom, 1, xSplit, top, x1, panelBottom, 1];
 
-  async function render(theme, photoFile) {
+  return { P, W, ops, x0, x1, xSplit, top, panelBottom, height, quietRects, leftBottom, rightBottom };
+}
+
+function finish(L, c) {
+  const { P, W, ops, x0, x1, xSplit, top, panelBottom, height, quietRects } = L;
+
+  async function render(theme, photoFile = null) {
     const col = (k) => theme[k];
     let out = "";
     // Frosted panels (page colour wash) + hairline borders, as on the site.
@@ -230,5 +233,5 @@ export async function layoutPoster(c, opts = {}) {
     return `<g font-family="GS">${out}</g>`;
   }
 
-  return { width: W, height, quietRects, quiet: P.quiet, quietZone: P.quietZone, render, panels: { x0, x1, xSplit, top, bottom: panelBottom } };
+  return { width: W, height, quietRects, quiet: P.quiet, quietZone: P.quietZone, render, leftW: P.leftW, panels: { x0, x1, xSplit, top, bottom: panelBottom } };
 }
