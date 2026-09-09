@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Praxis AI — Human-First in an AI-First world.</title>
+  <meta name="description" content="Meet a Human-First Digital Twin™ — real expertise, governed end to end. AI Middleware, Digital Twins, LXP, and PraxisShield™ from Praxis AI." />
+  <link rel="icon" href="/demos/assets/brand/icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script type="module" crossorigin src="/demos/assets/v2mercury-DdMpqBCq.js"></script>
+  <link rel="modulepreload" crossorigin href="/demos/assets/modulepreload-polyfill-B5Qt9EMX.js">
+  <link rel="modulepreload" crossorigin href="/demos/assets/content-BmG41JIl.js">
+  <link rel="modulepreload" crossorigin href="/demos/assets/motion-T28mx4Nt.js">
+  <link rel="stylesheet" crossorigin href="/demos/assets/v2mercury-CZ3jn50C.css">
+  <link rel="stylesheet" crossorigin href="/demos/assets/base-BAgu-4YE.css">
+</head>
+<body class="mercury">
+
+  <!-- Mega-menu nav — transparent over the dark hero, light-blurred once scrolled -->
+  <header class="nav" id="nav">
+    <div class="nav__inner">
+      <a class="nav__logo" href="/demos/v2/mercury/" aria-label="Praxis AI home">
+        <img class="nav__logo-dark" src="/demos/assets/brand/wordmark-2025-dark.webp" alt="Praxis AI" width="132" height="28" />
+        <span class="nav__logo-plate" aria-hidden="true"><img src="/demos/assets/brand/logo.svg" alt="" width="104" height="24" /></span>
+      </a>
+
+      <nav class="nav__menu" aria-label="Primary">
+        <div class="nav__item" data-menu="products">
+          <button class="nav__link" aria-expanded="false" aria-controls="menu-products">Products <i class="nav__chev"></i></button>
+          <div class="mega" id="menu-products" role="region" aria-label="Products"></div>
+        </div>
+        <div class="nav__item" data-menu="industries">
+          <button class="nav__link" aria-expanded="false" aria-controls="menu-industries">Industries <i class="nav__chev"></i></button>
+          <div class="mega" id="menu-industries" role="region" aria-label="Industries"></div>
+        </div>
+        <div class="nav__item" data-menu="resources">
+          <button class="nav__link" aria-expanded="false" aria-controls="menu-resources">Resources <i class="nav__chev"></i></button>
+          <div class="mega" id="menu-resources" role="region" aria-label="Resources"></div>
+        </div>
+        <div class="nav__item" data-menu="company">
+          <button class="nav__link" aria-expanded="false" aria-controls="menu-company">Company <i class="nav__chev"></i></button>
+          <div class="mega" id="menu-company" role="region" aria-label="Company"></div>
+        </div>
+      </nav>
+
+      <div class="nav__actions">
+        <a class="nav__login" href="https://www.hiimpria.ai/login">Digital Twin Login</a>
+        <a class="btn btn--primary btn--sm" href="#contact">Talk to Our Team</a>
+        <button class="nav__burger" id="burger" aria-label="Open menu" aria-expanded="false" aria-controls="drawer">
+          <span></span><span></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile drawer (≤ 960px) -->
+    <div class="drawer" id="drawer" hidden></div>
+  </header>
+
+  <main>
+
+    <!-- Hero: centered display headline + inline capture + product-as-hero browser frame -->
+    <section class="hero" id="top">
+      <div class="hero__glow" aria-hidden="true"></div>
+      <div class="container hero__inner">
+        <p class="eyebrow hero__eyebrow" data-reveal="fade">Human-First Digital Twins™ · Gold Stevie® 2026 · Most Innovative Tech Company</p>
+        <h1 class="hero__title" data-reveal="up"><span class="grad">Human-First</span> in an<br />AI-First world.</h1>
+        <p class="hero__sub" data-reveal="up" data-delay=".08">
+          <span class="hero__sub-line">People who know AI choose Praxis AI.</span>
+          Meet a Digital Twin — real expertise, governed end to end.
+        </p>
+
+        <form class="capture" id="capture" data-reveal="up" data-delay=".14" novalidate>
+          <label class="sr-only" for="capture-email">Work email</label>
+          <input class="capture__input" id="capture-email" type="email" name="email" placeholder="Enter your work email" autocomplete="email" required />
+          <button class="btn btn--primary capture__btn" type="submit">Talk to Our Team</button>
+          <p class="capture__note" id="capture-note" role="status" aria-live="polite">We'll only email you about your request.</p>
+        </form>
+      </div>
+
+      <div class="container container--wide hero__product" data-reveal="fade" data-delay=".2">
+        <div class="tilt" id="hero-tilt">
+          <div class="browser" id="hero-browser">
+            <div class="browser__bar">
+              <span class="browser__dots" aria-hidden="true"><i></i><i></i><i></i></span>
+              <span class="browser__url mono">hiimpria.ai</span>
+              <span class="browser__live mono"><i aria-hidden="true"></i>live · staging</span>
+            </div>
+            <div class="browser__body" id="hero-embed"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- "Everything you do with expertise. All in one place." — 4 product blocks with parallax captures -->
+    <section class="features section section--paper" id="products">
+      <div class="container">
+        <header class="section__head" data-reveal="up">
+          <p class="eyebrow eyebrow--dark">Four products. One human-first layer.</p>
+          <h2 class="h2">Everything you do with expertise.<br /><span class="grad">All in one place.</span></h2>
+          <p class="lede">AI Middleware, Digital Twins, the LXP, and PraxisShield™ — one layer that lives inside your security perimeter and speaks in your voice.</p>
+        </header>
+        <div class="features__grid" id="features-grid"></div>
+      </div>
+    </section>
+
+    <!-- "Loved by…" — segment tabs + testimonial crossfade + partner logo row -->
+    <section class="loved section section--ink" id="customers">
+      <div class="container">
+        <header class="section__head" data-reveal="up">
+          <p class="eyebrow">Proof, not promises</p>
+          <h2 class="h2">Loved by <span class="grad">180+</span> of the most ambitious institutions on the planet.</h2>
+        </header>
+        <div class="tabs" id="tabs" role="tablist" aria-label="Customer segment"></div>
+        <div class="tcards" id="tcards" aria-live="polite"></div>
+        <div class="logos" id="logos" data-stagger=".04"></div>
+      </div>
+    </section>
+
+    <!-- "Generic AI has been a novelty. Now, it's infrastructure." — alternating rows w/ side slide-ins -->
+    <section class="rows section section--white" id="solutions">
+      <div class="container">
+        <header class="section__head" data-reveal="up">
+          <p class="eyebrow eyebrow--dark">Built in PRIA</p>
+          <h2 class="h2">Generic AI has been a novelty.<br /><span class="grad">Now, it's infrastructure.</span></h2>
+        </header>
+        <div id="rows"></div>
+      </div>
+    </section>
+
+    <!-- Big-quote breaker on light canvas — words revealing on scroll -->
+    <section class="bigquote section section--paper" id="quote">
+      <div class="container bigquote__inner">
+        <span class="bigquote__mark" aria-hidden="true">“</span>
+        <blockquote class="bigquote__text" id="bigquote"></blockquote>
+        <p class="bigquote__cite" id="bigquote-cite" data-reveal="fade"></p>
+      </div>
+    </section>
+
+    <!-- "Get started fast. And never stop moving." — 3-card row -->
+    <section class="fast section section--white" id="get-started">
+      <div class="container">
+        <header class="section__head" data-reveal="up">
+          <p class="eyebrow eyebrow--dark">Praxis Studios</p>
+          <h2 class="h2">Get started fast.<br /><span class="grad">And never stop moving.</span></h2>
+        </header>
+        <div class="fast__grid" data-stagger=".12">
+          <article class="fast__card">
+            <span class="fast__num mono">01 — Praxis Studios</span>
+            <h3 class="h3">Deploy a twin in days</h3>
+            <p>Praxis Studios captures the expert, builds the twin, deploys it, and tunes it. Share your domain, use cases, and branding through a short intake — a configured Human-First Digital Twin™ comes back within days, ready for the expert's approval.</p>
+            <img src="/demos/assets/pria/twins-dark.webp" alt="PRIA 2026 — Twins gallery" width="1440" height="900" loading="lazy" />
+          </article>
+          <article class="fast__card">
+            <span class="fast__num mono">02 — Integration layer</span>
+            <h3 class="h3">Bring your LMS</h3>
+            <p>LTI Advantage 1.3 for Canvas, Blackboard, and Moodle — students and faculty arrive already signed in with course context carried across. Enterprise SSO over OAuth 2.0 / OIDC with Okta, Microsoft Entra ID, and Google Workspace.</p>
+            <img src="/demos/assets/pria/settings-dark.webp" alt="PRIA 2026 — Settings" width="1440" height="900" loading="lazy" />
+          </article>
+          <article class="fast__card">
+            <span class="fast__num mono">03 — Always on</span>
+            <h3 class="h3">Ask anything in 100+ languages</h3>
+            <p>1,000+ conversations a week per twin, 24/7, in text or Convo Mode voice. The best of 30+ LLMs, orchestrated through one human-first layer — every answer cited back to the IP Vault™.</p>
+            <img src="/demos/assets/pria/chat-dark.webp" alt="PRIA 2026 — Chat" width="1440" height="900" loading="lazy" />
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Stat quad — large display numbers with count-up on ink -->
+    <section class="stats section section--ink" id="stats">
+      <div class="container">
+        <p class="eyebrow stats__eyebrow" data-reveal="fade">Measured across 180+ organizations</p>
+        <div class="stats__grid" id="stats-grid"></div>
+      </div>
+    </section>
+
+    <!-- "Standard protection stops short." — 3 trust cards -->
+    <section class="trust section section--paper" id="security">
+      <div class="container">
+        <header class="section__head" data-reveal="up">
+          <p class="eyebrow eyebrow--dark">Governed end to end</p>
+          <h2 class="h2">Standard protection stops short.<br /><span class="grad">Praxis goes further.</span></h2>
+          <p class="lede">Governance isn't a feature we bolted on. It's the layer everything else runs through.</p>
+        </header>
+        <div class="trust__grid" data-stagger=".1">
+          <article class="trust__card">
+            <div class="trust__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15.5" r="1.4"/></svg>
+            </div>
+            <h3 class="h3">IP Vault™</h3>
+            <p>Patent-pending protected knowledge store. Your documents, voice, and expertise stay yours — every answer traceable to a source you approved, never used to train public models.</p>
+            <span class="trust__tag mono">USPTO Patent Pending · App. No. 19/647,154 · 14 Technical Innovations Protected</span>
+          </article>
+          <article class="trust__card">
+            <div class="trust__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l7 3v5c0 5-3.2 8.4-7 10-3.8-1.6-7-5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg>
+            </div>
+            <h3 class="h3">PraxisShield™</h3>
+            <p>An agent watchdog platform: constitutional governance, purpose-binding, guardrail instructions that win every conflict, threat monitoring, and full audit trails. Nothing goes live without the expert's approval.</p>
+            <span class="trust__tag mono">Agent watchdog · purpose-bound · audit trails</span>
+          </article>
+          <article class="trust__card">
+            <div class="trust__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.5l2.3 2.3 4.7-5"/></svg>
+            </div>
+            <h3 class="h3">SOC 2 Type II. Zero breaches.</h3>
+            <p>Formal third-party attestation work is underway, including a SOC 2 examination — current status and documentation available on request. Zero data leaks or breaches since day one, across every deployment.</p>
+            <span class="trust__tag mono">SOC 2 examination in progress · 0 incidents</span>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Dual CTA — For the Expert / For the Organization -->
+    <section class="dual section section--ink" id="contact">
+      <div class="container">
+        <div class="dual__grid" id="dual-grid"></div>
+        <p class="dual__foot" data-reveal="fade">Or <a href="https://www.praxisdna.ai">discover your Digital Twin DNA</a> in two minutes — no account required.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Multi-column footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer__top">
+        <div class="footer__brand">
+          <img src="/demos/assets/brand/wordmark-2025-dark.webp" alt="Praxis AI" width="132" height="28" />
+          <p>Human-First in an AI-First world.</p>
+          <ul class="footer__social" id="footer-social"></ul>
+        </div>
+        <div class="footer__cols" id="footer-cols"></div>
+      </div>
+      <div class="footer__legal">
+        <p>Praxis AI is a Human-First Digital Twin™ company. Digital Twins are anchored in real, consenting human experts and governed by PraxisShield™ constitutional guardrails. Amplified Intelligence™, IP Vault™, PraxisShield™, and Human-First Digital Twin™ are trademarks of Praxis AI. Engagement, renewal, and mastery figures are measured with partner institutions and may vary by deployment.</p>
+        <p class="mono" id="footer-patent"></p>
+        <p id="footer-addresses"></p>
+        <p class="footer__meta">© 2026 Praxis AI, Inc. · <span class="mono">v2 · brand-compliant concept replica of mercury.com</span> — built for the Praxis demo hub. Not affiliated with Mercury Technologies.</p>
+      </div>
+    </div>
+  </footer>
+
+<script>
+// Concept-only marketing links must not navigate into the portfolio.
+document.addEventListener('click', function (event) {
+  const link = event.target.closest('a[href]');
+  if (!link) return;
+  const url = new URL(link.href, location.href);
+  if (url.origin === location.origin && !url.pathname.startsWith('/demos')) {
+    event.preventDefault();
+    alert('This is a design concept. This destination is not part of the demo.');
+  }
+});
+</script></body>
+</html>

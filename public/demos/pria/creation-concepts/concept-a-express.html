@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Concept A — Express Wizard · Praxis Creation Concepts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="./shared.css" />
+<script>if (window.self !== window.top) document.documentElement.classList.add('embedded')</script>
+<style>
+/* ── Layout ───────────────────────────────────────────────────── */
+.page { max-width: 760px; margin: 0 auto; padding: 40px 24px 80px; }
+
+/* ── Screen transitions ───────────────────────────────────────── */
+.screen { display: none; opacity: 0; transform: translateY(10px); transition: opacity .3s ease, transform .3s ease; }
+.screen.active { display: block; }
+.screen.visible { opacity: 1; transform: translateY(0); }
+
+/* ── Category choice (Step 0) ────────────────────────────────── */
+.choice-heading { text-align: center; margin-bottom: 36px; }
+.choice-heading h1 { font-size: 28px; font-weight: 800; margin: 0 0 8px; }
+.choice-heading p  { color: var(--text-soft); margin: 0; font-size: 15px; }
+
+.choice-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+@media (max-width: 540px) { .choice-cards { grid-template-columns: 1fr; } }
+
+.choice-card {
+  position: relative; overflow: hidden;
+  background: var(--surface); border-radius: var(--radius);
+  border: 2px solid var(--border-soft);
+  padding: 32px 28px 28px;
+  cursor: pointer; transition: border-color .18s ease, transform .18s ease, box-shadow .18s ease;
+  user-select: none;
+}
+.choice-card::before {
+  content: ""; position: absolute; inset: 0; opacity: 0;
+  transition: opacity .25s ease;
+}
+.choice-card.personal::before { background: linear-gradient(135deg, rgba(79,70,229,.18), rgba(12,41,235,.10)); }
+.choice-card.community::before { background: linear-gradient(135deg, rgba(124,58,237,.18), rgba(219,39,119,.12)); }
+.choice-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+.choice-card:hover::before { opacity: 1; }
+.choice-card:hover.personal { border-color: rgba(79,70,229,.55); }
+.choice-card:hover.community { border-color: rgba(124,58,237,.55); }
+
+.choice-card .card-icon {
+  width: 48px; height: 48px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; margin-bottom: 18px; position: relative;
+}
+.choice-card.personal .card-icon { background: linear-gradient(135deg, var(--personal-from), var(--personal-to)); }
+.choice-card.community .card-icon { background: linear-gradient(135deg, var(--community-from), var(--community-to)); }
+
+.choice-card h2 { font-size: 18px; font-weight: 800; margin: 0 0 8px; position: relative; }
+.choice-card p  { font-size: 14px; color: var(--text-soft); margin: 0 0 18px; line-height: 1.6; position: relative; }
+.choice-card .cc-badge { position: relative; }
+
+.choice-card .card-arrow {
+  position: absolute; top: 28px; right: 24px;
+  font-size: 20px; color: var(--text-faint); transition: transform .18s ease, color .18s ease;
+}
+.choice-card:hover .card-arrow { transform: translateX(3px); color: var(--text-soft); }
+
+/* ── Stepper ──────────────────────────────────────────────────── */
+.stepper {
+  display: flex; align-items: center; justify-content: center;
+  gap: 0; margin-bottom: 44px; position: relative;
+}
+.step-item {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 8px; position: relative; cursor: pointer;
+}
+.step-item:not(:last-child)::after {
+  content: ""; position: absolute;
+  top: 14px; left: calc(50% + 14px);
+  width: calc(100% + 28px); /* connects to next */
+  height: 2px; background: var(--border-soft);
+  transition: background .4s ease;
+}
+.step-item.done:not(:last-child)::after { background: var(--step-accent, var(--indigo)); }
+
+.stepper { gap: 60px; }
+.step-dot {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 2px solid var(--border-soft); background: var(--surface);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: var(--text-faint);
+  transition: all .25s ease; position: relative; z-index: 1;
+}
+.step-item.active .step-dot {
+  border-color: var(--step-accent, var(--indigo));
+  background: var(--step-accent, var(--indigo));
+  color: #fff; box-shadow: 0 0 0 4px rgba(79,70,229,.22);
+}
+.step-item.done .step-dot {
+  border-color: var(--step-accent, var(--indigo));
+  background: var(--step-accent, var(--indigo));
+  color: #fff;
+}
+.step-label { font-size: 12px; font-weight: 600; color: var(--text-faint); white-space: nowrap; transition: color .2s; }
+.step-item.active .step-label { color: var(--text); }
+.step-item.done  .step-label { color: var(--text-soft); }
+
+/* ── Section card ─────────────────────────────────────────────── */
+.wizard-card {
+  background: var(--surface); border-radius: var(--radius);
+  border: 1px solid var(--border-soft); padding: 36px;
+}
+.wizard-card h2 { font-size: 20px; font-weight: 800; margin: 0 0 6px; }
+.wizard-card .sub { color: var(--text-soft); font-size: 14px; margin: 0 0 28px; line-height: 1.55; }
+
+/* ── Inputs ───────────────────────────────────────────────────── */
+.field { margin-bottom: 20px; }
+.field label { display: block; font-size: 13px; font-weight: 700; color: var(--text-soft); margin-bottom: 8px; letter-spacing: .03em; text-transform: uppercase; }
+.field input, .field textarea {
+  width: 100%; background: var(--surface-2); border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm); color: var(--text); font-family: inherit;
+  font-size: 15px; padding: 12px 14px; outline: none;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.field input:focus, .field textarea:focus {
+  border-color: var(--step-accent, var(--indigo));
+  box-shadow: 0 0 0 3px rgba(79,70,229,.18);
+}
+.field input::placeholder, .field textarea::placeholder { color: var(--text-faint); }
+.field textarea { resize: vertical; min-height: 130px; line-height: 1.6; }
+
+/* ── Community extras (hidden until community selected) ───────── */
+.community-only { display: none; }
+body.cat-community .community-only { display: block; }
+
+/* ── Avatar picker ────────────────────────────────────────────── */
+.avatar-section { display: flex; align-items: center; gap: 24px; margin-bottom: 24px; }
+.avatar-ring {
+  width: 84px; height: 84px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--step-accent, var(--indigo)), var(--blue-2));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 34px; cursor: pointer; position: relative;
+  border: 3px solid var(--border-soft); flex-shrink: 0;
+  transition: transform .15s ease, box-shadow .15s ease;
+  user-select: none;
+}
+.avatar-ring:hover { transform: scale(1.05); box-shadow: 0 0 0 5px rgba(79,70,229,.2); }
+.avatar-ring .cam-overlay {
+  position: absolute; inset: 0; border-radius: 50%;
+  background: rgba(0,0,0,.45); display: flex; align-items: center;
+  justify-content: center; font-size: 18px; opacity: 0; transition: opacity .15s ease;
+}
+.avatar-ring:hover .cam-overlay { opacity: 1; }
+.avatar-hint { font-size: 13px; color: var(--text-faint); line-height: 1.55; }
+.avatar-hint strong { display: block; color: var(--text-soft); margin-bottom: 4px; }
+
+.appearance-link {
+  font-size: 13px; color: var(--text-faint); text-decoration: none;
+  display: inline-flex; align-items: center; gap: 6px; cursor: default;
+  border-bottom: 1px dashed var(--border-soft); padding-bottom: 1px;
+  position: relative;
+}
+.appearance-link .tip {
+  display: none; position: absolute; bottom: calc(100% + 8px); left: 0;
+  background: var(--surface-3); border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm); padding: 8px 12px; font-size: 12px;
+  color: var(--text-soft); white-space: nowrap; pointer-events: none; z-index: 10;
+  box-shadow: var(--shadow);
+}
+.appearance-link:hover .tip { display: block; }
+
+/* ── Chips ────────────────────────────────────────────────────── */
+.chip-group { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+.chip {
+  padding: 9px 18px; border-radius: 999px; font-size: 13px; font-weight: 700;
+  border: 1.5px solid var(--border-soft); background: var(--surface-2);
+  color: var(--text-soft); cursor: pointer; transition: all .15s ease;
+  user-select: none;
+}
+.chip:hover { border-color: var(--step-accent, var(--indigo)); color: var(--text); }
+.chip.selected {
+  background: var(--step-accent, var(--indigo));
+  border-color: var(--step-accent, var(--indigo)); color: #fff;
+}
+
+/* ── Sliders ──────────────────────────────────────────────────── */
+.slider-group { display: flex; flex-direction: column; gap: 22px; margin-top: 8px; }
+.slider-row {}
+.slider-labels { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 12.5px; color: var(--text-faint); }
+.slider-squares { display: flex; gap: 6px; }
+.sq {
+  width: 36px; height: 36px; border-radius: 8px; background: var(--surface-2);
+  border: 1.5px solid var(--border-soft); cursor: pointer; transition: all .12s ease;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: var(--text-faint);
+}
+.sq:hover { border-color: var(--step-accent, var(--indigo)); color: var(--text); }
+.sq.active {
+  background: var(--step-accent, var(--indigo)); border-color: var(--step-accent, var(--indigo));
+  color: #fff; box-shadow: 0 0 0 3px rgba(79,70,229,.2);
+}
+
+/* ── Optional note ────────────────────────────────────────────── */
+.optional-note {
+  margin-top: 24px; padding: 14px 16px; background: var(--surface-2);
+  border-radius: var(--radius-sm); border-left: 3px solid var(--step-accent, var(--indigo));
+  font-size: 13px; color: var(--text-faint);
+}
+.optional-note strong { color: var(--text-soft); }
+
+/* ── Accordion ────────────────────────────────────────────────── */
+.accordion { margin-top: 20px; background: var(--surface-2); border-radius: var(--radius-sm); overflow: hidden; }
+.accordion-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; cursor: pointer; user-select: none;
+  font-size: 13.5px; font-weight: 700; color: var(--text-soft);
+  border: 1px solid var(--border-soft); border-radius: var(--radius-sm);
+  transition: border-color .15s ease;
+}
+.accordion-head:hover { border-color: var(--border); }
+.accordion-head .chevron { font-size: 11px; transition: transform .2s ease; }
+.accordion-head.open .chevron { transform: rotate(180deg); }
+.accordion-body {
+  display: none; padding: 16px; border: 1px solid var(--border-soft);
+  border-top: none; border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+}
+.accordion-body.open { display: block; }
+.accordion-body ul { margin: 0; padding-left: 20px; color: var(--text-faint); font-size: 13px; line-height: 2; }
+.accordion-body ul strong { color: var(--text-soft); }
+
+/* ── Shimmer ──────────────────────────────────────────────────── */
+.shimmer-block {
+  height: 130px; border-radius: var(--radius-sm);
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 50%, var(--surface-2) 75%);
+  background-size: 200% 100%; animation: shimmer 1.4s infinite;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-faint); font-size: 14px; gap: 10px;
+}
+@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+.shimmer-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-faint); animation: pulse-dot 1s ease-in-out infinite alternate; }
+.shimmer-dot:nth-child(2){animation-delay:.2s} .shimmer-dot:nth-child(3){animation-delay:.4s}
+
+/* ── Community subscription card ─────────────────────────────── */
+.sub-card {
+  background: var(--surface-2); border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm); padding: 18px 20px; margin-top: 20px;
+}
+.sub-card h4 { margin: 0 0 14px; font-size: 14px; font-weight: 700; color: var(--text-soft); }
+.toggle-row { display: flex; gap: 10px; align-items: center; }
+.tog-btn {
+  padding: 7px 16px; border-radius: 999px; font-size: 13px; font-weight: 700;
+  border: 1.5px solid var(--border-soft); background: var(--surface);
+  color: var(--text-faint); cursor: pointer; transition: all .15s ease;
+}
+.tog-btn.on { background: var(--step-accent, var(--indigo)); border-color: var(--step-accent, var(--indigo)); color: #fff; }
+.paid-input { margin-top: 14px; display: none; }
+.paid-input.visible { display: flex; align-items: center; gap: 10px; }
+.paid-input span { font-size: 16px; color: var(--text-faint); }
+.paid-input input { width: 120px; }
+
+/* ── Create button / progress ─────────────────────────────────── */
+.create-btn-wrap { margin-top: 32px; text-align: center; }
+.cc-btn.create {
+  font-size: 16px; padding: 15px 36px;
+  background: linear-gradient(90deg, var(--step-accent-from, var(--indigo)), var(--step-accent-to, var(--blue-2)));
+}
+
+.progress-wrap { margin-top: 32px; display: none; }
+.progress-label { font-size: 14px; color: var(--text-soft); margin-bottom: 12px; font-weight: 600; }
+.progress-bar-bg {
+  height: 8px; background: var(--surface-2); border-radius: 999px; overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%; border-radius: 999px; width: 0%;
+  background: linear-gradient(90deg, var(--step-accent-from, var(--indigo)), var(--step-accent-to, var(--blue-2)));
+  transition: width 1.1s cubic-bezier(.4,0,.2,1);
+}
+.progress-phases { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+.phase-item {
+  display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-faint);
+  opacity: 0; transform: translateX(-8px); transition: opacity .3s ease, transform .3s ease;
+}
+.phase-item.show { opacity: 1; transform: none; }
+.phase-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border-soft); flex-shrink: 0; }
+.phase-item.complete .phase-dot { background: var(--success); }
+.phase-item.complete { color: var(--text-soft); }
+
+/* ── Success screen ───────────────────────────────────────────── */
+.success-wrap { text-align: center; padding: 20px 0; }
+.success-ring {
+  width: 96px; height: 96px; border-radius: 50%; margin: 0 auto 24px;
+  display: flex; align-items: center; justify-content: center; font-size: 40px;
+  animation: pulse-ring 2s ease-in-out infinite;
+}
+@keyframes pulse-ring {
+  0%,100%{box-shadow:0 0 0 0 rgba(79,70,229,.4), 0 0 0 6px rgba(79,70,229,.18)}
+  50%{box-shadow:0 0 0 10px rgba(79,70,229,.15), 0 0 0 20px rgba(79,70,229,.06)}
+}
+.success-wrap h2 { font-size: 26px; font-weight: 800; margin: 0 0 6px; }
+.success-wrap .success-sub { color: var(--text-soft); font-size: 15px; margin: 0 0 20px; }
+.success-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 32px; }
+.stat-compare {
+  background: var(--surface-2); border-radius: var(--radius-sm); padding: 18px 24px;
+  border: 1px solid var(--border-soft); display: inline-block; text-align: left; max-width: 360px; width: 100%;
+}
+.stat-row { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; font-size: 13px; padding: 6px 0; }
+.stat-row:not(:last-child) { border-bottom: 1px solid var(--border-soft); }
+.stat-label { color: var(--text-faint); }
+.stat-new { color: var(--success); font-weight: 700; }
+.stat-old { color: var(--text-faint); text-decoration: line-through; font-size: 12px; }
+
+/* ── Step footer ──────────────────────────────────────────────── */
+.step-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 28px; }
+
+/* ── Toast ────────────────────────────────────────────────────── */
+.toast {
+  position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: var(--surface-3); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 12px 22px; font-size: 14px; color: var(--text-soft); font-weight: 600;
+  box-shadow: var(--shadow); opacity: 0; transition: opacity .25s ease, transform .25s ease;
+  pointer-events: none; z-index: 100; white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── Review preview card ──────────────────────────────────────── */
+.preview-label { font-size: 13px; font-weight: 700; color: var(--text-faint); text-transform: uppercase; letter-spacing:.04em; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+
+<!-- ── Topbar ── -->
+<header class="cc-topbar">
+  <a class="brand" href="./index.html">Praxis · Creation Concepts</a>
+  <span class="crumb">Concept A — Express Wizard (3 steps)</span>
+  <span class="spacer"></span>
+  <a class="nav-pill active" href="./concept-a-express.html">A</a>
+  <a class="nav-pill" href="./concept-b-conversational.html">B</a>
+  <a class="nav-pill" href="./concept-c-single-page.html">C</a>
+  <a class="nav-pill" href="./concept-d-templates.html">D</a>
+    <a class="nav-pill" href="./concept-e-combined.html">E ★</a>
+</header>
+
+<div class="page">
+
+  <!-- ═══════════════════════════════════════════
+       SCREEN 0 — Category choice
+  ════════════════════════════════════════════ -->
+  <div class="screen active" id="screen-0">
+    <div class="choice-heading">
+      <h1>Who is this twin for?</h1>
+      <p>Choose a twin type to get started — this shapes defaults &amp; subscription options.</p>
+    </div>
+    <div class="choice-cards">
+
+      <div class="choice-card personal" role="button" tabindex="0" onclick="selectCategory('personal')" onkeydown="if(event.key==='Enter')selectCategory('personal')">
+        <span class="card-arrow">→</span>
+        <div class="card-icon">🧠</div>
+        <h2>Personal Twin</h2>
+        <p>A digital twin of yourself. Private by default — your knowledge, your voice, for your own audience.</p>
+        <span class="cc-badge personal">● Personal</span>
+      </div>
+
+      <div class="choice-card community" role="button" tabindex="0" onclick="selectCategory('community')" onkeydown="if(event.key==='Enter')selectCategory('community')">
+        <span class="card-arrow">→</span>
+        <div class="card-icon">🌐</div>
+        <h2>Community Twin</h2>
+        <p>A twin of a significant person — a mentor, creator, or public figure. Others can subscribe and chat with it.</p>
+        <span class="cc-badge community">● Community</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       SCREENS 1–3 — Wizard
+  ════════════════════════════════════════════ -->
+  <div class="screen" id="screen-wizard">
+
+    <!-- Stepper -->
+    <div class="stepper" id="stepper">
+      <div class="step-item" id="step-item-0" onclick="goToStep(1)">
+        <div class="step-dot">1</div>
+        <div class="step-label">Identity</div>
+      </div>
+      <div class="step-item" id="step-item-1" onclick="goToStep(2)">
+        <div class="step-dot">2</div>
+        <div class="step-label">Personality</div>
+      </div>
+      <div class="step-item" id="step-item-2">
+        <div class="step-dot">3</div>
+        <div class="step-label">Review &amp; Create</div>
+      </div>
+    </div>
+
+    <!-- ── Step 1 — Identity ── -->
+    <div class="screen" id="step-1">
+      <div class="wizard-card">
+        <h2>Identity</h2>
+        <p class="sub">Name your twin and give it a face. Everything else can be refined later.</p>
+
+        <!-- Avatar -->
+        <div class="avatar-section">
+          <div class="avatar-ring" id="avatar-ring" onclick="cycleAvatar()" title="Click to change avatar">
+            <span id="avatar-emoji">🧠</span>
+            <div class="cam-overlay">📷</div>
+          </div>
+          <div class="avatar-hint">
+            <strong>Avatar</strong>
+            Click to cycle mock avatars · Upload supported after creation
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="twin-name">Twin name</label>
+          <input type="text" id="twin-name" placeholder="Pria" autocomplete="off" />
+        </div>
+
+        <div class="community-only">
+          <div class="field">
+            <label for="based-on">Who is this twin based on?</label>
+            <input type="text" id="based-on" placeholder="e.g. Coach Marchand" autocomplete="off" />
+          </div>
+          <div class="field">
+            <label for="subtitle">Subtitle shown to subscribers</label>
+            <input type="text" id="subtitle" placeholder="e.g. AI version of Coach Marchand's methodology" autocomplete="off" />
+          </div>
+        </div>
+
+        <p style="margin: 0 0 4px;">
+          <a class="appearance-link" href="#">
+            🎨 Appearance &amp; backgrounds — set up later in Settings
+            <span class="tip">Moved out of creation to keep the wizard fast. Find it in Twin Settings → Appearance.</span>
+          </a>
+        </p>
+      </div>
+      <div class="step-footer">
+        <button class="cc-btn ghost" onclick="goBack()">← Back</button>
+        <button class="cc-btn" id="step1-next" onclick="goToStep(2)">Continue →</button>
+      </div>
+    </div>
+
+    <!-- ── Step 2 — Personality ── -->
+    <div class="screen" id="step-2">
+      <div class="wizard-card">
+        <h2>Personality</h2>
+        <p class="sub">5 essential questions — takes about 60 seconds. 9 optional questions live in the twin's profile.</p>
+
+        <div class="field">
+          <label for="q1">1 · Role &amp; identity</label>
+          <input type="text" id="q1" placeholder="What role or identity should this twin represent?" autocomplete="off" />
+        </div>
+
+        <div class="field">
+          <label for="q2">2 · Primary helpfulness</label>
+          <input type="text" id="q2" placeholder="What should your twin help people with most often?" autocomplete="off" />
+        </div>
+
+        <div class="field">
+          <label for="q3">3 · Target audience</label>
+          <input type="text" id="q3" placeholder="Who will interact with your twin most often?" autocomplete="off" />
+        </div>
+
+        <div class="field">
+          <label>4 · Advice style</label>
+          <div class="chip-group" id="style-chips">
+            <div class="chip" onclick="selectChip(this)" data-val="Direct">Direct</div>
+            <div class="chip" onclick="selectChip(this)" data-val="Encouraging">Encouraging</div>
+            <div class="chip" onclick="selectChip(this)" data-val="Analytical">Analytical</div>
+            <div class="chip" onclick="selectChip(this)" data-val="Balanced">Balanced</div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>5 · Communication style</label>
+          <div class="slider-group">
+            <div class="slider-row">
+              <div class="slider-labels"><span>Direct</span><span>Tone</span><span>Expressive</span></div>
+              <div class="slider-squares" id="slider-tone" data-val="4">
+                <div class="sq" onclick="setSq('slider-tone',1)">1</div><div class="sq" onclick="setSq('slider-tone',2)">2</div><div class="sq" onclick="setSq('slider-tone',3)">3</div><div class="sq active" onclick="setSq('slider-tone',4)">4</div><div class="sq" onclick="setSq('slider-tone',5)">5</div><div class="sq" onclick="setSq('slider-tone',6)">6</div><div class="sq" onclick="setSq('slider-tone',7)">7</div>
+              </div>
+            </div>
+            <div class="slider-row">
+              <div class="slider-labels"><span>Concise</span><span>Detail</span><span>Comprehensive</span></div>
+              <div class="slider-squares" id="slider-detail" data-val="4">
+                <div class="sq" onclick="setSq('slider-detail',1)">1</div><div class="sq" onclick="setSq('slider-detail',2)">2</div><div class="sq" onclick="setSq('slider-detail',3)">3</div><div class="sq active" onclick="setSq('slider-detail',4)">4</div><div class="sq" onclick="setSq('slider-detail',5)">5</div><div class="sq" onclick="setSq('slider-detail',6)">6</div><div class="sq" onclick="setSq('slider-detail',7)">7</div>
+              </div>
+            </div>
+            <div class="slider-row">
+              <div class="slider-labels"><span>Professional</span><span>Warmth</span><span>Nurturing</span></div>
+              <div class="slider-squares" id="slider-warmth" data-val="4">
+                <div class="sq" onclick="setSq('slider-warmth',1)">1</div><div class="sq" onclick="setSq('slider-warmth',2)">2</div><div class="sq" onclick="setSq('slider-warmth',3)">3</div><div class="sq active" onclick="setSq('slider-warmth',4)">4</div><div class="sq" onclick="setSq('slider-warmth',5)">5</div><div class="sq" onclick="setSq('slider-warmth',6)">6</div><div class="sq" onclick="setSq('slider-warmth',7)">7</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="optional-note">
+          <strong>9 optional questions</strong> moved to the twin's profile — refine your twin's depth, expertise level, and boundaries anytime after creation.
+        </div>
+      </div>
+      <div class="step-footer">
+        <button class="cc-btn ghost" onclick="goToStep(1)">← Back</button>
+        <button class="cc-btn" id="step2-next" onclick="goToStep(3)" disabled>Continue →</button>
+      </div>
+    </div>
+
+    <!-- ── Step 3 — Review & Create ── -->
+    <div class="screen" id="step-3">
+      <div class="wizard-card">
+        <h2>Review &amp; Create</h2>
+        <p class="sub">We've generated your twin's core instructions from your answers. Edit freely.</p>
+
+        <div class="preview-label">Generated instructions</div>
+        <div class="shimmer-block" id="shimmer">
+          <div class="shimmer-dot"></div><div class="shimmer-dot"></div><div class="shimmer-dot"></div>
+          <span style="margin-left:8px">Generating instructions…</span>
+        </div>
+        <div class="field" id="persona-field" style="display:none; margin-top:0;">
+          <textarea id="persona-text" rows="6"></textarea>
+        </div>
+
+        <!-- Smart defaults accordion -->
+        <div class="accordion" style="margin-top:24px;">
+          <div class="accordion-head" id="acc-head" onclick="toggleAccordion()">
+            ✅ Smart defaults applied
+            <span class="chevron">▼</span>
+          </div>
+          <div class="accordion-body" id="acc-body">
+            <ul id="defaults-list"></ul>
+          </div>
+        </div>
+
+        <!-- Community subscription card -->
+        <div class="community-only sub-card" id="sub-card">
+          <h4>🔔 Subscription</h4>
+          <div class="toggle-row">
+            <button class="tog-btn on" id="tog-free" onclick="setSubTier('free')">Free</button>
+            <button class="tog-btn" id="tog-paid" onclick="setSubTier('paid')">Paid</button>
+          </div>
+          <div class="paid-input" id="paid-input">
+            <span>$</span>
+            <div class="field" style="margin:0; flex:1">
+              <input type="number" id="price-input" placeholder="9.99" min="0.99" step="0.01" />
+            </div>
+            <span style="font-size:13px; color:var(--text-faint)">/month</span>
+          </div>
+        </div>
+
+        <!-- Create button -->
+        <div class="create-btn-wrap">
+          <button class="cc-btn create" id="create-btn" onclick="startCreation()">Create twin</button>
+        </div>
+
+        <!-- Progress -->
+        <div class="progress-wrap" id="progress-wrap">
+          <div class="progress-label" id="progress-label">Seeding Digital Twin…</div>
+          <div class="progress-bar-bg"><div class="progress-bar-fill" id="progress-fill"></div></div>
+          <div class="progress-phases" id="progress-phases">
+            <div class="phase-item" data-phase="0"><div class="phase-dot"></div>Seeding Digital Twin…</div>
+            <div class="phase-item" data-phase="1"><div class="phase-dot"></div>Infusing personality…</div>
+            <div class="phase-item" data-phase="2"><div class="phase-dot"></div>Shaping voice &amp; tone…</div>
+            <div class="phase-item" data-phase="3"><div class="phase-dot"></div>Awakening consciousness…</div>
+          </div>
+        </div>
+      </div>
+      <div class="step-footer" id="step3-footer">
+        <button class="cc-btn ghost" onclick="goToStep(2)">← Back</button>
+      </div>
+    </div>
+
+    <!-- ── Success screen ── -->
+    <div class="screen" id="screen-success">
+      <div class="success-wrap">
+        <div class="success-ring" id="success-ring">🧠</div>
+        <h2 id="success-name">Your twin is alive!</h2>
+        <p class="success-sub">
+          <span id="success-sub-text"></span>
+        </p>
+        <div style="display:flex; justify-content:center; margin-bottom:18px;">
+          <span class="cc-badge" id="success-badge"></span>
+        </div>
+        <div class="success-actions">
+          <button class="cc-btn" onclick="showToast('Prototype — not wired')">Open twin →</button>
+          <button class="cc-btn ghost" onclick="showToast('Prototype — not wired')">Add knowledge files now</button>
+        </div>
+        <div style="display:flex;justify-content:center;">
+          <div class="stat-compare">
+            <div style="font-size:12px;font-weight:700;color:var(--text-faint);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Time to twin ⚡</div>
+            <div class="stat-row"><span class="stat-label">Steps</span><span class="stat-new">3 steps</span><span class="stat-old">8 steps</span></div>
+            <div class="stat-row"><span class="stat-label">Questions</span><span class="stat-new">5 questions</span><span class="stat-old">14 questions</span></div>
+            <div class="stat-row"><span class="stat-label">Time</span><span class="stat-new">under 2 minutes</span><span class="stat-old">~8 minutes</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /screen-wizard -->
+</div><!-- /page -->
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── State ─────────────────────────────────────────────────────── */
+const state = {
+  category: null,       // 'personal' | 'community'
+  currentStep: 0,       // wizard step 1–3
+  adviceStyle: null,
+  sliders: { tone: 4, detail: 4, warmth: 4 },
+  avatarIdx: 0,
+  subTier: 'free',
+  creationDone: false,
+};
+
+const AVATARS = [
+  { emoji: '🧠', bg: 'linear-gradient(135deg,#4f46e5,#0c29eb)' },
+  { emoji: '✨', bg: 'linear-gradient(135deg,#7c3aed,#4f46e5)' },
+  { emoji: '🌊', bg: 'linear-gradient(135deg,#06b6d4,#0c29eb)' },
+  { emoji: '🔥', bg: 'linear-gradient(135deg,#f59e0b,#ef4444)' },
+];
+
+const ACCENT = {
+  personal:  { from: '#4f46e5', to: '#0c29eb', glow: 'rgba(79,70,229,.18)' },
+  community: { from: '#7c3aed', to: '#db2777', glow: 'rgba(124,58,237,.18)' },
+};
+
+/* ── Utilities ─────────────────────────────────────────────────── */
+function applyAccent(cat) {
+  const a = ACCENT[cat];
+  document.documentElement.style.setProperty('--step-accent', a.from);
+  document.documentElement.style.setProperty('--step-accent-from', a.from);
+  document.documentElement.style.setProperty('--step-accent-to', a.to);
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => { s.classList.remove('active','visible'); });
+  const el = document.getElementById(id);
+  el.classList.add('active');
+  requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('visible')));
+}
+
+function showStepInWizard(n) {
+  ['step-1','step-2','step-3','screen-success'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.classList.remove('active','visible'); }
+  });
+  const el = document.getElementById('step-' + n) || document.getElementById('screen-success');
+  el.classList.add('active');
+  requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('visible')));
+}
+
+function updateStepper(active) {
+  [0,1,2].forEach(i => {
+    const item = document.getElementById('step-item-' + i);
+    if (!item) return;
+    item.classList.remove('active','done');
+    if (i + 1 < active) item.classList.add('done');
+    else if (i + 1 === active) item.classList.add('active');
+  });
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+/* ── Category selection ────────────────────────────────────────── */
+function selectCategory(cat) {
+  state.category = cat;
+  applyAccent(cat);
+  document.body.classList.remove('cat-personal','cat-community');
+  document.body.classList.add('cat-' + cat);
+
+  // Prefill audience hint for community
+  if (cat === 'community') {
+    document.getElementById('q3').placeholder = 'Subscribers of [name]';
+  } else {
+    document.getElementById('q3').placeholder = 'Who will interact with your twin most often?';
+  }
+
+  // Transition to wizard
+  showScreen('screen-wizard');
+  state.currentStep = 1;
+  showStepInWizard(1);
+  updateStepper(1);
+}
+
+/* ── Step navigation ───────────────────────────────────────────── */
+function goToStep(n) {
+  if (n < 1) { showScreen('screen-0'); return; }
+  if (n === 3 && !canProceedFromStep2()) return;
+  state.currentStep = n;
+  showStepInWizard(n);
+  updateStepper(n);
+  if (n === 3) onEnterStep3();
+}
+
+function goBack() {
+  if (state.currentStep === 1) { showScreen('screen-0'); }
+  else { goToStep(state.currentStep - 1); }
+}
+
+/* ── Avatar cycling ────────────────────────────────────────────── */
+function cycleAvatar() {
+  state.avatarIdx = (state.avatarIdx + 1) % AVATARS.length;
+  const av = AVATARS[state.avatarIdx];
+  const ring = document.getElementById('avatar-ring');
+  document.getElementById('avatar-emoji').textContent = av.emoji;
+  ring.style.background = av.bg;
+  document.getElementById('success-ring').textContent = av.emoji;
+  document.getElementById('success-ring').style.background = av.bg;
+}
+
+/* ── Chips ─────────────────────────────────────────────────────── */
+function selectChip(el) {
+  document.querySelectorAll('#style-chips .chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  state.adviceStyle = el.dataset.val;
+  validateStep2();
+}
+
+/* ── Sliders ───────────────────────────────────────────────────── */
+function setSq(groupId, val) {
+  state.sliders[groupId.replace('slider-','')] = val;
+  const group = document.getElementById(groupId);
+  group.dataset.val = val;
+  group.querySelectorAll('.sq').forEach((sq, i) => {
+    sq.classList.toggle('active', i + 1 === val);
+  });
+}
+
+/* ── Validation ────────────────────────────────────────────────── */
+function canProceedFromStep2() {
+  const q1 = document.getElementById('q1').value.trim();
+  const q2 = document.getElementById('q2').value.trim();
+  const q3 = document.getElementById('q3').value.trim();
+  return q1 && q2 && q3 && state.adviceStyle;
+}
+
+function validateStep2() {
+  document.getElementById('step2-next').disabled = !canProceedFromStep2();
+}
+
+['q1','q2','q3'].forEach(id => {
+  document.getElementById(id).addEventListener('input', validateStep2);
+});
+
+/* ── Step 3 logic ──────────────────────────────────────────────── */
+function onEnterStep3() {
+  if (state.creationDone) return;
+
+  // Set create button label
+  const name = document.getElementById('twin-name').value.trim() || 'Pria';
+  document.getElementById('create-btn').textContent = 'Create ' + name;
+
+  // Update defaults list
+  const cat = state.category;
+  const ul = document.getElementById('defaults-list');
+  ul.innerHTML = `
+    <li><strong>Joining:</strong> ${cat === 'personal' ? 'Disabled (private)' : 'Open subscription'}</li>
+    <li><strong>Credits:</strong> Pooled</li>
+    <li><strong>Realtime voice:</strong> Off</li>
+    <li><strong>Knowledge files:</strong> Add after creation</li>
+  `;
+
+  // Sub card defaults
+  state.subTier = 'free';
+  document.getElementById('tog-free').classList.add('on');
+  document.getElementById('tog-paid').classList.remove('on');
+  document.getElementById('paid-input').classList.remove('visible');
+
+  // Shimmer then generate
+  const shimmer = document.getElementById('shimmer');
+  const field   = document.getElementById('persona-field');
+  shimmer.style.display = 'flex'; field.style.display = 'none';
+
+  setTimeout(() => {
+    shimmer.style.display = 'none';
+    field.style.display = 'block';
+    document.getElementById('persona-text').value = generatePersona();
+  }, 1200);
+}
+
+function generatePersona() {
+  const name   = document.getElementById('twin-name').value.trim() || 'Pria';
+  const q1     = document.getElementById('q1').value.trim() || 'a knowledgeable guide';
+  const q2     = document.getElementById('q2').value.trim() || 'answering questions and providing guidance';
+  const q3     = document.getElementById('q3').value.trim() || 'a broad audience';
+  const style  = state.adviceStyle || 'Balanced';
+  const tone   = state.sliders.tone;
+  const detail = state.sliders.detail;
+  const warmth = state.sliders.warmth;
+  const toneDesc   = tone <= 3 ? 'direct and clear' : tone >= 5 ? 'expressive and nuanced' : 'balanced in tone';
+  const detailDesc = detail <= 3 ? 'concise' : detail >= 5 ? 'comprehensive' : 'moderately detailed';
+  const warmthDesc = warmth <= 3 ? 'professional' : warmth >= 5 ? 'nurturing and warm' : 'approachable';
+  const basedOn = state.category === 'community' ? document.getElementById('based-on').value.trim() : '';
+  const basedLine = basedOn ? ` Drawing inspiration from ${basedOn},` : '';
+
+  return `You are ${name}, ${q1}.${basedLine} Your primary purpose is ${q2}, primarily serving ${q3}.\n\nWhen engaging with users, you adopt a ${style.toLowerCase()} approach — be ${toneDesc}, ${detailDesc} in your responses, and ${warmthDesc} in how you relate to people. Always prioritise clarity and genuine helpfulness over length.\n\nYou speak in first person and maintain a consistent identity. When uncertain, acknowledge it honestly rather than speculating. Your goal is to be the most useful version of ${name} that your audience could interact with.`;
+}
+
+/* ── Accordion ─────────────────────────────────────────────────── */
+function toggleAccordion() {
+  const head = document.getElementById('acc-head');
+  const body = document.getElementById('acc-body');
+  const open = body.classList.toggle('open');
+  head.classList.toggle('open', open);
+}
+
+/* ── Subscription toggle ───────────────────────────────────────── */
+function setSubTier(tier) {
+  state.subTier = tier;
+  document.getElementById('tog-free').classList.toggle('on', tier === 'free');
+  document.getElementById('tog-paid').classList.toggle('on', tier === 'paid');
+  document.getElementById('paid-input').classList.toggle('visible', tier === 'paid');
+}
+
+/* ── Creation animation ────────────────────────────────────────── */
+const PHASES = ['Seeding Digital Twin…','Infusing personality…','Shaping voice & tone…','Awakening consciousness…'];
+
+function startCreation() {
+  document.getElementById('create-btn').style.display = 'none';
+  document.getElementById('step3-footer').style.display = 'none';
+  const pw = document.getElementById('progress-wrap');
+  pw.style.display = 'block';
+  const phases = document.querySelectorAll('.phase-item');
+  const fill   = document.getElementById('progress-fill');
+  const lbl    = document.getElementById('progress-label');
+  let p = 0;
+
+  function advancePhase() {
+    if (p > 0) phases[p-1].classList.add('complete');
+    if (p < phases.length) {
+      phases[p].classList.add('show');
+      lbl.textContent = PHASES[p];
+      fill.style.width = ((p + 1) / phases.length * 100) + '%';
+      p++;
+      setTimeout(advancePhase, 1200);
+    } else {
+      setTimeout(showSuccess, 600);
+    }
+  }
+  advancePhase();
+}
+
+function showSuccess() {
+  state.creationDone = true;
+  const name = document.getElementById('twin-name').value.trim() || 'Pria';
+  const cat  = state.category;
+  const av   = AVATARS[state.avatarIdx];
+
+  document.getElementById('success-name').textContent = name + ' is alive!';
+  document.getElementById('success-sub-text').textContent =
+    cat === 'community' ? 'Community twin ready for subscribers.' : 'Personal twin ready — just for you.';
+
+  const badge = document.getElementById('success-badge');
+  badge.className = 'cc-badge ' + cat;
+  badge.textContent = cat === 'personal' ? '● Personal' : '● Community';
+
+  const ring = document.getElementById('success-ring');
+  ring.textContent = av.emoji;
+  ring.style.background = av.bg;
+
+  updateStepper(4); // all done
+  showStepInWizard('success');
+  document.getElementById('screen-success').classList.add('active');
+  requestAnimationFrame(() => requestAnimationFrame(() =>
+    document.getElementById('screen-success').classList.add('visible')
+  ));
+}
+
+/* ── Keyboard: Enter to advance ────────────────────────────────── */
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'BUTTON') return;
+  if (state.currentStep === 1) { goToStep(2); }
+  else if (state.currentStep === 2 && canProceedFromStep2()) { goToStep(3); }
+});
+
+/* ── Init: show step-1 avatar emoji in success ring ───────────── */
+document.getElementById('success-ring').textContent = AVATARS[0].emoji;
+
+/* ── Init: fade in the opening category screen (it starts at
+   opacity 0 via .screen; without this the whole page is invisible) ── */
+showScreen('screen-0');
+</script>
+<script>
+// Concept-only marketing links must not navigate into the portfolio.
+document.addEventListener('click', function (event) {
+  const link = event.target.closest('a[href]');
+  if (!link) return;
+  const url = new URL(link.href, location.href);
+  if (url.origin === location.origin && !url.pathname.startsWith('/demos')) {
+    event.preventDefault();
+    alert('This is a design concept. This destination is not part of the demo.');
+  }
+});
+</script></body>
+</html>

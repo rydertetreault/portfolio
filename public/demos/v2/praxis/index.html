@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Praxis AI — Human-First in an AI-First world · The Human Thread</title>
+  <meta name="description" content="Praxis AI turns real people's expertise and organizational knowledge into secure, governed AI experts. Human-First Digital Twins™, AI Middleware, LXP, PraxisShield™, and IP Vault™ work together across 100+ models without vendor lock-in." />
+  <link rel="icon" href="/demos/assets/brand/a-dot.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script type="module" crossorigin src="/demos/assets/v2praxis-DKcEUmKe.js"></script>
+  <link rel="modulepreload" crossorigin href="/demos/assets/modulepreload-polyfill-B5Qt9EMX.js">
+  <link rel="modulepreload" crossorigin href="/demos/assets/content-BmG41JIl.js">
+  <link rel="modulepreload" crossorigin href="/demos/assets/motion-T28mx4Nt.js">
+  <link rel="stylesheet" crossorigin href="/demos/assets/v2praxis-B5V33goK.css">
+  <link rel="stylesheet" crossorigin href="/demos/assets/base-BAgu-4YE.css">
+</head>
+<body class="px">
+
+  <a class="skip" href="#main">Skip to content</a>
+
+  <!-- 0 · Nav -->
+  <header class="nav" id="nav">
+    <div class="nav-inner">
+      <a class="nav-logo" href="/demos/v2/praxis/" aria-label="Praxis AI — home">
+        <img src="/demos/assets/brand/wordmark-2025-dark.webp" alt="Praxis AI" width="118" height="24" />
+      </a>
+      <nav class="nav-menu" id="navMenu" aria-label="Primary"></nav>
+      <div class="nav-actions">
+        <button class="nav-k mono" id="navK" type="button" aria-label="Open command palette"><span>Search</span><kbd>⌘K</kbd></button>
+        <a class="btn btn-ghost" href="https://www.hiimpria.ai/login" target="_blank" rel="noopener">Digital Twin Login</a>
+        <a class="btn btn-grad" href="/contact" data-magnetic=".25">Talk to Our Team</a>
+      </div>
+      <button class="nav-burger" id="navBurger" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="navMenu"><span></span><span></span></button>
+    </div>
+  </header>
+
+  <!-- ⌘K command palette -->
+  <div class="kbar" id="kbar" role="dialog" aria-modal="true" aria-label="Command palette" hidden>
+    <div class="kbar-backdrop" data-kbar-close></div>
+    <div class="kbar-panel">
+      <div class="kbar-head">
+        <span class="kbar-glyph mono" aria-hidden="true">⌘K</span>
+        <input class="kbar-input" id="kbarInput" type="text" placeholder="Search products, twins, docs… or type an action" autocomplete="off" spellcheck="false" aria-label="Search" role="combobox" aria-expanded="true" aria-controls="kbarList" aria-autocomplete="list" />
+        <button class="kbar-esc mono" type="button" data-kbar-close aria-label="Close">Esc</button>
+      </div>
+      <ul class="kbar-list" id="kbarList" role="listbox"></ul>
+      <div class="kbar-foot mono"><span><kbd>↑</kbd><kbd>↓</kbd> navigate</span><span><kbd>↵</kbd> open</span><span><kbd>/</kbd> opens anywhere</span></div>
+    </div>
+  </div>
+
+  <main id="main">
+
+    <!-- 2 · The Human Thread — page-wide layer (desktop only) -->
+    <div class="thread-layer" id="threadLayer" aria-hidden="true">
+      <svg id="threadSvg" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="threadGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#006aff" />
+            <stop offset="1" stop-color="#5900ff" />
+          </linearGradient>
+        </defs>
+        <!-- glow = two wide, low-alpha strokes (no SVG blur filter — that re-rasterised a 13k-px layer every scroll frame) -->
+        <path id="threadGhost" class="thread-ghost" d="" />
+        <path id="threadPathHalo" class="thread-path-halo" d="" />
+        <path id="threadPathGlow" class="thread-path-glow" d="" />
+        <path id="threadPath" class="thread-path" d="" />
+      </svg>
+    </div>
+
+    <!-- 1 · Hero -->
+    <section class="hero" id="hero">
+      <div class="hero-bg" aria-hidden="true">
+        <div class="hero-grid-dots"></div>
+        <div class="hero-glow hero-glow-blue"></div>
+        <div class="hero-glow hero-glow-violet"></div>
+        <div class="hero-glow hero-glow-green"></div>
+        <canvas id="particles"></canvas>
+      </div>
+
+      <div class="container hero-cols">
+        <div class="hero-copy">
+          <p class="eyebrow hero-eyebrow" id="heroEyebrow">Human-First Digital Twins™</p>
+          <h1 class="hero-h1" id="heroH1">Human-First in an AI-First world.</h1>
+          <p class="hero-sub" id="heroSub">Praxis AI turns real people's expertise and company knowledge into <b>secure, governed AI experts</b> — trained on their documents and knowledge, communicating in their style and voice, and available 24/7 in 100+ languages for education, training, support, and knowledge retention.</p>
+          <div class="hero-ctas" id="heroCtas">
+            <a class="btn btn-grad btn-lg" href="/contact" data-magnetic=".25">Talk to Our Team <span aria-hidden="true">→</span></a>
+            <a class="btn btn-ghost btn-lg" href="#overview" data-magnetic=".2">See the platform</a>
+          </div>
+          <p class="hero-micro mono" id="heroMicro">100+ languages · 100+ models · 180+ organizations · zero breaches</p>
+        </div>
+
+        <!-- The Answer Card -->
+        <div class="answer-wrap" id="answerWrap">
+          <figure class="answer" id="answer" aria-live="polite">
+            <figcaption class="answer-head">
+              <img class="answer-avatar" id="ansAvatar" src="/demos/assets/twins/jen-welter.webp" alt="" width="36" height="36" />
+              <span class="answer-id">
+                <b id="ansName">Coach JenAI</b>
+                <span class="answer-role" id="ansRole">1st Female NFL Coach</span>
+              </span>
+              <span class="answer-live mono"><i aria-hidden="true"></i>live</span>
+            </figcaption>
+
+            <div class="answer-body">
+              <div class="answer-msg answer-msg-user">
+                <span class="answer-who mono">Learner</span>
+                <p class="answer-prompt" id="ansPrompt"></p>
+              </div>
+              <div class="answer-msg answer-msg-twin">
+                <span class="answer-who mono" id="ansWho">Coach JenAI</span>
+                <p class="answer-reply" id="ansReply"></p>
+                <button class="cite" id="ansCite" type="button" aria-label="Citation 1 — open source in IP Vault">
+                  <span class="cite-n mono">[1]</span><span class="cite-txt mono" id="ansCiteTxt"></span>
+                </button>
+                <p class="approved" id="ansApproved"><i class="approved-check" aria-hidden="true">✓</i><span id="ansApprovedTxt">Governed for Dr. Jen Welter · PraxisShield™</span></p>
+              </div>
+            </div>
+
+            <div class="answer-composer" aria-hidden="true">
+              <span class="composer-text" id="ansComposer"></span><span class="composer-caret"></span>
+              <span class="composer-send mono">↵</span>
+            </div>
+
+            <!-- the Human Thread inside the card: citation → portrait -->
+            <svg class="answer-thread" id="ansThreadSvg" aria-hidden="true">
+              <path id="ansThreadHalo" class="halo" d="" />
+              <path id="ansThreadPath" d="" />
+            </svg>
+          </figure>
+
+          <div class="answer-portrait" id="ansPortrait">
+            <img id="ansPortraitImg" src="/demos/assets/twins/jen-welter.webp" alt="" width="88" height="88" />
+            <span class="portrait-ring" aria-hidden="true"></span>
+            <span class="portrait-label mono" id="ansPortraitLabel">Dr. Jen Welter</span>
+          </div>
+
+          <ol class="answer-dots" id="answerDots" aria-label="Featured twins"></ol>
+        </div>
+      </div>
+
+      <div class="hero-marquee" id="heroMarquee">
+        <p class="marquee-label mono">Trusted by 180+ organizations across 3 countries</p>
+        <div class="marquee"><div class="marquee-track" id="marqueeTrack"></div></div>
+      </div>
+    </section>
+
+    <!-- 3 · Brief platform overview -->
+    <section class="overview" id="overview">
+      <div class="container">
+        <div class="sec-head overview-head">
+          <span class="thread-node" data-node="overview" aria-hidden="true"></span>
+          <p class="eyebrow">The platform</p>
+          <h2 class="h2">Real expertise. Secure AI experts.</h2>
+          <p class="lede">Praxis AI turns people’s expertise and company knowledge into governed AI experts, then deploys them for learning, support, and knowledge retention.</p>
+        </div>
+
+        <div class="overview-grid" id="overviewGrid">
+          <article class="overview-card card-twin">
+            <span class="overview-num mono">01 · THE EXPERT</span>
+            <h3>Human-First Digital Twin™</h3>
+            <p>An AI version of a person’s or organization’s expertise — trained on their documents and knowledge, modeled on their communication style and voice, and available 24/7 in 100+ languages.</p>
+            <ul class="overview-tags mono"><li>DOCUMENTS</li><li>VOICE</li><li>100+ LANGUAGES</li></ul>
+          </article>
+
+          <article class="overview-card card-middleware">
+            <span class="overview-num mono">02 · UNDERNEATH</span>
+            <h3>AI Middleware</h3>
+            <p>Connects organizational data, RAG, tools, AI agents, and 100+ models from providers such as OpenAI, Anthropic, Google, and AWS — without model lock-in.</p>
+            <ul class="overview-tags mono"><li>YOUR DATA</li><li>RAG + TOOLS</li><li>100+ MODELS</li></ul>
+          </article>
+
+          <article class="overview-card card-lxp">
+            <span class="overview-num mono">03 · WHERE IT TEACHES</span>
+            <h3>LXP</h3>
+            <p>An AI-powered Learning Experience Platform using AI instructors and Digital Twins for training, development, tutoring, onboarding, and AI-skilling.</p>
+            <ul class="overview-tags mono"><li>TRAINING</li><li>ONBOARDING</li><li>AI-SKILLING</li></ul>
+          </article>
+
+          <article class="overview-card card-shield">
+            <span class="overview-num mono">04 · AROUND IT ALL</span>
+            <h3>PraxisShield™</h3>
+            <p>The agent watchdog for governance, auditability, purpose restrictions, and protection of organizational knowledge and IP — including the IP Vault™.</p>
+            <ul class="overview-tags mono"><li>GOVERNANCE</li><li>AUDIT</li><li>IP VAULT™</li></ul>
+          </article>
+        </div>
+
+        <div class="overview-flow" id="overviewFlow" aria-label="How the platform works">
+          <span>Real expert</span><i>→</i><span>Private knowledge</span><i>→</i><span>Governed AI expert</span><i>→</i><span>Deploy anywhere</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4 · Example in action -->
+    <section class="usecases" id="usecases">
+      <div class="container usecases-grid">
+        <div class="sec-head">
+          <span class="thread-node" data-node="usecases" aria-hidden="true"></span>
+          <p class="eyebrow">Put expertise to work</p>
+          <h2 class="h2">One platform. Many outcomes.</h2>
+          <p class="lede">Deploy the same governed expertise wherever people need an answer, a teacher, or institutional knowledge.</p>
+        </div>
+        <ul class="usecase-list" id="usecaseList">
+          <li><span class="mono">01</span><b>Education &amp; tutoring</b></li>
+          <li><span class="mono">02</span><b>Employee training</b></li>
+          <li><span class="mono">03</span><b>Onboarding</b></li>
+          <li><span class="mono">04</span><b>Professional development</b></li>
+          <li><span class="mono">05</span><b>Customer support</b></li>
+          <li><span class="mono">06</span><b>Knowledge retention</b></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 5 · Product glimpse — intentionally lightweight -->
+    <section class="glimpse" id="glimpse">
+      <div class="container glimpse-grid">
+        <div class="glimpse-copy sec-head">
+          <span class="thread-node" data-node="glimpse" aria-hidden="true"></span>
+          <p class="eyebrow">A glimpse of the product</p>
+          <h2 class="h2">Meet the expertise — not another chatbot.</h2>
+          <p class="lede">The experience feels conversational. The difference is underneath: a real expert, private knowledge, model-independent infrastructure, and governance around every interaction.</p>
+          <a class="btn btn-grad btn-lg" href="/contact" data-magnetic=".2">See it in action <span aria-hidden="true">→</span></a>
+        </div>
+        <figure class="glimpse-frame" data-reveal="scale">
+          <div class="glimpse-bar mono"><i></i><span>PRIA · DIGITAL TWIN</span><em>PRODUCT PREVIEW</em></div>
+          <img src="/demos/assets/pria/chat-dark.webp" alt="A brief preview of a Praxis Human-First Digital Twin conversation" width="1440" height="900" loading="lazy" />
+        </figure>
+      </div>
+    </section>
+
+    <!-- 11 · Final CTA -->
+    <section class="cta" id="cta">
+      <div class="container cta-inner">
+        <span class="thread-node thread-end" data-node="cta" id="threadEnd" aria-hidden="true"></span>
+        <p class="cta-kicker mono">REAL EXPERTISE · PRIVATE KNOWLEDGE · MODEL INDEPENDENCE · GOVERNED AI</p>
+        <h2 class="cta-h2" id="ctaH2">Human-First in an AI-First world.</h2>
+        <a class="btn btn-grad btn-xl" href="/contact" data-magnetic=".3">Talk to Our Team <span aria-hidden="true">→</span></a>
+        <p class="cta-thesis" id="ctaThesis"></p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer" id="footer">
+    <div class="container">
+      <div class="foot-top">
+        <div class="foot-brand">
+          <img src="/demos/assets/brand/wordmark-2025-dark.webp" alt="Praxis AI" width="118" height="24" />
+          <p id="footManifesto"></p>
+        </div>
+        <div class="foot-cols" id="footCols"></div>
+      </div>
+      <div class="foot-bottom">
+        <div class="foot-addr mono" id="footAddr"></div>
+        <p class="foot-patent mono" id="footPatent"></p>
+        <ul class="foot-social" id="footSocial"></ul>
+        <p class="foot-note mono">Praxis original concept · designed for this lab · © 2026 Praxis AI</p>
+      </div>
+    </div>
+  </footer>
+
+<script>
+// Concept-only marketing links must not navigate into the portfolio.
+document.addEventListener('click', function (event) {
+  const link = event.target.closest('a[href]');
+  if (!link) return;
+  const url = new URL(link.href, location.href);
+  if (url.origin === location.origin && !url.pathname.startsWith('/demos')) {
+    event.preventDefault();
+    alert('This is a design concept. This destination is not part of the demo.');
+  }
+});
+</script></body>
+</html>

@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Praxis · Twin Creation Concepts</title>
+<link rel="stylesheet" href="./shared.css">
+<script>if (window.self !== window.top) document.documentElement.classList.add('embedded')</script>
+<style>
+  .wrap { max-width: 1060px; margin: 0 auto; padding: 40px 24px 80px; }
+  .hero { text-align: center; margin-bottom: 14px; }
+  .hero h1 {
+    font-size: 34px; font-weight: 800; margin: 0 0 10px;
+    background: linear-gradient(90deg, #93c5fd, #c4b5fd, #67e8f9);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .hero p { color: var(--text-soft); font-size: 15px; max-width: 640px; margin: 0 auto; line-height: 1.6; }
+
+  .problem {
+    display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;
+    margin: 28px 0 40px;
+  }
+  .stat {
+    background: var(--surface); border: 1px solid var(--border-soft);
+    border-radius: var(--radius); padding: 14px 22px; text-align: center; min-width: 150px;
+  }
+  .stat .num { font-size: 24px; font-weight: 800; }
+  .stat .lbl { font-size: 11.5px; color: var(--text-faint); text-transform: uppercase; letter-spacing: .06em; margin-top: 2px; }
+  .stat.bad .num { color: #fca5a5; }
+  .stat.good .num { color: #6ee7b7; }
+
+  .cats { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 44px; }
+  @media (max-width: 720px) { .cats { grid-template-columns: 1fr; } }
+  .cat {
+    border-radius: var(--radius); padding: 22px; border: 1px solid var(--border-soft);
+    background: var(--surface); position: relative; overflow: hidden;
+  }
+  .cat::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 4px; }
+  .cat.personal::before { background: linear-gradient(90deg, var(--personal-from), var(--personal-to)); }
+  .cat.community::before { background: linear-gradient(90deg, var(--community-from), var(--community-to)); }
+  .cat h3 { margin: 8px 0 8px; font-size: 17px; }
+  .cat p { margin: 0; color: var(--text-soft); font-size: 13.5px; line-height: 1.6; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+  .card {
+    display: block; text-decoration: none; color: inherit;
+    background: var(--surface); border: 1px solid var(--border-soft);
+    border-radius: var(--radius); overflow: hidden;
+    transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+  }
+  .card:hover { transform: translateY(-3px); border-color: var(--border); box-shadow: var(--shadow); }
+  .card .head { height: 92px; display: flex; align-items: center; padding: 0 22px; gap: 16px; }
+  .card.a .head { background: linear-gradient(120deg, #0c29eb, #4f46e5); }
+  .card.b .head { background: linear-gradient(120deg, #7c3aed, #4f46e5); }
+  .card.c .head { background: linear-gradient(120deg, #0e7490, #0c29eb); }
+  .card.d .head { background: linear-gradient(120deg, #be185d, #7c3aed); }
+  .card .letter {
+    width: 44px; height: 44px; border-radius: 12px; flex: none;
+    background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.25);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 20px; color: #fff;
+  }
+  .card .head h2 { margin: 0; font-size: 18px; color: #fff; }
+  .card .head .tag { font-size: 12px; color: rgba(255,255,255,.75); margin-top: 2px; }
+  .card .body { padding: 18px 22px 20px; }
+  .card .body p { margin: 0 0 14px; color: var(--text-soft); font-size: 13.5px; line-height: 1.65; }
+  .meta { display: flex; gap: 8px; flex-wrap: wrap; }
+  .meta span {
+    font-size: 11.5px; font-weight: 600; color: var(--accent-text);
+    background: rgba(79,70,229,.12); border: 1px solid rgba(79,70,229,.3);
+    border-radius: 999px; padding: 3px 10px;
+  }
+  .foot { margin-top: 48px; text-align: center; color: var(--text-faint); font-size: 12.5px; line-height: 1.7; }
+</style>
+</head>
+<body>
+  <div class="cc-topbar">
+    <a class="brand" href="./index.html">Praxis · Creation Concepts</a>
+    <span class="crumb">Overview</span>
+    <span class="spacer"></span>
+    <a class="nav-pill" href="./concept-a-express.html">A</a>
+    <a class="nav-pill" href="./concept-b-conversational.html">B</a>
+    <a class="nav-pill" href="./concept-c-single-page.html">C</a>
+    <a class="nav-pill" href="./concept-d-templates.html">D</a>
+    <a class="nav-pill" href="./concept-e-combined.html">E ★</a>
+  </div>
+
+  <div class="wrap">
+    <div class="hero">
+      <h1>Rethinking Twin Creation</h1>
+      <p>Four concepts that keep the <strong>same underlying process</strong> as staging
+      (persona answers → generated instructions → configuration) but cut the time-to-twin
+      dramatically — and introduce <strong>Personal</strong> vs <strong>Community</strong> twin categories.</p>
+    </div>
+
+    <div class="problem">
+      <div class="stat bad"><div class="num">8</div><div class="lbl">steps today</div></div>
+      <div class="stat bad"><div class="num">14</div><div class="lbl">questions today</div></div>
+      <div class="stat bad"><div class="num">~8 min</div><div class="lbl">time today</div></div>
+      <div class="stat good"><div class="num">1–3</div><div class="lbl">steps proposed</div></div>
+      <div class="stat good"><div class="num">≤ 5</div><div class="lbl">required questions</div></div>
+      <div class="stat good"><div class="num">30–90s</div><div class="lbl">time proposed</div></div>
+    </div>
+
+    <div class="cats">
+      <div class="cat personal">
+        <span class="cc-badge personal">Personal</span>
+        <h3>Personal Twin</h3>
+        <p>A digital twin of <em>yourself</em>. Private by default — your knowledge, your voice,
+        used by you, your team, or your clients. Joining defaults to disabled.</p>
+      </div>
+      <div class="cat community">
+        <span class="cc-badge community">Community</span>
+        <h3>Community Twin</h3>
+        <p>A twin of a <em>significant person</em> — a mentor, creator, family member, or public
+        figure. Others subscribe and chat with it. Optional free or paid subscription.</p>
+      </div>
+    </div>
+
+    <div class="grid">
+      <a class="card a" href="./concept-a-express.html">
+        <div class="head">
+          <div class="letter">A</div>
+          <div><h2>Express Wizard</h2><div class="tag">3 steps · same wizard mental model</div></div>
+        </div>
+        <div class="body">
+          <p>The safest evolution: keeps the familiar stepper, but collapses 8 steps into 3 —
+          Identity, Personality (only the 5 required questions), Review &amp; Create. Everything
+          else becomes a smart default you can change later.</p>
+          <div class="meta"><span>~2 min</span><span>5 questions</span><span>lowest risk</span></div>
+        </div>
+      </a>
+
+      <a class="card b" href="./concept-b-conversational.html">
+        <div class="head">
+          <div class="letter">B</div>
+          <div><h2>Conversational Create</h2><div class="tag">chat-first · Pria interviews you</div></div>
+        </div>
+        <div class="body">
+          <p>Creation as a conversation. Pria asks 7 quick questions in a chat, then presents a
+          persona card to tweak and confirm. On-brand for an AI product — the twin is born the
+          way it will be used.</p>
+          <div class="meta"><span>~60 sec</span><span>7 questions</span><span>most on-brand</span></div>
+        </div>
+      </a>
+
+      <a class="card c" href="./concept-c-single-page.html">
+        <div class="head">
+          <div class="letter">C</div>
+          <div><h2>Single-Page Smart Form</h2><div class="tag">no steps · live preview</div></div>
+        </div>
+        <div class="body">
+          <p>One scrolling page with progressive disclosure and a live twin-profile preview that
+          updates as you type — instructions auto-generate in real time. Power users create in
+          one pass, nothing is hidden behind steps.</p>
+          <div class="meta"><span>~90 sec</span><span>5 required fields</span><span>most transparent</span></div>
+        </div>
+      </a>
+
+      <a class="card d" href="./concept-d-templates.html">
+        <div class="head">
+          <div class="letter">D</div>
+          <div><h2>Template Gallery</h2><div class="tag">pick · personalize · create</div></div>
+        </div>
+        <div class="body">
+          <p>Near-instant creation: choose Personal or Community, pick a template that pre-answers
+          11 of 14 persona questions, personalize 2–3 fields, done. Blank Canvas still routes to
+          the full flow for those who want it.</p>
+          <div class="meta"><span>~30 sec</span><span>3 fields</span><span>fastest</span></div>
+        </div>
+      </a>
+    </div>
+
+    <a class="card e" href="./concept-e-combined.html" style="margin-top:18px;">
+      <div class="head" style="background: linear-gradient(120deg, #059669, #0c29eb);">
+        <div class="letter">E</div>
+        <div><h2>Combined Flow ★ Recommended</h2><div class="tag">D's gallery + B's chat + C's review page</div></div>
+      </div>
+      <div class="body">
+        <p>The synthesis: pick a template <em>or</em> start fresh. Templates skip straight to a prefilled
+        review page; starting fresh runs the 60-second chat with Pria, which then lands on the same
+        filled-out page — where users can add optional detail before creating.</p>
+        <div class="meta"><span>~30–90 sec</span><span>two entry paths</span><span>one review surface</span></div>
+      </div>
+    </a>
+
+    <div class="foot">
+      All concepts preserve the staging pipeline: persona answers → generated instructions →
+      instance configuration → knowledge upload (moved post-creation).<br>
+      Prototypes are fully mocked — no API calls. Built for review on the concept worktree.
+    </div>
+  </div>
+<script>
+// Concept-only marketing links must not navigate into the portfolio.
+document.addEventListener('click', function (event) {
+  const link = event.target.closest('a[href]');
+  if (!link) return;
+  const url = new URL(link.href, location.href);
+  if (url.origin === location.origin && !url.pathname.startsWith('/demos')) {
+    event.preventDefault();
+    alert('This is a design concept. This destination is not part of the demo.');
+  }
+});
+</script></body>
+</html>

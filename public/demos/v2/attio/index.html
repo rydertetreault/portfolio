@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Praxis AI — Welcome to Amplified Intelligence™ · attio v2</title>
+  <meta name="description" content="Praxis AI turns a real expert's knowledge into a governed Human-First Digital Twin™ that teaches, supports, and answers around the clock — in 100+ languages, with proof on every answer. A brand-compliant attio.com-style concept replica." />
+  <link rel="icon" href="/demos/assets/brand/icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script type="module" crossorigin src="/demos/assets/v2attio-W9VhXCP3.js"></script>
+  <link rel="modulepreload" crossorigin href="/demos/assets/modulepreload-polyfill-B5Qt9EMX.js">
+  <link rel="modulepreload" crossorigin href="/demos/assets/content-BmG41JIl.js">
+  <link rel="modulepreload" crossorigin href="/demos/assets/motion-T28mx4Nt.js">
+  <link rel="stylesheet" crossorigin href="/demos/assets/v2attio-D1lVTZAY.css">
+  <link rel="stylesheet" crossorigin href="/demos/assets/base-BAgu-4YE.css">
+</head>
+<body class="attio">
+
+  <!-- Attio: 52px light header, hairline bottom, one shared popup whose panels swap direction-aware -->
+  <header class="nav" id="nav">
+    <div class="nav-inner">
+      <a class="nav-logo" href="/demos/v2/attio/" aria-label="Praxis AI home">
+        <span class="plate"><img src="/demos/assets/brand/wordmark-2025-dark.webp" alt="Praxis AI" width="72" height="20" /></span>
+      </a>
+      <nav class="nav-menu" aria-label="Primary">
+        <ul class="nav-list" id="navList"></ul>
+        <div class="nav-popup" id="navPopup">
+          <div class="nav-popup-panels" id="navPanels"></div>
+        </div>
+      </nav>
+      <div class="nav-actions">
+        <a class="btn btn-ghost" href="https://www.hiimpria.ai/login" target="_blank" rel="noopener">Digital Twin Login</a>
+        <a class="btn btn-primary" href="/contact">Talk to Our Team</a>
+      </div>
+      <button class="nav-burger" id="navBurger" aria-label="Toggle menu" aria-expanded="false" aria-controls="navMobile"><span></span><span></span></button>
+    </div>
+    <div class="nav-mobile" id="navMobile" hidden></div>
+  </header>
+
+  <main id="main">
+
+    <!-- ── HERO ───────────────────────────────────────────────────── -->
+    <section class="hero" id="hero">
+      <div class="hero-bg" aria-hidden="true">
+        <div class="hero-bg-grad"></div>
+        <div class="hero-bg-stripes"></div>
+        <div class="hero-bg-spot" id="heroSpot"></div>
+      </div>
+
+      <div class="hero-content">
+        <div class="hero-text" id="heroText">
+          <a class="pill" id="heroPill" href="#stories" data-in>
+            <span class="pill-dot" aria-hidden="true"></span>
+            <span>Digital RAI. — Ray Kurzweil's twin debuts at AI for Good, Geneva</span>
+            <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2.5L8 6l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+          <h1 class="h1" data-in>Welcome to Amplified Intelligence<sup>™</sup>.</h1>
+          <p class="hero-sub" data-in>Praxis AI turns real people's expertise and private organizational knowledge into secure AI experts — then gives organizations the infrastructure to deploy them for learning, support, onboarding, and knowledge retention.</p>
+          <div class="hero-ctas" data-in>
+            <a class="btn btn-primary btn-lg" href="/contact">Talk to Our Team</a>
+            <a class="btn btn-secondary btn-lg" href="https://www.praxisdna.ai" target="_blank" rel="noopener">Discover Your Digital Twin DNA</a>
+          </div>
+        </div>
+
+        <div class="hero-stage" id="heroStage">
+          <!-- main product window: the real PRIA 2026 UI -->
+          <div class="shell" id="heroShell">
+            <div class="win win-main" id="heroWin">
+              <div class="win-bar" aria-hidden="true"><i></i><i></i><i></i><span class="win-title">PRIA 2026 · Live staging site</span></div>
+              <div class="win-body"><div class="pria-shot" id="heroEmbed"></div></div>
+            </div>
+          </div>
+
+          <!-- side windows: twin in a meeting (Convo Mode), twin in Slack, twin via MCP -->
+          <div class="win win-side win-call" id="winCall" aria-hidden="true">
+            <div class="win-bar"><i></i><i></i><i></i></div>
+            <div class="app">
+              <div class="app-head"><span>Practice review · Coach JenAI joined</span></div>
+              <div class="call-video">
+                <div class="call-face"><img src="/demos/assets/twins/jen-welter.webp" alt="" loading="lazy" /></div>
+                <div class="call-time"><span>10:00</span><span>28:14</span></div>
+                <div class="call-bars"><i class="on"></i><i class="prog"><b></b></i><i></i><i></i><i></i></div>
+              </div>
+              <div class="app-tabs"><span>Meeting</span><span class="on">Transcript</span><span>Speakers</span></div>
+              <div class="call-log"><div class="call-lines" id="callLines"></div></div>
+            </div>
+          </div>
+
+          <div class="win win-side win-slack" id="winSlack" aria-hidden="true">
+            <div class="win-bar"><i></i><i></i><i></i></div>
+            <div class="app slack">
+              <p class="slack-ch"># cohort-14</p>
+              <div class="slack-msgs" id="slackMsgs"></div>
+            </div>
+          </div>
+
+          <div class="win win-side win-term" id="winTerm" aria-hidden="true">
+            <div class="win-bar"><i></i><i></i><i></i></div>
+            <div class="app term">
+              <div class="term-body" id="termBody"></div>
+              <div class="term-foot"><span>▶ auto · Middleware router · via MCP</span><span class="ok">PraxisShield™ audit on</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── LOGO CELLS ─────────────────────────────────────────────── -->
+    <section class="logos" aria-label="Partners">
+      <div class="logo-grid" id="logoGrid"></div>
+    </section>
+
+    <!-- ── PLATFORM (sticky rail scrollytelling) ──────────────────── -->
+    <section class="platform" id="platform">
+      <div class="container sec-head">
+        <p class="eyebrow" data-in>One platform · four product systems</p>
+        <h2 class="h2" data-in>Turn human expertise into secure AI experts. <span class="dim">Build the expert. Connect the intelligence layer. Deploy learning. Govern every action.</span></h2>
+      </div>
+      <div class="platform-body">
+        <nav class="rail" id="rail" aria-label="Platform features"><ol id="railList"></ol></nav>
+        <div class="feats" id="feats"></div>
+      </div>
+    </section>
+
+    <!-- ── SELF-BUILDING ──────────────────────────────────────────── -->
+    <section class="selfbuild" id="selfbuild">
+      <div class="container sec-head sec-head-row">
+        <div>
+          <p class="eyebrow" data-in>Self-building</p>
+          <h2 class="h2" data-in>Live from day one. <span class="dim">Upload the playbook, connect the LMS and your identity provider. The twin builds itself around your knowledge — before the first question.</span></h2>
+        </div>
+        <a class="btn btn-secondary" href="/contact" data-in>Talk to Our Team <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2.5L8 6l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      </div>
+      <div class="board-wrap"><div class="board" id="board"></div></div>
+    </section>
+
+    <!-- ── THE ONLY DIGITAL TWIN WITH IP VAULT™ (dark horizon) ────── -->
+    <section class="context dark" id="vault">
+      <div class="context-stage">
+        <div class="stripes" aria-hidden="true"></div>
+        <div class="context-head">
+          <p class="eyebrow" data-in>Knowledge protection</p>
+          <h2 class="h2 h2-xl" data-in>IP Vault<sup>™</sup></h2>
+          <p class="context-note" data-in>Protected organizational knowledge · expert-approved sources · purpose-bound access · complete provenance</p>
+        </div>
+        <div class="horizon" aria-hidden="true">
+          <div class="horizon-glow"></div>
+          <div class="horizon-ring"></div>
+          <div class="horizon-disc"></div>
+        </div>
+        <ul class="context-pairs" id="contextPairs"></ul>
+      </div>
+
+      <!-- Signals → Knowledge accordion + canvas -->
+      <div class="signals" id="signals">
+        <div class="container sec-head sec-head-row">
+          <div>
+            <p class="eyebrow" data-in>Knowledge</p>
+            <h2 class="h2" data-in>All of the knowledge, none of the noise. <span class="dim">Ready to answer.</span></h2>
+          </div>
+          <a class="btn btn-secondary" href="/ip-vault" data-in>See the IP Vault™ <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2.5L8 6l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+        </div>
+        <div class="container signals-body">
+          <div class="acc" id="acc" role="tablist" aria-label="Knowledge signals"></div>
+          <div class="signal-vis" aria-hidden="true"><canvas id="signalCanvas"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── CONNECTIVITY ───────────────────────────────────────────── -->
+    <section class="connect" id="connect">
+      <div class="stripes" aria-hidden="true"></div>
+      <div class="connect-head">
+        <p class="eyebrow" data-in>Connectivity</p>
+        <h3 class="h2" data-in>Your whole stack, connected.</h3>
+        <p class="lede" data-in>Canvas, Blackboard, Moodle, Okta, Google Workspace, Slack, Teams, and Zoom — plus 100+ AI models from OpenAI, Anthropic, Google, AWS, and others, without locking you into one.</p>
+        <a class="btn btn-secondary" href="/middleware" data-in>Explore the Middleware <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2.5L8 6l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      </div>
+      <div class="tiles" id="tiles" aria-hidden="true"></div>
+    </section>
+
+    <!-- ── SDK. API. MCP. (dark cell grid) ───────────────────────── -->
+    <section class="build dark" id="build">
+      <div class="container">
+        <div class="cells" id="cells" aria-hidden="true"></div>
+        <div class="build-grid">
+          <div class="build-copy">
+            <h2 class="h2" data-in>SDK. API. MCP. <span class="dim">Build anything on the Middleware.</span></h2>
+            <p class="lede" data-in>A JavaScript SDK for embedding a twin, an OpenAI-compatible endpoint so existing apps just point at it, and a Model Context Protocol server so the twin's knowledge shows up inside the tools your team already uses.</p>
+            <a class="btn btn-secondary" href="/docs" data-in>View docs <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2.5L8 6l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+          </div>
+          <div class="code" id="code" data-in>
+            <div class="code-tabs" role="tablist" aria-label="Developer surfaces"></div>
+            <pre class="code-body"><code id="codeBody"></code></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── QUOTE (sticky, word-scrubbed) ──────────────────────────── -->
+    <section class="quote" id="quote">
+      <div class="quote-sticky">
+        <blockquote class="quote-text" id="quoteText"></blockquote>
+        <figcaption class="quote-by" id="quoteBy"></figcaption>
+      </div>
+    </section>
+
+    <!-- ── PROOF, NOT PROMISES (stats) ────────────────────────────── -->
+    <section class="scale" id="proof">
+      <div class="scale-line" aria-hidden="true"></div>
+      <div class="container">
+        <div class="sec-head">
+          <p class="eyebrow" data-in>Proof, not promises</p>
+          <h2 class="h2" data-in>Run at institution scale. <span class="dim">Production-grade for the experts, the learners, and the people accountable for both.</span></h2>
+        </div>
+        <ul class="stats" id="stats"></ul>
+      </div>
+    </section>
+
+    <!-- ── CUSTOMER STORIES ───────────────────────────────────────── -->
+    <section class="stories" id="stories">
+      <div class="container sec-head sec-head-row">
+        <div>
+          <p class="eyebrow" data-in>Customer stories</p>
+          <h2 class="h2" data-in>Trusted by 180+ organizations. <span class="dim">From first twin to institution scale.</span></h2>
+        </div>
+        <a class="btn btn-secondary" href="/customer-stories" data-in>Read more <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2.5L8 6l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      </div>
+      <div class="container">
+        <div class="story-tabs" id="storyTabs" role="tablist" aria-label="Customer stories"><span class="story-hl" aria-hidden="true"></span></div>
+        <div class="story" id="story"></div>
+      </div>
+    </section>
+
+    <!-- ── CHANGELOG (ruler-tick cards) ───────────────────────────── -->
+    <section class="changelog" id="changelog">
+      <div class="container sec-head sec-head-row">
+        <div>
+          <p class="eyebrow" data-in>What's new in PRIA</p>
+          <h2 class="h2" data-in>Better as you grow. <span class="dim">New capabilities every release to keep pace with you.</span></h2>
+        </div>
+        <a class="btn btn-secondary" href="/innovation-hub" data-in>View all <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2.5L8 6l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      </div>
+      <div class="cl-scroller" id="clScroller"></div>
+    </section>
+
+    <!-- ── CTA ────────────────────────────────────────────────────── -->
+    <section class="cta dark" id="cta">
+      <div class="cta-pattern" aria-hidden="true"><div class="stripes"></div></div>
+      <div class="container cta-inner">
+        <h2 class="h2 h2-cta" data-in>Build the expert. Power the organization. Govern the intelligence.</h2>
+        <div class="cta-actions" data-in>
+          <a class="btn btn-white btn-lg" href="/contact">Talk to Our Team</a>
+          <a class="btn btn-secondary btn-lg" href="https://www.praxisdna.ai" target="_blank" rel="noopener">Discover Your Digital Twin DNA</a>
+        </div>
+        <form class="cta-form" id="ctaForm" data-in>
+          <label class="sr-only" for="ctaEmail">Work email</label>
+          <input id="ctaEmail" type="email" name="email" placeholder="Work email" autocomplete="email" required />
+          <button class="btn btn-primary" type="submit"><span class="lbl">Send me a demo</span><span class="spin" aria-hidden="true"></span></button>
+        </form>
+        <p class="cta-note mono">Human-First in an AI-First world.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer dark" id="footer"></footer>
+
+<script>
+// Concept-only marketing links must not navigate into the portfolio.
+document.addEventListener('click', function (event) {
+  const link = event.target.closest('a[href]');
+  if (!link) return;
+  const url = new URL(link.href, location.href);
+  if (url.origin === location.origin && !url.pathname.startsWith('/demos')) {
+    event.preventDefault();
+    alert('This is a design concept. This destination is not part of the demo.');
+  }
+});
+</script></body>
+</html>

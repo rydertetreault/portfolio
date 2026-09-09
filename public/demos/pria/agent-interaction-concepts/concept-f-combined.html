@@ -1,0 +1,3282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Concept F · Command Deck — Praxis</title>
+<link rel="stylesheet" href="./shared.css" />
+<script>if (window.self !== window.top) document.documentElement.classList.add('embedded')</script>
+<style>
+/* ── Page layout ─────────────────────────────────────────── */
+body {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── Canvas area ─────────────────────────────────────────── */
+#canvas-wrap {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+  cursor: grab;
+  background-image: radial-gradient(circle, rgba(148,163,184,0.18) 1px, transparent 1px);
+  background-size: 28px 28px;
+  background-color: var(--bg);
+}
+#canvas-wrap.dragging { cursor: grabbing; }
+
+#world {
+  position: absolute;
+  top: 0; left: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+/* ── SVG edges ───────────────────────────────────────────── */
+#edges-svg {
+  position: absolute;
+  top: 0; left: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+
+/* ── Node cards shared ───────────────────────────────────── */
+.node-card {
+  position: absolute;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-soft);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  transition: opacity .25s ease, box-shadow .2s ease, border-color .2s ease;
+}
+.node-card.dimmed {
+  opacity: 0.22 !important;
+  pointer-events: none;
+}
+.node-card.selected {
+  box-shadow: 0 0 0 2px var(--indigo), var(--shadow);
+}
+/* Drop-target highlight — dashed cyan ring */
+.node-card.drop-target {
+  border-color: var(--cyan) !important;
+  box-shadow: 0 0 0 2px var(--cyan), 0 0 18px rgba(6,182,212,.35), var(--shadow) !important;
+  outline: 2px dashed var(--cyan);
+  outline-offset: 3px;
+}
+
+/* ── Plan cards ──────────────────────────────────────────── */
+.plan-card {
+  width: 250px;
+  padding: 14px 16px 16px;
+}
+.plan-card .plan-kicker {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 10px;
+}
+.plan-card .plan-label {
+  font-size: 9.5px; font-weight: 800; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--text-faint);
+}
+.plan-card .plan-name {
+  font-size: 13.5px; font-weight: 700; color: var(--text);
+  margin: 0 0 10px; line-height: 1.35;
+}
+.plan-card .plan-progress-wrap { margin-bottom: 8px; }
+.plan-card .plan-progress-bar-bg {
+  height: 4px; border-radius: 999px;
+  background: rgba(148,163,184,.12); overflow: hidden;
+}
+.plan-card .plan-progress-bar-fill {
+  height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--indigo), #818cf8);
+  transition: width .5s ease;
+}
+.plan-card .plan-progress-label {
+  font-size: 10px; color: var(--text-faint); margin-top: 4px;
+}
+.plan-card .plan-origin {
+  font-size: 10.5px; color: var(--text-faint);
+  margin-top: 8px; padding-top: 8px;
+  border-top: 1px solid var(--border-soft);
+}
+
+/* ── Task cards ──────────────────────────────────────────── */
+.task-card {
+  width: 205px;
+  padding: 12px 14px;
+}
+.task-card .task-header {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+}
+.task-card .task-name {
+  font-size: 12.5px; font-weight: 700; color: var(--text);
+  flex: 1; line-height: 1.3;
+}
+.task-card .task-meta { font-size: 10.5px; color: var(--text-faint); }
+
+/* ── Agent cards ─────────────────────────────────────────── */
+.agent-card {
+  width: 285px;
+  padding: 0;
+  overflow: visible; /* allow chips to protrude right */
+}
+.agent-card-header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 13px 14px 11px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.agent-avatar {
+  position: relative;
+  width: 36px; height: 36px; min-width: 36px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #1e2a4a 0%, #111827 100%);
+  border: 1px solid var(--border-soft);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px;
+  flex-shrink: 0;
+}
+.agent-avatar .pulse-ring {
+  display: none;
+  position: absolute;
+  inset: -4px;
+  border-radius: 12px;
+  border: 2px solid rgba(79,70,229,.55);
+  animation: ring-pulse 2s ease infinite;
+}
+.agent-card.running .agent-avatar .pulse-ring { display: block; }
+@keyframes ring-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.3; transform: scale(1.08); }
+}
+.agent-info { flex: 1; min-width: 0; }
+.agent-name {
+  font-size: 12.5px; font-weight: 700; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.agent-role {
+  font-size: 10.5px; color: var(--text-faint); margin-top: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.agent-card-body { padding: 11px 14px 13px; }
+
+.agent-stats {
+  display: flex; gap: 0;
+  margin-bottom: 10px;
+  background: rgba(15,23,42,.6);
+  border-radius: 8px;
+  border: 1px solid var(--border-soft);
+  overflow: hidden;
+}
+.stat-cell { flex: 1; text-align: center; padding: 7px 4px; }
+.stat-cell + .stat-cell { border-left: 1px solid var(--border-soft); }
+.stat-val {
+  font-size: 12px; font-weight: 700; color: var(--text);
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+}
+.stat-label {
+  font-size: 9px; color: var(--text-faint);
+  text-transform: uppercase; letter-spacing: .07em; margin-top: 2px;
+}
+
+.thinking-ticker {
+  font-size: 10.5px; color: var(--text-soft);
+  line-height: 1.45; min-height: 30px;
+  border-left: 2px solid rgba(79,70,229,.45);
+  padding-left: 8px;
+  display: flex; align-items: center;
+}
+.thinking-ticker.queued { color: var(--text-faint); border-left-color: var(--border-soft); }
+.thinking-ticker.done { border-left-color: rgba(16,185,129,.4); }
+.thinking-ticker span { animation: tick-fade .35s ease; }
+@keyframes tick-fade {
+  from { opacity: 0; transform: translateY(3px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Inputs row on agent card ────────────────────────────── */
+.agent-inputs-row {
+  display: flex; flex-wrap: wrap; gap: 5px;
+  padding: 8px 14px 10px;
+  border-top: 1px solid var(--border-soft);
+  background: rgba(6,182,212,.04);
+}
+.agent-inputs-label {
+  font-size: 9px; font-weight: 800; letter-spacing: .09em;
+  text-transform: uppercase; color: var(--cyan);
+  width: 100%; margin-bottom: 2px;
+}
+/* Zapier-style mapped-field pill */
+.mapped-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 10px; font-weight: 700;
+  padding: 3px 9px 3px 7px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(6,182,212,.22), rgba(6,182,212,.14));
+  border: 1px solid rgba(6,182,212,.45);
+  color: var(--cyan);
+  cursor: pointer;
+  user-select: none;
+  transition: background .15s, box-shadow .15s, transform .1s;
+  position: relative;
+}
+.mapped-pill:hover {
+  background: linear-gradient(90deg, rgba(6,182,212,.32), rgba(6,182,212,.22));
+  box-shadow: 0 0 10px rgba(6,182,212,.25);
+}
+.mapped-pill:active { transform: scale(.96); }
+.mapped-pill .pill-dot {
+  width: 6px; height: 6px; border-radius: 999px;
+  background: var(--cyan); flex-shrink: 0;
+}
+/* snap-away removal animation */
+@keyframes pill-snap {
+  0%   { transform: scale(1); opacity: 1; }
+  40%  { transform: scale(1.15) translateX(6px); opacity: .8; }
+  100% { transform: scale(0) translateX(20px); opacity: 0; }
+}
+.mapped-pill.snapping { animation: pill-snap .3s ease forwards; }
+
+/* ── Output chips on card right edge ─────────────────────── */
+.output-chips {
+  position: absolute;
+  /* Dock chips OUTSIDE the card's right edge like ports — an 8px notch
+     overlaps the border so they read as attached, not floating on top
+     of the card content. */
+  left: 100%;
+  margin-left: -8px;
+  right: auto;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+  pointer-events: none; /* container transparent */
+  z-index: 10;
+}
+.out-chip {
+  display: flex; align-items: center;
+  gap: 5px;
+  padding: 4px 8px 4px 7px;
+  border-radius: 999px;
+  font-size: 9.5px; font-weight: 700;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  cursor: grab;
+  pointer-events: all;
+  user-select: none;
+  position: relative;
+  transition: box-shadow .15s, transform .12s;
+}
+.out-chip:hover {
+  transform: scale(1.06) translateX(-2px);
+  z-index: 11;
+}
+.out-chip:active { cursor: grabbing; }
+
+/* done — solid / filled */
+.out-chip.done {
+  background: rgba(16,185,129,.18);
+  border: 1.5px solid rgba(16,185,129,.6);
+  color: #6ee7b7;
+  box-shadow: 0 2px 8px rgba(16,185,129,.2);
+}
+/* running — pulsing */
+.out-chip.running {
+  background: rgba(79,70,229,.18);
+  border: 1.5px solid rgba(79,70,229,.6);
+  color: var(--accent-text);
+  animation: chip-pulse 1.8s ease infinite;
+}
+@keyframes chip-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(79,70,229,.4); }
+  50%       { box-shadow: 0 0 0 5px rgba(79,70,229,0); }
+}
+/* queued — hollow */
+.out-chip.queued {
+  background: transparent;
+  border: 1.5px dashed rgba(148,163,184,.35);
+  color: var(--text-faint);
+}
+.out-chip .chip-icon {
+  width: 8px; height: 8px; border-radius: 999px; flex-shrink: 0;
+}
+.out-chip.done    .chip-icon { background: var(--success); }
+.out-chip.running .chip-icon { background: var(--indigo); animation: ws-pulse 1.6s ease infinite; }
+.out-chip.queued  .chip-icon { background: transparent; border: 1.5px solid var(--text-faint); }
+
+/* Drag phantom */
+#chip-drag-phantom {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9999;
+  display: none;
+  padding: 4px 10px 4px 8px;
+  border-radius: 999px;
+  font-size: 9.5px; font-weight: 700;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  transform: translate(-50%, -50%);
+}
+#chip-drag-phantom.done {
+  background: rgba(16,185,129,.3);
+  border: 1.5px solid rgba(16,185,129,.8);
+  color: #6ee7b7;
+}
+#chip-drag-phantom.running {
+  background: rgba(79,70,229,.3);
+  border: 1.5px solid var(--indigo);
+  color: var(--accent-text);
+}
+#chip-drag-phantom.queued {
+  background: rgba(15,23,42,.85);
+  border: 1.5px dashed rgba(148,163,184,.5);
+  color: var(--text-soft);
+}
+#chip-drag-phantom.tool {
+  background: rgba(167,139,250,.28);
+  border: 1.5px dashed rgba(167,139,250,.8);
+  color: #c4b5fd;
+}
+
+/* ── Rubber-band bezier on SVG overlay ───────────────────── */
+#drag-svg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9998;
+  overflow: visible;
+}
+#drag-curve {
+  fill: none;
+  stroke: var(--cyan);
+  stroke-width: 2;
+  stroke-dasharray: 6 4;
+  stroke-linecap: round;
+  opacity: 0.85;
+  animation: drag-dash 1s linear infinite;
+}
+@keyframes drag-dash {
+  from { stroke-dashoffset: 20; }
+  to   { stroke-dashoffset: 0; }
+}
+
+/* ── Data edges (cyan, thicker, animated dash-flow) ─────── */
+.data-edge-path {
+  fill: none;
+  stroke: var(--cyan);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-dasharray: 9 5;
+  animation: data-flow 1.4s linear infinite;
+  opacity: .75;
+}
+.data-edge-path.dimmed { opacity: 0.08; }
+.data-edge-path.lit    { opacity: 1; }
+@keyframes data-flow {
+  from { stroke-dashoffset: 56; }
+  to   { stroke-dashoffset: 0; }
+}
+
+/* ── Data edge label ─────────────────────────────────────── */
+.data-edge-label {
+  fill: var(--cyan);
+  font-size: 9px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  paint-order: stroke;
+  stroke: var(--bg);
+  stroke-width: 3px;
+  letter-spacing: .04em;
+}
+
+/* ── Pill popover ────────────────────────────────────────── */
+#pill-popover {
+  position: fixed;
+  z-index: 9000;
+  background: var(--surface);
+  border: 1px solid rgba(6,182,212,.45);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 30px rgba(2,12,27,.7), 0 0 0 1px rgba(6,182,212,.15);
+  padding: 13px 14px;
+  width: 230px;
+  display: none;
+  flex-direction: column;
+  gap: 10px;
+}
+#pill-popover.open { display: flex; }
+#pill-popover .pop-header {
+  font-size: 9.5px; font-weight: 800; letter-spacing: .09em;
+  text-transform: uppercase; color: var(--cyan);
+}
+#pill-popover .pop-key {
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--accent-text); font-weight: 700;
+}
+#pill-popover .pop-sample-label {
+  font-size: 9px; color: var(--text-faint);
+  text-transform: uppercase; letter-spacing: .07em;
+  margin-top: 4px;
+}
+#pill-popover .pop-sample-val {
+  font-family: var(--font-mono); font-size: 10.5px;
+  color: var(--success); margin-top: 2px;
+  word-break: break-all;
+}
+#pill-popover .pop-unbind {
+  width: 100%; padding: 7px;
+  background: rgba(239,68,68,.12);
+  border: 1px solid rgba(239,68,68,.35);
+  color: #fca5a5; font-size: 11.5px; font-weight: 700;
+  border-radius: 7px; cursor: pointer;
+  transition: background .15s;
+}
+#pill-popover .pop-unbind:hover { background: rgba(239,68,68,.22); }
+
+/* ── Inspector panel ─────────────────────────────────────── */
+#inspector {
+  position: absolute;
+  top: 0; right: 0;
+  width: 330px; height: 100%;
+  background: rgba(15, 23, 42, 0.97);
+  backdrop-filter: blur(14px);
+  border-left: 1px solid var(--border-soft);
+  display: flex; flex-direction: column;
+  transform: translateX(100%);
+  transition: transform .28s cubic-bezier(.4,0,.2,1);
+  z-index: 30;
+  box-shadow: -12px 0 40px rgba(2,12,27,.5);
+}
+#inspector.open { transform: translateX(0); }
+
+.insp-topbar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--border-soft);
+  flex-shrink: 0;
+}
+.insp-close {
+  margin-left: auto;
+  background: none; border: none;
+  color: var(--text-faint); font-size: 18px;
+  cursor: pointer; line-height: 1;
+  padding: 2px 6px; border-radius: 6px;
+  transition: color .15s, background .15s;
+}
+.insp-close:hover { color: var(--text); background: var(--surface-2); }
+
+.insp-body {
+  flex: 1; min-height: 0; overflow-y: auto;
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 18px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148,163,184,.2) transparent;
+}
+.insp-body::-webkit-scrollbar { width: 5px; }
+.insp-body::-webkit-scrollbar-thumb { background: rgba(148,163,184,.2); border-radius: 99px; }
+
+.insp-section-label {
+  font-size: 9.5px; font-weight: 800; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--text-faint);
+  margin-bottom: 7px;
+}
+.insp-section-label.cyan { color: var(--cyan); }
+
+.insp-breadcrumb {
+  font-size: 11px; color: var(--text-faint);
+  display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
+}
+.insp-breadcrumb .sep { color: var(--border); }
+.insp-breadcrumb b { color: var(--text-soft); }
+
+.insp-stats {
+  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;
+}
+.insp-stat {
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  padding: 10px 8px; text-align: center;
+}
+.insp-stat .sv { font-size: 14px; font-weight: 700; font-family: var(--font-mono); color: var(--text); }
+.insp-stat .sl { font-size: 9px; text-transform: uppercase; letter-spacing: .07em; color: var(--text-faint); margin-top: 3px; }
+
+.steps-list { display: flex; flex-direction: column; gap: 6px; }
+.step-row { display: flex; align-items: center; gap: 9px; font-size: 12px; color: var(--text-soft); }
+.step-icon {
+  width: 18px; height: 18px; min-width: 18px;
+  border-radius: 999px;
+  border: 1.5px solid var(--border-soft);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px;
+}
+.step-icon.done-step  { background: rgba(16,185,129,.15); border-color: rgba(16,185,129,.5); color: #6ee7b7; }
+.step-icon.running-step { border-color: var(--indigo); animation: ws-pulse 1.6s ease infinite; }
+.step-icon.queued-step { opacity: 0.4; }
+
+.thinking-feed { display: flex; flex-direction: column; gap: 6px; }
+.thought-row {
+  font-size: 11.5px; color: var(--text-soft); line-height: 1.5;
+  padding: 7px 10px;
+  background: rgba(79,70,229,.06);
+  border-left: 2px solid rgba(79,70,229,.3);
+  border-radius: 0 6px 6px 0;
+}
+
+.tools-list { display: flex; flex-direction: column; gap: 5px; }
+.tool-row {
+  display: grid; grid-template-columns: 44px 1fr auto;
+  align-items: center; gap: 8px;
+  font-size: 11px; padding: 7px 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+}
+.tool-badge {
+  font-size: 9px; font-weight: 800; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--accent-text);
+  background: rgba(79,70,229,.12);
+  border-radius: 5px; padding: 3px 5px;
+  text-align: center; font-family: var(--font-mono);
+}
+.tool-target { color: var(--text); font-family: var(--font-mono); font-size: 10.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tool-result { color: var(--text-faint); font-family: var(--font-mono); font-size: 10px; white-space: nowrap; }
+
+.context-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.ctx-chip {
+  font-size: 10.5px; color: var(--text-soft);
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: 6px; padding: 4px 9px;
+  font-family: var(--font-mono);
+}
+
+/* Inspector io section */
+.insp-io-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.insp-out-chip {
+  font-family: var(--font-mono); font-size: 9.5px; font-weight: 700;
+  padding: 3px 8px; border-radius: 999px;
+}
+.insp-out-chip.done  { background: rgba(16,185,129,.15); border: 1px solid rgba(16,185,129,.45); color: #6ee7b7; }
+.insp-out-chip.running { background: rgba(79,70,229,.15); border: 1px solid rgba(79,70,229,.45); color: var(--accent-text); }
+.insp-out-chip.queued  { background: transparent; border: 1px dashed rgba(148,163,184,.3); color: var(--text-faint); }
+
+.insp-binding-row {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11px; color: var(--text-soft);
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+.insp-binding-row:last-child { border-bottom: none; }
+.insp-binding-arrow { color: var(--cyan); font-size: 12px; }
+
+.insp-footer {
+  padding: 14px 16px;
+  border-top: 1px solid var(--border-soft);
+  flex-shrink: 0;
+}
+.steer-btn {
+  width: 100%; padding: 11px;
+  border-radius: var(--radius-sm); border: none;
+  background: var(--indigo); color: #fff;
+  font-size: 13px; font-weight: 700;
+  cursor: pointer; letter-spacing: .02em;
+  transition: background .15s, transform .1s;
+}
+.steer-btn:hover { background: #4338ca; }
+.steer-btn:active { transform: scale(.98); }
+
+/* ── HUD overlays ────────────────────────────────────────── */
+#zoom-hud {
+  position: absolute;
+  bottom: 18px; left: 18px;
+  display: flex; align-items: center; gap: 2px;
+  background: rgba(15,23,42,.85);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px; overflow: hidden;
+  z-index: 20;
+  backdrop-filter: blur(8px);
+}
+.zoom-btn {
+  background: none; border: none;
+  color: var(--text-soft); font-size: 16px;
+  cursor: pointer; padding: 6px 12px; line-height: 1;
+  transition: color .12s, background .12s;
+}
+.zoom-btn:hover { color: var(--text); background: rgba(148,163,184,.08); }
+#zoom-label {
+  font-size: 11px; font-weight: 700; font-family: var(--font-mono);
+  color: var(--text-soft); min-width: 42px; text-align: center; padding: 0 2px;
+}
+
+#canvas-hint {
+  position: absolute;
+  bottom: 18px; right: 18px;
+  font-size: 10.5px; color: var(--text-faint);
+  z-index: 20; pointer-events: none; user-select: none;
+}
+
+/* ── Edge SVG paths (dependency) ─────────────────────────── */
+.edge-path {
+  fill: none; stroke-width: 1.5; stroke-linecap: round;
+}
+.edge-path.running {
+  stroke: var(--indigo);
+  stroke-dasharray: 7 5;
+  animation: dash-flow 1.2s linear infinite;
+}
+.edge-path.done   { stroke: rgba(16,185,129,.55); stroke-dasharray: none; }
+.edge-path.queued { stroke: rgba(148,163,184,.2); stroke-dasharray: 4 6; }
+@keyframes dash-flow {
+  from { stroke-dashoffset: 48; }
+  to   { stroke-dashoffset: 0; }
+}
+.edge-path.dimmed { opacity: 0.08; }
+.edge-path.lit    { opacity: 1; }
+
+/* ── Selection dimming ───────────────────────────────────── */
+#world.has-selection .node-card:not(.selected):not(.path-lit) { opacity: 0.18; }
+#world.has-selection .edge-path:not(.lit) { opacity: 0.05; }
+
+/* ═══════════════════════════════════════════════════════════
+   Concept F additions — agent dock · tool grips · tool edges
+   · minimal edge palette · edge "+" inserter
+═══════════════════════════════════════════════════════════ */
+
+/* ── Tool-binding edge (dashed violet — distinct from cyan data edges) ── */
+.tool-edge-path {
+  fill: none;
+  stroke: #a78bfa;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 3 6;
+  animation: data-flow 1.8s linear infinite;
+  opacity: .8;
+}
+.tool-edge-path.dimmed { opacity: 0.08; }
+.tool-edge-path.lit    { opacity: 1; }
+.tool-edge-label {
+  fill: #c4b5fd;
+  font-size: 9px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  paint-order: stroke;
+  stroke: var(--bg);
+  stroke-width: 3px;
+  letter-spacing: .04em;
+}
+
+/* ── Tool-input pill (violet cousin of .mapped-pill) ─────── */
+.tool-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 10px; font-weight: 700;
+  padding: 3px 9px 3px 7px;
+  border-radius: 999px;
+  background: rgba(167,139,250,.14);
+  border: 1px solid rgba(167,139,250,.45);
+  color: #c4b5fd;
+  cursor: pointer; user-select: none;
+}
+.tool-pill:hover { background: rgba(167,139,250,.24); }
+.tool-pill .pill-dot { width: 6px; height: 6px; border-radius: 999px; background: #a78bfa; }
+
+/* ── Agent Dock (fixed right overlay inside #canvas-wrap) ── */
+#agent-dock {
+  position: absolute;
+  top: 0; right: 0;
+  width: 300px; height: 100%;
+  background: #0f172a;
+  border-left: 1px solid var(--border-soft);
+  display: flex; flex-direction: column;
+  transform: translateX(100%);
+  transition: transform .28s cubic-bezier(.4,0,.2,1);
+  z-index: 40;
+  box-shadow: -14px 0 40px rgba(2,12,27,.6);
+}
+#agent-dock.open { transform: translateX(0); }
+.dock-topbar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid var(--border-soft);
+  flex-shrink: 0;
+}
+.dock-topbar .agent-avatar { width: 30px; height: 30px; min-width: 30px; font-size: 14px; border-radius: 8px; }
+.dock-title { flex: 1; min-width: 0; }
+.dock-name { font-size: 12.5px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dock-role { font-size: 10px; color: var(--text-faint); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dock-close {
+  background: none; border: none;
+  color: var(--text-faint); font-size: 18px;
+  cursor: pointer; line-height: 1;
+  padding: 2px 6px; border-radius: 6px;
+  transition: color .15s, background .15s;
+}
+.dock-close:hover { color: var(--text); background: var(--surface-2); }
+.dock-body {
+  flex: 1; min-height: 0; overflow-y: auto;
+  padding: 14px;
+  display: flex; flex-direction: column; gap: 16px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148,163,184,.2) transparent;
+}
+.dock-body::-webkit-scrollbar { width: 5px; }
+.dock-body::-webkit-scrollbar-thumb { background: rgba(148,163,184,.2); border-radius: 99px; }
+
+.dock-section-label {
+  font-size: 9.5px; font-weight: 800; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--text-faint);
+  margin-bottom: 8px;
+}
+.dock-section { border-top: 1px solid var(--border-soft); padding-top: 14px; }
+.dock-section:first-child { border-top: none; padding-top: 0; }
+
+/* Steer */
+.dock-textarea {
+  width: 100%; min-height: 60px; resize: vertical;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: 7px;
+  padding: 8px 10px;
+  color: var(--text);
+  font-family: var(--font-sans); font-size: 12px;
+  line-height: 1.4;
+  outline: none;
+  transition: border-color .12s;
+}
+.dock-textarea:focus { border-color: var(--indigo); }
+.dock-btn {
+  margin-top: 8px;
+  width: 100%; padding: 8px;
+  background: var(--indigo); color: #fff;
+  border: none; border-radius: 7px;
+  font-size: 12px; font-weight: 700;
+  cursor: pointer; letter-spacing: .02em;
+  transition: background .12s, transform .1s;
+}
+.dock-btn:hover { background: #4338ca; }
+.dock-btn:active { transform: scale(.98); }
+.dock-btn.secondary {
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border-soft);
+}
+.dock-btn.secondary:hover { background: var(--surface-3); }
+
+/* Model & limits fields */
+.dock-field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+.dock-field label {
+  font-size: 10px; color: var(--text-faint);
+  text-transform: uppercase; letter-spacing: .06em;
+}
+.dock-input, .dock-select {
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: 6px;
+  padding: 6px 8px;
+  color: var(--text);
+  font-family: var(--font-mono); font-size: 11.5px;
+  outline: none;
+  transition: border-color .12s;
+}
+.dock-input:focus, .dock-select:focus { border-color: var(--indigo); }
+
+/* Tools list in dock */
+.dock-tools { display: flex; flex-direction: column; gap: 6px; }
+.dock-tool-row {
+  display: grid; grid-template-columns: 1fr auto auto;
+  align-items: center; gap: 10px;
+  padding: 7px 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: 7px;
+  font-size: 11.5px;
+}
+.dock-tool-name {
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--text); font-weight: 700;
+}
+/* iOS-style toggle */
+.dock-toggle {
+  width: 30px; height: 16px; border-radius: 999px;
+  background: rgba(148,163,184,.25);
+  position: relative; cursor: pointer;
+  transition: background .15s;
+  flex-shrink: 0;
+}
+.dock-toggle::after {
+  content: ''; position: absolute;
+  top: 2px; left: 2px;
+  width: 12px; height: 12px; border-radius: 50%;
+  background: #fff;
+  transition: left .15s;
+}
+.dock-toggle.on { background: var(--indigo); }
+.dock-toggle.on::after { left: 16px; }
+/* Drag handle grip */
+.dock-tool-grip {
+  color: var(--text-faint);
+  cursor: grab;
+  font-size: 14px;
+  padding: 0 2px;
+  user-select: none;
+  transition: color .12s;
+}
+.dock-tool-grip:hover { color: var(--accent-text); }
+.dock-tool-grip:active { cursor: grabbing; }
+
+/* ── Toast (from concept-b) ──────────────────────────────── */
+#f-toast {
+  position: fixed;
+  bottom: 22px; left: 50%; transform: translateX(-50%) translateY(8px);
+  background: rgba(15,23,42,.96);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-size: 12.5px; color: var(--text-soft);
+  z-index: 300;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s ease, transform .2s ease;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(2,12,27,.6);
+  white-space: nowrap;
+}
+#f-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ── Minimal edge palette (crisp restyle of concept-b) ───── */
+#edge-palette {
+  position: fixed;
+  z-index: 200;
+  background: #0f172a;
+  border: 1px solid rgba(148,163,184,.18);
+  border-radius: 8px;
+  box-shadow: 0 8px 28px rgba(2,12,27,.55);
+  padding: 4px;
+  display: none;
+  width: 180px;
+  transform-origin: top left;
+}
+#edge-palette.visible { display: block; }
+.palette-header {
+  font-size: 10px; font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--text-faint);
+  padding: 6px 10px 4px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.palette-edge-label {
+  font-family: var(--font-mono); font-size: 10px;
+  color: var(--text-soft); font-weight: 500;
+  text-transform: none; letter-spacing: 0;
+}
+.palette-action {
+  display: block; width: 100%; text-align: left;
+  padding: 6px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px; color: var(--text-soft);
+  border: none; background: none;
+  transition: background .1s, color .1s;
+}
+.palette-action:hover { background: rgba(148,163,184,.09); color: var(--text); }
+.palette-action:active { background: rgba(148,163,184,.14); }
+
+/* ── Edge "+" inserter (from concept-b, verbatim pattern) ── */
+.edge-plus {
+  position: absolute;
+  width: 24px; height: 24px;
+  margin: -12px 0 0 -12px;
+  border-radius: 50%;
+  border: 1px solid var(--border-soft);
+  background: rgba(15,23,42,.95);
+  color: var(--text-soft);
+  font-size: 15px; line-height: 22px; font-weight: 700;
+  text-align: center;
+  cursor: pointer;
+  z-index: 5;
+  box-shadow: 0 2px 8px rgba(0,0,0,.45);
+  /* counter-scale: --invz = 1/zoom, set by applyCamera, so button
+     stays constant size on SCREEN regardless of camera zoom */
+  transform: scale(var(--invz, 1));
+  transition: background .12s, color .12s, border-color .12s;
+  user-select: none;
+  padding: 0;
+}
+.edge-plus:hover, .edge-plus.hot, .edge-plus.active {
+  background: var(--indigo);
+  border-color: transparent;
+  color: #fff;
+}
+.edge-plus:hover { transform: scale(calc(var(--invz, 1) * 1.25)); }
+
+/* Invisible fat hitbox — same trick as concept-b */
+.edge-hitbox {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 18;
+  pointer-events: stroke;
+  cursor: pointer;
+}
+
+/* ── Library panel (left-side counterpart to #agent-dock) ─ */
+#library-panel {
+  position: absolute;
+  top: 0; left: 0;
+  width: 240px; height: 100%;
+  background: #0f172a;
+  border-right: 1px solid var(--border-soft);
+  display: flex; flex-direction: column;
+  z-index: 40;
+  box-shadow: 14px 0 40px rgba(2,12,27,.45);
+  transition: width .22s cubic-bezier(.4,0,.2,1);
+  overflow: hidden;
+}
+#library-panel.collapsed { width: 36px; }
+
+/* Header row */
+.lib-topbar {
+  display: flex; align-items: center;
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid var(--border-soft);
+  flex-shrink: 0;
+  gap: 8px;
+}
+.lib-title {
+  flex: 1;
+  font-size: 10px; font-weight: 800; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--text-faint);
+}
+.lib-chevron {
+  background: none; border: none;
+  color: var(--text-faint); font-size: 13px; line-height: 1;
+  cursor: pointer; padding: 4px 6px; border-radius: 6px;
+  transition: color .12s, background .12s;
+}
+.lib-chevron:hover { color: var(--text); background: var(--surface-2); }
+
+/* Collapsed rail label — vertical "LIBRARY" */
+#library-panel .lib-rail-label {
+  display: none;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  margin: 12px auto 0;
+  font-size: 10px; font-weight: 800; letter-spacing: .18em;
+  text-transform: uppercase; color: var(--text-faint);
+  cursor: pointer; user-select: none;
+}
+#library-panel.collapsed .lib-topbar { padding: 10px 6px; justify-content: center; }
+#library-panel.collapsed .lib-title { display: none; }
+#library-panel.collapsed .lib-body  { display: none; }
+#library-panel.collapsed .lib-rail-label { display: block; }
+#library-panel.collapsed { cursor: pointer; }
+
+/* Body — scrollable */
+.lib-body {
+  flex: 1; min-height: 0; overflow-y: auto;
+  padding: 12px 10px 16px;
+  display: flex; flex-direction: column; gap: 14px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148,163,184,.2) transparent;
+}
+.lib-body::-webkit-scrollbar { width: 5px; }
+.lib-body::-webkit-scrollbar-thumb { background: rgba(148,163,184,.2); border-radius: 99px; }
+
+.lib-section-label {
+  font-size: 10px; font-weight: 800; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--text-faint);
+  padding: 0 4px 6px;
+}
+
+/* Row (draggable item) */
+.lib-row {
+  display: grid;
+  grid-template-columns: 24px 1fr 10px;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 8px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  cursor: grab;
+  user-select: none;
+  transition: background .12s, border-color .12s;
+}
+.lib-row:hover {
+  background: var(--surface-2);
+  border-color: rgba(148,163,184,.18);
+}
+.lib-row.armed {
+  background: rgba(79,70,229,.16);
+  border-color: var(--indigo);
+}
+.lib-row:active { cursor: grabbing; }
+.lib-mono {
+  width: 24px; height: 24px;
+  border-radius: 6px;
+  background: rgba(79,70,229,.16);
+  border: 1px solid rgba(79,70,229,.4);
+  color: #c7d2fe;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-size: 11px; font-weight: 800;
+}
+.lib-mono.flow  { background: rgba(245,158,11,.14); border-color: rgba(245,158,11,.5); color: #fbbf24; }
+.lib-mono.note  { background: rgba(234,179,8,.18);  border-color: rgba(234,179,8,.55);  color: #fde68a; }
+.lib-mono.tmpl  { background: rgba(34,197,94,.14);  border-color: rgba(34,197,94,.45);  color: #86efac; }
+.lib-text { min-width: 0; }
+.lib-name {
+  font-size: 11.5px; font-weight: 700; color: var(--text);
+  line-height: 1.2;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.lib-hint {
+  font-size: 10px; color: var(--text-faint);
+  line-height: 1.25; margin-top: 1px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.lib-grip {
+  color: transparent;
+  font-size: 12px;
+  text-align: center;
+  transition: color .12s;
+}
+.lib-row:hover .lib-grip { color: var(--text-faint); }
+
+/* Shift left-anchored HUD elements when panel is open so they aren't covered. */
+#canvas-wrap.lib-open #zoom-hud { left: 252px; }
+#canvas-wrap.lib-open .hud-left { left: 252px !important; }
+
+/* ── Gate node (approval checkpoint) ─────────────────────── */
+.gate-card {
+  width: 140px;
+  padding: 10px 12px 11px;
+  border-color: rgba(245,158,11,.55) !important;
+  background: rgba(30,20,10,.85);
+}
+.gate-card .gate-label {
+  font-size: 9.5px; font-weight: 800; letter-spacing: .12em;
+  text-transform: uppercase; color: #fbbf24;
+  margin-bottom: 4px;
+}
+.gate-card .gate-name {
+  font-size: 12px; font-weight: 700; color: var(--text);
+  line-height: 1.25;
+}
+.gate-card .gate-sub {
+  font-size: 10px; color: var(--text-faint);
+  margin-top: 4px; line-height: 1.35;
+}
+
+/* ── Note (sticky annotation) ────────────────────────────── */
+.note-card {
+  width: 160px;
+  padding: 10px 12px;
+  background: rgba(234,179,8,.10) !important;
+  border-color: rgba(234,179,8,.45) !important;
+}
+.note-card .note-text {
+  font-size: 11.5px; color: #fde68a;
+  line-height: 1.4; outline: none;
+  min-height: 44px;
+}
+.note-card .note-text:focus { color: #fef3c7; }
+
+/* ── Placement mode: crosshair, ghost card ──────────────── */
+#canvas-wrap.placing { cursor: crosshair; }
+#canvas-wrap.placing.dragging { cursor: crosshair; }
+
+#ghost-agent {
+  position: absolute;
+  width: 285px;
+  min-height: 130px;
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  border: 1.5px dashed rgba(148,163,184,.55);
+  background: rgba(15,23,42,.55);
+  color: var(--text-faint);
+  font: 500 12px/1.4 var(--font-sans, system-ui, sans-serif);
+  pointer-events: none;
+  transform-origin: 0 0;
+  display: none;
+  box-shadow: 0 0 0 2px rgba(79,70,229,.18);
+}
+#ghost-agent.visible { display: block; }
+#ghost-agent .ghost-title {
+  font-size: 12.5px; font-weight: 600; color: var(--text);
+  margin-bottom: 4px;
+}
+#ghost-agent .ghost-sub {
+  font-size: 10.5px; color: var(--text-faint); letter-spacing: .02em;
+}
+
+/* Moving state on a card */
+.agent-card.moving {
+  cursor: grabbing !important;
+  box-shadow: 0 0 0 2px var(--indigo), 0 12px 28px rgba(0,0,0,.45) !important;
+  z-index: 5;
+}
+
+/* Editable agent name inside custom cards */
+.agent-name[contenteditable="true"] {
+  outline: none;
+  border-bottom: 1px dashed transparent;
+  padding: 1px 2px;
+  border-radius: 3px;
+}
+.agent-name[contenteditable="true"]:hover,
+.agent-name[contenteditable="true"]:focus {
+  border-bottom-color: rgba(148,163,184,.4);
+  background: rgba(148,163,184,.06);
+}
+</style>
+</head>
+<body>
+
+<!-- ── Top bar ────────────────────────────────────────────── -->
+<header class="cc-topbar">
+  <a class="brand" href="./index.html">Praxis · Workspace Concepts</a>
+  <span class="crumb">Concept F · Command Deck</span>
+  <span class="spacer"></span>
+  <a class="nav-pill"        href="./concept-a-config-flip.html">A</a>
+  <a class="nav-pill"        href="./concept-b-edge-palette.html">B</a>
+  <a class="nav-pill"        href="./concept-c-run-controls.html">C</a>
+  <a class="nav-pill"        href="./concept-d-data-mapping.html">D</a>
+  <a class="nav-pill"        href="./concept-e-template-blocks.html">E</a>
+  <a class="nav-pill active" href="./concept-f-combined.html">F</a>
+</header>
+
+<!-- ── Explainer strip ────────────────────────────────────── -->
+<div class="ws-explain">
+  <h1>F · Command Deck</h1>
+  <p>Select a card to steer &amp; configure · drag chips and tool grips to wire the graph · + on any edge for quick actions</p>
+  <div class="scores">
+    <span>Try: <b>click an agent</b> — the dock opens</span>
+    <span>·</span>
+    <span><b>drag a tool grip ⠿</b> onto another card</span>
+    <span>·</span>
+    <span><b>click + on an edge</b></span>
+  </div>
+</div>
+
+<!-- ── Main canvas ────────────────────────────────────────── -->
+<div id="canvas-wrap">
+  <!-- Library panel (left) — n8n-style node palette; drag or click-to-arm -->
+  <aside id="library-panel" aria-label="Node library">
+    <div class="lib-topbar">
+      <div class="lib-title">Library</div>
+      <button class="lib-chevron" id="lib-chevron" title="Collapse (or press n)">‹</button>
+    </div>
+    <div class="lib-rail-label">Library</div>
+    <div class="lib-body" id="lib-body">
+      <div class="lib-group">
+        <div class="lib-section-label">Agents</div>
+        <div class="lib-row" data-kind="agent" data-archetype="researcher">
+          <div class="lib-mono">R</div>
+          <div class="lib-text"><div class="lib-name">Researcher</div><div class="lib-hint">web + summarize</div></div>
+          <div class="lib-grip">⠿</div>
+        </div>
+        <div class="lib-row" data-kind="agent" data-archetype="coder">
+          <div class="lib-mono">C</div>
+          <div class="lib-text"><div class="lib-name">Coder</div><div class="lib-hint">bash + edit</div></div>
+          <div class="lib-grip">⠿</div>
+        </div>
+        <div class="lib-row" data-kind="agent" data-archetype="qa">
+          <div class="lib-mono">Q</div>
+          <div class="lib-text"><div class="lib-name">QA</div><div class="lib-hint">playwright + http</div></div>
+          <div class="lib-grip">⠿</div>
+        </div>
+        <div class="lib-row" data-kind="agent" data-archetype="writer">
+          <div class="lib-mono">W</div>
+          <div class="lib-text"><div class="lib-name">Writer</div><div class="lib-hint">drafting + tone</div></div>
+          <div class="lib-grip">⠿</div>
+        </div>
+        <div class="lib-row" data-kind="agent" data-archetype="custom">
+          <div class="lib-mono">+</div>
+          <div class="lib-text"><div class="lib-name">Custom</div><div class="lib-hint">blank agent</div></div>
+          <div class="lib-grip">⠿</div>
+        </div>
+      </div>
+      <div class="lib-group">
+        <div class="lib-section-label">Flow</div>
+        <div class="lib-row" data-kind="gate">
+          <div class="lib-mono flow">G</div>
+          <div class="lib-text"><div class="lib-name">Gate</div><div class="lib-hint">approval checkpoint</div></div>
+          <div class="lib-grip">⠿</div>
+        </div>
+        <div class="lib-row" data-kind="note">
+          <div class="lib-mono note">N</div>
+          <div class="lib-text"><div class="lib-name">Note</div><div class="lib-hint">sticky annotation</div></div>
+          <div class="lib-grip">⠿</div>
+        </div>
+      </div>
+      <div class="lib-group">
+        <div class="lib-section-label">Templates</div>
+        <div class="lib-row" data-kind="template" data-template="deploy-qa">
+          <div class="lib-mono tmpl">D</div>
+          <div class="lib-text"><div class="lib-name">Deploy + QA pair</div><div class="lib-hint">drops a wired group</div></div>
+          <div class="lib-grip">⠿</div>
+        </div>
+        <div class="lib-row" data-kind="template" data-template="research-trio">
+          <div class="lib-mono tmpl">R</div>
+          <div class="lib-text"><div class="lib-name">Research trio</div><div class="lib-hint">drops a wired group</div></div>
+          <div class="lib-grip">⠿</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <div id="world">
+    <svg id="edges-svg"></svg>
+    <!-- Ghost card lives in world-space so it scales with zoom -->
+    <div id="ghost-agent">
+      <div class="ghost-title">New agent</div>
+      <div class="ghost-sub">click to place · Esc to cancel</div>
+    </div>
+    <!-- nodes injected by JS -->
+  </div>
+
+  <!-- Rubber-band drag SVG (fixed overlay) -->
+  <svg id="drag-svg" style="display:none">
+    <path id="drag-curve" d=""/>
+  </svg>
+
+  <!-- Chip drag phantom (used for both output-chip and tool-grip drags) -->
+  <div id="chip-drag-phantom"></div>
+
+  <!-- Pill popover -->
+  <div id="pill-popover">
+    <div class="pop-header">Mapped Field</div>
+    <div class="pop-key" id="pop-key"></div>
+    <div class="pop-sample-label">Sample value</div>
+    <div class="pop-sample-val" id="pop-sample"></div>
+    <button class="pop-unbind" id="pop-unbind">✕ Unbind</button>
+  </div>
+
+  <!-- ── Agent Dock (right-side overlay, does NOT pan with canvas) ── -->
+  <div id="agent-dock">
+    <div class="dock-topbar">
+      <div class="agent-avatar" id="dock-avatar">🤖</div>
+      <div class="dock-title">
+        <div class="dock-name" id="dock-name"></div>
+        <div class="dock-role" id="dock-role"></div>
+      </div>
+      <button class="dock-close" id="dock-close">×</button>
+    </div>
+    <div class="dock-body">
+      <!-- ▸ Steer -->
+      <div class="dock-section">
+        <div class="dock-section-label">Steer</div>
+        <textarea class="dock-textarea" id="dock-steer" placeholder="Nudge this agent — e.g. 'prefer smaller bundles' or 'skip the smoke test'…"></textarea>
+        <button class="dock-btn" id="dock-steer-send">Send steer</button>
+      </div>
+      <!-- ▸ Model & limits -->
+      <div class="dock-section">
+        <div class="dock-section-label">Model &amp; limits</div>
+        <div class="dock-field">
+          <label>Model</label>
+          <select class="dock-select" id="dock-model">
+            <option value="haiku">haiku</option>
+            <option value="sonnet-4">sonnet-4</option>
+            <option value="opus-4">opus-4</option>
+          </select>
+        </div>
+        <div class="dock-field">
+          <label>Max steps</label>
+          <input type="number" class="dock-input" id="dock-maxsteps" min="1" max="200" value="24" />
+        </div>
+        <button class="dock-btn secondary" id="dock-rerun">Re-run with changes</button>
+      </div>
+      <!-- ▸ Tools -->
+      <div class="dock-section">
+        <div class="dock-section-label">Tools · drag ⠿ onto another card to wire</div>
+        <div class="dock-tools" id="dock-tools"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Zoom HUD -->
+  <div id="zoom-hud">
+    <button class="zoom-btn" id="zoom-out">−</button>
+    <span id="zoom-label">100%</span>
+    <button class="zoom-btn" id="zoom-in">+</button>
+  </div>
+
+  <div id="canvas-hint">Click card to open dock · drag chip / tool grip onto card · + on any edge</div>
+</div>
+
+<!-- ── Minimal edge palette popover ────────────────────────── -->
+<div id="edge-palette">
+  <div class="palette-header">
+    <span class="palette-edge-label" id="palette-edge-label"></span>
+  </div>
+  <button class="palette-action" data-action="insert">Insert agent</button>
+  <button class="palette-action" data-action="gate">Add gate</button>
+  <button class="palette-action" data-action="mute">Mute</button>
+  <button class="palette-action" data-action="boost">Boost</button>
+</div>
+
+<!-- ── Toast ─────────────────────────────────────────────── -->
+<div id="f-toast"></div>
+
+<script src="./data.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════
+   Concept D — Data-Mapping Handles
+   Based on _base-dag.html · extends with output chips,
+   rubber-band bezier drags, data edges, mapped-pill bindings,
+   pill popover, and I/O inspector section.
+═══════════════════════════════════════════════════════════ */
+
+/* ── Constants ───────────────────────────────────────────── */
+const PLAN_W    = 250;
+const TASK_W    = 205;
+const AGENT_W   = 285;
+const COL_GAP   = 95;
+const ROW_GAP   = 26;
+const CARD_H_AGENT = 130;
+const CARD_H_TASK  = 64;
+const CARD_H_PLAN  = 120;
+
+const COL_PLAN  = 0;
+const COL_TASK  = PLAN_W + COL_GAP;
+const COL_AGENT = PLAN_W + COL_GAP + TASK_W + COL_GAP;
+
+/* ── Agent outputs registry ──────────────────────────────── */
+/* Map agentId → list of output chip descriptors */
+const AGENT_OUTPUTS = {
+  'ag-deploy': [
+    { key: 'preview_url', sample: 'https://pria-demo-git-main.vercel.app' },
+    { key: 'bundle_stats', sample: '{"size":"1.8 MB","modules":42}' },
+  ],
+  'ag-copy': [
+    { key: 'landing_copy', sample: '# Course landing\nLearn AI-first workflows...' },
+    { key: 'tone_report',  sample: '{"score":0.92,"voice":"confident"}' },
+  ],
+  'ag-qa': [
+    { key: 'test_report', sample: '{"passed":18,"failed":0,"skipped":2}' },
+  ],
+  'ag-index': [
+    { key: 'index_id', sample: 'idx_7f3a2c91d4e0b865' },
+  ],
+  'ag-audit': [
+    { key: 'stale_list', sample: '["old-guide.md","2023-notes.md"]' },
+  ],
+  'ag-rubric': [
+    { key: 'summary_md', sample: '# Rubric Summary\n3 bands · 240 rows...' },
+  ],
+};
+
+/* No-op stub — Concept F replaced the inspector panel with the dock,
+   but two call sites in addBinding/removeBinding still referenced the
+   old function. Keep as a no-op so those don't throw. */
+function populateInspectorIO(/* flat */) { /* no-op in Concept F */ }
+
+/* ── Bindings state ──────────────────────────────────────── */
+/*
+  binding: {
+    id: string,
+    fromAgentId: string,
+    fromKey: string,
+    toAgentId: string,
+    sample: string,
+    edgeEl: SVGElement | null,   (data edge path)
+    labelEl: SVGElement | null,  (midpoint label)
+  }
+*/
+const bindings = [];
+let bindingSeq = 0;
+
+/* ── Helper: escape HTML ─────────────────────────────────── */
+function escHtml(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* ── Agent avatar glyph ──────────────────────────────────── */
+function agentGlyph(agent) {
+  const r = (agent.role || '').toLowerCase();
+  if (r.includes('infra') || r.includes('vercel') || r.includes('deploy')) return '⚙️';
+  if (r.includes('test')  || r.includes('qa')     || r.includes('playwright')) return '🧪';
+  if (r.includes('draft') || r.includes('copy')   || r.includes('landing')) return '✍️';
+  if (r.includes('embed') || r.includes('index'))  return '🔗';
+  if (r.includes('audit') || r.includes('scan')   || r.includes('fresh')) return '🔍';
+  if (r.includes('analy') || r.includes('rubric') || r.includes('summ')) return '📊';
+  return '🤖';
+}
+
+/* ── Status chip HTML ────────────────────────────────────── */
+function chipHtml(status) {
+  return `<span class="ws-status ${status}">${status}</span>`;
+}
+
+/* ── Layout ──────────────────────────────────────────────── */
+function computeLayout(plans) {
+  const layout = { plans: [], tasks: [], agents: [], worldH: 0, worldW: 0 };
+  let worldY = 40;
+
+  plans.forEach(plan => {
+    const planEntry = { plan, tasks: [] };
+    let planTop = worldY;
+    let planBottom = worldY;
+
+    plan.tasks.forEach(task => {
+      const taskEntry = { task, agents: [] };
+      let taskTop = worldY;
+
+      task.agents.forEach(agent => {
+        layout.agents.push({ agent, task, plan, x: COL_AGENT, y: worldY });
+        taskEntry.agents.push({ agent, y: worldY });
+        worldY += CARD_H_AGENT + ROW_GAP;
+      });
+
+      const taskMid = taskTop + ((worldY - ROW_GAP - taskTop) / 2) - CARD_H_TASK / 2;
+      taskEntry.y = taskMid;
+      layout.tasks.push({ task, plan, x: COL_TASK, y: taskMid, agentsTop: taskTop });
+      planEntry.tasks.push(taskEntry);
+      planBottom = worldY;
+      worldY += 20;
+    });
+
+    const planMid = planTop + ((planBottom - 20 - planTop) / 2) - CARD_H_PLAN / 2;
+    planEntry.y = planMid;
+    layout.plans.push({ plan, x: COL_PLAN, y: planMid });
+    worldY += 20;
+  });
+
+  layout.worldH = worldY + 40;
+  layout.worldW = COL_AGENT + AGENT_W + 80; /* extra for chips */
+  return layout;
+}
+
+/* ── Card HTML builders ──────────────────────────────────── */
+function planCardHtml(plan) {
+  const total = plan.tasks.length;
+  const done  = plan.tasks.filter(t => t.status === 'done').length;
+  const pct   = total > 0 ? Math.round((done / total) * 100) : 0;
+  return `
+    <div class="plan-kicker">
+      <span class="plan-label">Plan</span>${chipHtml(plan.status)}
+    </div>
+    <div class="plan-name">${plan.name}</div>
+    <div class="plan-progress-wrap">
+      <div class="plan-progress-bar-bg">
+        <div class="plan-progress-bar-fill" style="width:${pct}%"></div>
+      </div>
+      <div class="plan-progress-label">${done} / ${total} tasks complete</div>
+    </div>
+    <div class="plan-origin">${plan.origin || 'Scheduled'}</div>`;
+}
+
+function taskCardHtml(task) {
+  const n = task.agents.length;
+  return `
+    <div class="task-header">
+      <div class="ws-dot ${task.status}"></div>
+      <div class="task-name">${task.name}</div>
+    </div>
+    <div class="task-meta">${n} ${n === 1 ? 'agent' : 'agents'} · ${task.status}</div>`;
+}
+
+function agentCardHtml(agent) {
+  const glyph   = agentGlyph(agent);
+  const elapsed = agent.stats?.elapsed ?? '—';
+  const tokens  = agent.stats?.tokens  != null ? agent.stats.tokens.toFixed(1) : '0.0';
+  const tc      = agent.stats?.toolCalls ?? 0;
+
+  const thinkLines = agent.thinking || [];
+  let thinkHtml = '';
+  if (agent.status === 'running') {
+    thinkHtml = `<span>${escHtml(thinkLines[0] || '')}</span>`;
+  } else if (agent.status === 'done') {
+    thinkHtml = `<span>${escHtml(thinkLines[thinkLines.length - 1] || '')}</span>`;
+  } else {
+    thinkHtml = `<span>${escHtml(thinkLines[0] || '')}</span>`;
+  }
+
+  return `
+    <div class="agent-card-header">
+      <div class="agent-avatar">
+        ${glyph}<div class="pulse-ring"></div>
+      </div>
+      <div class="agent-info">
+        <div class="agent-name">${escHtml(agent.name)}</div>
+        <div class="agent-role">${escHtml(agent.role)} · ${escHtml(agent.model)}</div>
+      </div>
+      ${chipHtml(agent.status)}
+    </div>
+    <div class="agent-card-body">
+      <div class="agent-stats">
+        <div class="stat-cell">
+          <div class="stat-val" data-stat-elapsed="${agent.id}">${elapsed}</div>
+          <div class="stat-label">Elapsed</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-val" data-stat-tokens="${agent.id}">${tokens}k</div>
+          <div class="stat-label">Tokens</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-val" data-stat-tc="${agent.id}">${tc}</div>
+          <div class="stat-label">Tool calls</div>
+        </div>
+      </div>
+      <div class="thinking-ticker ${agent.status}" data-thinking="${agent.id}">${thinkHtml}</div>
+    </div>`;
+}
+
+/* ── Build world DOM ─────────────────────────────────────── */
+const world    = document.getElementById('world');
+const edgesSvg = document.getElementById('edges-svg');
+const plans    = window.WS_PLANS || [];
+const layout   = computeLayout(plans);
+
+const nodeEls  = {};  // id → DOM element
+const nodePos  = {};  // id → {x, y, w, h}
+
+layout.plans.forEach(({ plan, x, y }) => {
+  const el = document.createElement('div');
+  el.className = 'node-card plan-card';
+  el.id = `node-${plan.id}`;
+  el.style.left = x + 'px';
+  el.style.top  = y + 'px';
+  el.innerHTML  = planCardHtml(plan);
+  world.appendChild(el);
+  nodeEls[plan.id] = el;
+  nodePos[plan.id] = { x, y, w: PLAN_W, h: CARD_H_PLAN };
+});
+
+layout.tasks.forEach(({ task, plan, x, y }) => {
+  const el = document.createElement('div');
+  el.className = 'node-card task-card';
+  el.id = `node-${task.id}`;
+  el.style.left = x + 'px';
+  el.style.top  = y + 'px';
+  el.innerHTML  = taskCardHtml(task);
+  world.appendChild(el);
+  nodeEls[task.id] = el;
+  nodePos[task.id] = { x, y, w: TASK_W, h: CARD_H_TASK };
+});
+
+layout.agents.forEach(({ agent, task, plan, x, y }) => {
+  const el = document.createElement('div');
+  el.className = `node-card agent-card ${agent.status}`;
+  el.id = `node-${agent.id}`;
+  el.style.left = x + 'px';
+  el.style.top  = y + 'px';
+  el.innerHTML  = agentCardHtml(agent);
+  el.dataset.agentId = agent.id;
+  world.appendChild(el);
+  nodeEls[agent.id] = el;
+  nodePos[agent.id] = { x, y, w: AGENT_W, h: CARD_H_AGENT };
+
+  el.addEventListener('click', e => {
+    if (e.target.closest('.output-chips')) return;
+    if (e.target.closest('.mapped-pill')) return;
+    if (e.target.closest('.agent-inputs-row .pop-unbind')) return;
+    e.stopPropagation();
+    selectAgent(agent.id);
+  });
+
+  /* Output chips */
+  const outputs = AGENT_OUTPUTS[agent.id] || [];
+  if (outputs.length > 0) {
+    const chipsWrap = document.createElement('div');
+    chipsWrap.className = 'output-chips';
+    chipsWrap.dataset.fromAgent = agent.id;
+
+    outputs.forEach(({ key }) => {
+      const chip = document.createElement('div');
+      chip.className = `out-chip ${agent.status}`;
+      chip.dataset.fromAgent = agent.id;
+      chip.dataset.key = key;
+      chip.innerHTML = `<span class="chip-icon"></span>${key}`;
+      chip.title = `Drag to wire ${agent.name}.${key} into another agent`;
+
+      /* Drag initiation */
+      chip.addEventListener('pointerdown', e => {
+        e.stopPropagation();
+        startChipDrag(e, agent.id, key, agent.status);
+      });
+
+      chipsWrap.appendChild(chip);
+    });
+
+    el.appendChild(chipsWrap);
+  }
+});
+
+/* ── After render: measure heights, reposition, draw edges ─ */
+requestAnimationFrame(() => {
+  Object.keys(nodeEls).forEach(id => {
+    const el = nodeEls[id];
+    nodePos[id].h = el.offsetHeight;
+  });
+
+  layout.tasks.forEach(({ task }) => {
+    const agentIds = task.agents.map(a => a.id);
+    if (!agentIds.length) return;
+    const fp = nodePos[agentIds[0]];
+    const lp = nodePos[agentIds[agentIds.length - 1]];
+    if (!fp || !lp) return;
+    const span = (lp.y + lp.h) - fp.y;
+    const newY = fp.y + (span / 2) - (nodeEls[task.id].offsetHeight / 2);
+    nodeEls[task.id].style.top = newY + 'px';
+    nodePos[task.id].y = newY;
+    nodePos[task.id].h = nodeEls[task.id].offsetHeight;
+  });
+
+  layout.plans.forEach(({ plan }) => {
+    const taskIds = plan.tasks.map(t => t.id);
+    if (!taskIds.length) return;
+    const fp = nodePos[taskIds[0]];
+    const lp = nodePos[taskIds[taskIds.length - 1]];
+    if (!fp || !lp) return;
+    const span = (lp.y + lp.h) - fp.y;
+    const newY = fp.y + (span / 2) - (nodeEls[plan.id].offsetHeight / 2);
+    nodeEls[plan.id].style.top = newY + 'px';
+    nodePos[plan.id].y = newY;
+    nodePos[plan.id].h = nodeEls[plan.id].offsetHeight;
+  });
+
+  drawEdges();
+
+  /* Seed pre-existing binding: qa-agent ← deploy.preview_url */
+  addBinding('ag-deploy', 'preview_url', 'ag-qa');
+
+  fitToContent();
+});
+
+/* ── Dependency edge drawing ─────────────────────────────── */
+const edgeData = [];
+
+function drawEdges() {
+  /* Clear only dependency edges (data edges live alongside) */
+  Array.from(edgesSvg.querySelectorAll('.edge-path')).forEach(e => e.remove());
+
+  plans.forEach(plan => {
+    plan.tasks.forEach(task => {
+      const eId = `edge-${plan.id}-${task.id}`;
+      const el  = drawCubicEdge(plan.id, task.id, edgeStatus(plan.status, task.status), eId);
+      edgeData.push({ id: eId, el, status: edgeStatus(plan.status, task.status), planId: plan.id, taskId: task.id, agentId: null });
+
+      task.agents.forEach(agent => {
+        const eId2 = `edge-${task.id}-${agent.id}`;
+        const el2  = drawCubicEdge(task.id, agent.id, edgeStatus(task.status, agent.status), eId2);
+        edgeData.push({ id: eId2, el: el2, status: edgeStatus(task.status, agent.status), planId: plan.id, taskId: task.id, agentId: agent.id });
+      });
+    });
+  });
+}
+
+function edgeStatus(a, b) {
+  if (a === 'running' || b === 'running') return 'running';
+  if (a === 'done' && b === 'done') return 'done';
+  return 'queued';
+}
+
+function midRight(id) {
+  const p = nodePos[id]; if (!p) return { x:0, y:0 };
+  return { x: p.x + p.w, y: p.y + p.h / 2 };
+}
+function midLeft(id) {
+  const p = nodePos[id]; if (!p) return { x:0, y:0 };
+  return { x: p.x, y: p.y + p.h / 2 };
+}
+
+function drawCubicEdge(fromId, toId, status, id) {
+  const from = midRight(fromId);
+  const to   = midLeft(toId);
+  const cp   = Math.abs(to.x - from.x) * 0.45;
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('id', id);
+  path.setAttribute('class', `edge-path ${status}`);
+  path.setAttribute('d',
+    `M ${from.x} ${from.y} C ${from.x + cp} ${from.y}, ${to.x - cp} ${to.y}, ${to.x} ${to.y}`);
+  edgesSvg.appendChild(path);
+  return path;
+}
+
+/* ── Data-edge drawing (Concept F: fixed same-column routing) ────
+   Original concept-d always routed source-right → target-left with
+   symmetric horizontal control points. But every agent card lives
+   in the SAME column, so tx < fx and the curve looped backwards.
+
+   Fix: derive the source Y from the CHIP DOM element's actual bounds
+   (converted through the camera back into world coords), and when the
+   target is not clearly to the right, route right→right — exit source
+   rightward, bulge out past both cards, and enter the TARGET'S RIGHT
+   EDGE. Per-target lane offsets keep multiple bindings from stacking
+   on top of each other.                                            */
+const wrapRectCache = () => canvasWrap.getBoundingClientRect();
+
+/* screen (client) point → world coords */
+function toWorldCoords(screenX, screenY) {
+  const wr = wrapRectCache();
+  return {
+    x: (screenX - wr.left - cam.x) / cam.zoom,
+    y: (screenY - wr.top  - cam.y) / cam.zoom,
+  };
+}
+
+/* Look up the chip DOM element for a given output. Returns null if
+   the card hasn't rendered yet (in which case we fall back to layout
+   math for the initial pre-existing binding). */
+function findChipEl(fromAgentId, fromKey) {
+  const card = nodeEls[fromAgentId];
+  if (!card) return null;
+  return card.querySelector(`.out-chip[data-key="${CSS.escape(fromKey)}"]`);
+}
+
+/* Get world-space Y at the CENTER of the chip. */
+function chipWorldY(fromAgentId, fromKey) {
+  const chip = findChipEl(fromAgentId, fromKey);
+  if (chip) {
+    const r = chip.getBoundingClientRect();
+    return toWorldCoords(0, r.top + r.height / 2).y;
+  }
+  /* Fallback — approximate from layout constants */
+  const fromP    = nodePos[fromAgentId];
+  const outputs  = AGENT_OUTPUTS[fromAgentId] || [];
+  const chipIdx  = outputs.findIndex(o => o.key === fromKey);
+  const chipCnt  = outputs.length;
+  const chipAreaH   = chipCnt * 26 + (chipCnt - 1) * 7;
+  const chipAreaTop = fromP.y + fromP.h / 2 - chipAreaH / 2;
+  return chipAreaTop + chipIdx * (26 + 7) + 13;
+}
+
+/* World X of a chip's right end — the true edge-exit anchor now that
+   chips dock outside the card. Falls back to card right edge + 4. */
+function chipWorldRight(fromAgentId, fromKey) {
+  const chip = findChipEl(fromAgentId, fromKey);
+  if (chip) {
+    const r = chip.getBoundingClientRect();
+    return toWorldCoords(r.right, 0).x + 2;
+  }
+  const fromP = nodePos[fromAgentId];
+  return fromP.x + fromP.w + 4;
+}
+
+/* Per-target lane counter — used to fan out multiple bindings that
+   terminate on the same target card so their curves don't overlap. */
+function laneForBinding(binding, list) {
+  return list.filter(b => b.toAgentId === binding.toAgentId).indexOf(binding);
+}
+/* Per-target incoming index — offsets the entry point vertically so
+   multiple incoming edges hit the right edge at different Y. */
+function incomingIdx(binding, list) {
+  const same = list.filter(b => b.toAgentId === binding.toAgentId);
+  return same.indexOf(binding);
+}
+
+function drawDataEdge(binding) {
+  const fromP = nodePos[binding.fromAgentId];
+  const toP   = nodePos[binding.toAgentId];
+  if (!fromP || !toP) return;
+
+  const fx = chipWorldRight(binding.fromAgentId, binding.fromKey); /* chip's outer end */
+  const fy = chipWorldY(binding.fromAgentId, binding.fromKey);
+
+  const lane   = laneForBinding(binding, bindings);
+  const incIdx = incomingIdx(binding, bindings);
+
+  /* Right-going route (target is clearly to the right of source) */
+  const sameColumn = binding.toAgentId !== binding.fromAgentId &&
+                     (toP.x < fx + 40);           /* target NOT clearly right */
+
+  let d, mx, my;
+  if (!sameColumn) {
+    const tx = toP.x;
+    const ty = toP.y + toP.h / 2;
+    const cpx = Math.abs(tx - fx) * 0.5;
+    d = `M ${fx} ${fy} C ${fx + cpx} ${fy}, ${tx - cpx} ${ty}, ${tx} ${ty}`;
+  } else {
+    /* Same-column routing: bulge OUT to the right, come back to target's
+       right edge with a per-target vertical offset. */
+    const bulgeX = Math.max(fx, toP.x + toP.w) + 70 + lane * 24;
+    const tx = toP.x + toP.w;                    /* enter target's RIGHT edge */
+    const ty = toP.y + toP.h / 2 + (incIdx - (incIdx > 0 ? 0 : 0)) * 14;
+    /* Smooth cubic: leave rightward, arc around, come in from the right */
+    d = `M ${fx} ${fy} C ${bulgeX} ${fy}, ${bulgeX} ${ty}, ${tx} ${ty}`;
+  }
+
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('class', 'data-edge-path');
+  path.setAttribute('data-binding-id', binding.id);
+  path.setAttribute('d', d);
+  edgesSvg.appendChild(path);
+  binding.edgeEl = path;
+
+  /* Label at true path midpoint */
+  try {
+    const len = path.getTotalLength();
+    const pt  = path.getPointAtLength(len / 2);
+    mx = pt.x; my = pt.y - 6;
+  } catch (e) {
+    mx = fx; my = fy - 6;
+  }
+  const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  text.setAttribute('class', 'data-edge-label');
+  text.setAttribute('data-binding-id', binding.id);
+  text.setAttribute('x', mx);
+  text.setAttribute('y', my);
+  text.setAttribute('text-anchor', 'middle');
+  text.textContent = binding.fromKey;
+  edgesSvg.appendChild(text);
+  binding.labelEl = text;
+}
+
+function removeDataEdge(binding) {
+  binding.edgeEl?.remove();
+  binding.labelEl?.remove();
+  binding.edgeEl  = null;
+  binding.labelEl = null;
+}
+
+/* ── Binding management ──────────────────────────────────── */
+function addBinding(fromAgentId, fromKey, toAgentId) {
+  /* Don't duplicate */
+  const exists = bindings.find(
+    b => b.fromAgentId === fromAgentId && b.fromKey === fromKey && b.toAgentId === toAgentId
+  );
+  if (exists) return;
+
+  const outputs = AGENT_OUTPUTS[fromAgentId] || [];
+  const outDef  = outputs.find(o => o.key === fromKey);
+  if (!outDef) return;
+
+  /* Find source agent record for name */
+  const srcAgent = window.WS_ALL_AGENTS.find(a => a.id === fromAgentId);
+  const srcName  = srcAgent ? srcAgent.name.replace('-agent', '') : fromAgentId;
+
+  const binding = {
+    id: `binding-${++bindingSeq}`,
+    fromAgentId, fromKey, toAgentId,
+    sample: outDef.sample,
+    pillKey: `{{${srcName}.${fromKey}}}`,
+    edgeEl: null, labelEl: null,
+  };
+  bindings.push(binding);
+
+  /* Draw data edge */
+  drawDataEdge(binding);
+
+  /* Add pill to target card */
+  addPillToCard(binding);
+
+  /* Update inspector if open */
+  if (selectedAgent === fromAgentId || selectedAgent === toAgentId) {
+    const flat = window.WS_ALL_AGENTS.find(a => a.id === selectedAgent);
+    if (flat) populateInspectorIO(flat);
+  }
+}
+
+function removeBinding(bindingId) {
+  const idx = bindings.findIndex(b => b.id === bindingId);
+  if (idx < 0) return;
+  const binding = bindings[idx];
+
+  removeDataEdge(binding);
+  removePillFromCard(binding);
+  bindings.splice(idx, 1);
+
+  /* Refresh inspector */
+  if (selectedAgent === binding.fromAgentId || selectedAgent === binding.toAgentId) {
+    const flat = window.WS_ALL_AGENTS.find(a => a.id === selectedAgent);
+    if (flat) populateInspectorIO(flat);
+  }
+}
+
+/* ── Pill DOM helpers ────────────────────────────────────── */
+function ensureInputsRow(toAgentId) {
+  const card = nodeEls[toAgentId];
+  if (!card) return null;
+  let row = card.querySelector('.agent-inputs-row');
+  if (!row) {
+    row = document.createElement('div');
+    row.className = 'agent-inputs-row';
+    row.innerHTML = `<div class="agent-inputs-label">↘ Inputs</div>`;
+    card.appendChild(row);
+    /* Update nodePos height after DOM change */
+    requestAnimationFrame(() => {
+      nodePos[toAgentId].h = card.offsetHeight;
+      /* Redraw data edges that terminate at this card */
+      bindings.forEach(b => {
+        if (b.toAgentId === toAgentId && b.edgeEl) {
+          removeDataEdge(b);
+          drawDataEdge(b);
+        }
+      });
+    });
+  }
+  return row;
+}
+
+function addPillToCard(binding) {
+  const row = ensureInputsRow(binding.toAgentId);
+  if (!row) return;
+
+  const pill = document.createElement('span');
+  pill.className = 'mapped-pill';
+  pill.dataset.bindingId = binding.id;
+  pill.innerHTML = `<span class="pill-dot"></span>${escHtml(binding.pillKey)}`;
+  pill.addEventListener('click', e => {
+    e.stopPropagation();
+    openPillPopover(binding.id, pill);
+  });
+  row.appendChild(pill);
+}
+
+function removePillFromCard(binding) {
+  const card = nodeEls[binding.toAgentId];
+  if (!card) return;
+  const pill = card.querySelector(`.mapped-pill[data-binding-id="${binding.id}"]`);
+  if (!pill) return;
+
+  pill.classList.add('snapping');
+  setTimeout(() => {
+    pill.remove();
+    /* Remove inputs row if empty */
+    const row = card.querySelector('.agent-inputs-row');
+    if (row && row.querySelectorAll('.mapped-pill').length === 0) {
+      row.remove();
+      nodePos[binding.toAgentId].h = card.offsetHeight;
+    }
+  }, 320);
+}
+
+/* ── Pill popover ────────────────────────────────────────── */
+const pillPopover = document.getElementById('pill-popover');
+const popKey      = document.getElementById('pop-key');
+const popSample   = document.getElementById('pop-sample');
+const popUnbind   = document.getElementById('pop-unbind');
+let   popBindingId = null;
+
+function openPillPopover(bindingId, pillEl) {
+  const binding = bindings.find(b => b.id === bindingId);
+  if (!binding) return;
+
+  popBindingId = bindingId;
+  popKey.textContent    = binding.pillKey;
+  popSample.textContent = binding.sample;
+
+  pillPopover.classList.add('open');
+
+  /* Position near the pill */
+  const rect = pillEl.getBoundingClientRect();
+  pillPopover.style.left = (rect.left - 10) + 'px';
+  pillPopover.style.top  = (rect.bottom + 8) + 'px';
+
+  /* Clamp to viewport */
+  requestAnimationFrame(() => {
+    const pr = pillPopover.getBoundingClientRect();
+    if (pr.right > window.innerWidth - 8) {
+      pillPopover.style.left = (window.innerWidth - pr.width - 8) + 'px';
+    }
+    if (pr.bottom > window.innerHeight - 8) {
+      pillPopover.style.top = (rect.top - pr.height - 8) + 'px';
+    }
+  });
+}
+
+function closePillPopover() {
+  pillPopover.classList.remove('open');
+  popBindingId = null;
+}
+
+popUnbind.addEventListener('click', () => {
+  if (popBindingId) {
+    removeBinding(popBindingId);
+    closePillPopover();
+  }
+});
+
+document.addEventListener('pointerdown', e => {
+  if (!pillPopover.classList.contains('open')) return;
+  if (!pillPopover.contains(e.target)) closePillPopover();
+});
+
+/* ── Chip drag state ─────────────────────────────────────── */
+const phantom   = document.getElementById('chip-drag-phantom');
+const dragSvg   = document.getElementById('drag-svg');
+const dragCurve = document.getElementById('drag-curve');
+const canvasWrap = document.getElementById('canvas-wrap');
+
+let chipDrag = null;
+/* Set to true right after a chip drag completes, so the synthetic click
+   event that follows a mousedown-on-chip → mouseup-on-card sequence
+   doesn't reach the capture-phase deselect logic. */
+let suppressNextCanvasClick = false;
+/* chipDrag shape:
+   { kind: 'output' | 'tool',
+     fromAgentId, fromKey (output key OR tool name),
+     status,               // for phantom styling on outputs
+     fromWorldX, fromWorldY }
+*/
+
+function startChipDrag(e, fromAgentId, fromKey, status) {
+  return startDrag(e, { kind: 'output', fromAgentId, fromKey, status });
+}
+/* Generalized drag entry — used by both output chips and dock tool grips */
+function startDrag(e, payload) {
+  e.preventDefault();
+  closePillPopover();
+
+  /* World coords of drag origin — sourced from the actual DOM element
+     when possible so the rubber-band anchor is pixel-accurate. */
+  let fromWorldX, fromWorldY;
+  const srcEl = e.currentTarget;
+  const srcRect = srcEl && srcEl.getBoundingClientRect ? srcEl.getBoundingClientRect() : null;
+
+  if (payload.kind === 'output' && srcRect) {
+    const w = toWorldCoords(srcRect.right, srcRect.top + srcRect.height / 2);
+    fromWorldX = w.x + 2;
+    fromWorldY = w.y;
+  } else {
+    /* Tool grip lives in the fixed dock — anchor the edge on the source
+       agent card's right edge instead so it visually originates from
+       the card being configured. */
+    const fromP = nodePos[payload.fromAgentId];
+    fromWorldX  = fromP.x + fromP.w + 4;
+    fromWorldY  = fromP.y + fromP.h / 2;
+  }
+
+  chipDrag = { ...payload, fromWorldX, fromWorldY };
+
+  /* Phantom */
+  phantom.className = payload.kind === 'output' ? (payload.status || 'done') : 'tool';
+  phantom.textContent = payload.kind === 'tool' ? `⚒ ${payload.fromKey}` : payload.fromKey;
+  phantom.style.display = 'block';
+  phantom.style.left = e.clientX + 'px';
+  phantom.style.top  = e.clientY + 'px';
+
+  dragSvg.style.display = 'block';
+  updateDragCurve(e.clientX, e.clientY);
+  try { canvasWrap.setPointerCapture(e.pointerId); } catch (_) {}
+}
+
+function toScreenCoords(worldX, worldY) {
+  /* Apply camera transform: screen = world * zoom + offset */
+  const wrapRect = canvasWrap.getBoundingClientRect();
+  return {
+    x: worldX * cam.zoom + cam.x + wrapRect.left,
+    y: worldY * cam.zoom + cam.y + wrapRect.top,
+  };
+}
+
+function updateDragCurve(cx, cy) {
+  if (!chipDrag) return;
+  const sc  = toScreenCoords(chipDrag.fromWorldX, chipDrag.fromWorldY);
+  const fx  = sc.x, fy = sc.y;
+  const tx  = cx, ty = cy;
+  /* Mirror the same routing rule the persistent data edges use:
+     when the pointer is not clearly to the right of the source,
+     bulge out rightward instead of drawing a backwards S-loop. */
+  let d;
+  if (tx > fx + 40) {
+    const cpx = Math.abs(tx - fx) * 0.45;
+    d = `M ${fx} ${fy} C ${fx + cpx} ${fy}, ${tx - cpx} ${ty}, ${tx} ${ty}`;
+  } else {
+    const bulgeX = Math.max(fx, tx) + 80;
+    d = `M ${fx} ${fy} C ${bulgeX} ${fy}, ${bulgeX} ${ty}, ${tx} ${ty}`;
+  }
+  dragCurve.setAttribute('d', d);
+}
+
+/* Pointer events for drag */
+canvasWrap.addEventListener('pointermove', e => {
+  if (chipDrag) {
+    phantom.style.left = e.clientX + 'px';
+    phantom.style.top  = e.clientY + 'px';
+    updateDragCurve(e.clientX, e.clientY);
+
+    /* Highlight drop targets */
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const card = el?.closest('.agent-card');
+    document.querySelectorAll('.agent-card.drop-target').forEach(c => c.classList.remove('drop-target'));
+    if (card && card.dataset.agentId !== chipDrag.fromAgentId) {
+      card.classList.add('drop-target');
+    }
+    return;
+  }
+  if (!isDragging) return;
+  cam.x = dragStart.camX + (e.clientX - dragStart.x);
+  cam.y = dragStart.camY + (e.clientY - dragStart.y);
+  applyCamera();
+});
+
+canvasWrap.addEventListener('pointerup', e => {
+  if (chipDrag) {
+    /* Drop */
+    const el   = document.elementFromPoint(e.clientX, e.clientY);
+    const card = el?.closest('.agent-card');
+    document.querySelectorAll('.agent-card.drop-target').forEach(c => c.classList.remove('drop-target'));
+
+    phantom.style.display = 'none';
+    dragSvg.style.display  = 'none';
+    dragCurve.setAttribute('d', '');
+
+    if (card && card.dataset.agentId && card.dataset.agentId !== chipDrag.fromAgentId) {
+      if (chipDrag.kind === 'tool') {
+        addToolBinding(chipDrag.fromAgentId, chipDrag.fromKey, card.dataset.agentId);
+      } else {
+        addBinding(chipDrag.fromAgentId, chipDrag.fromKey, card.dataset.agentId);
+      }
+    }
+    chipDrag = null;
+    suppressNextCanvasClick = true;
+    return;
+  }
+  isDragging = false;
+  canvasWrap.classList.remove('dragging');
+});
+
+/* ── Camera / pan / zoom ─────────────────────────────────── */
+let cam = { x: 0, y: 0, zoom: 1 };
+
+function applyCamera() {
+  world.style.transform = `translate(${cam.x}px,${cam.y}px) scale(${cam.zoom})`;
+  /* counter-scale variable for edge "+" buttons (see .edge-plus) */
+  world.style.setProperty('--invz', (1 / cam.zoom).toFixed(4));
+  document.getElementById('zoom-label').textContent = Math.round(cam.zoom * 100) + '%';
+}
+
+function fitToContent() {
+  const wW  = layout.worldW;
+  const wH  = layout.worldH;
+  const vW  = canvasWrap.clientWidth - (dockOpen ? 300 : 0);
+  const vH  = canvasWrap.clientHeight;
+  const scaleX = vW / (wW + 80);
+  const scaleY = vH / (wH + 80);
+  let zoom = Math.min(scaleX, scaleY, 1);
+  zoom = Math.max(0.3, zoom);
+  cam.zoom = zoom;
+  cam.x = (vW - wW * zoom) / 2;
+  cam.y = (vH - wH * zoom) / 2;
+  applyCamera();
+}
+
+/* ── Pan ─────────────────────────────────────────────────── */
+let isDragging = false;
+let dragStart  = { x: 0, y: 0, camX: 0, camY: 0 };
+
+canvasWrap.addEventListener('pointerdown', e => {
+  if (chipDrag) return;
+  if (placementActive) return;   /* placement mode: no pan */
+  if (e.target.closest('.node-card')) return;
+  if (e.target.closest('#new-agent-toolbar')) return;
+  if (e.target.closest('#library-panel')) return;
+  if (e.target.closest('#agent-dock')) return;
+  if (e.target.closest('#pill-popover')) return;
+  if (e.target.closest('#edge-palette')) return;
+  if (e.target.closest('.edge-plus')) return;
+  if (e.target.closest('.zoom-btn')) return;
+  const cl = e.target.classList;
+  if (cl && (cl.contains('edge-hitbox') || cl.contains('edge-path'))) return;
+  isDragging = true;
+  dragStart = { x: e.clientX, y: e.clientY, camX: cam.x, camY: cam.y };
+  canvasWrap.classList.add('dragging');
+  canvasWrap.setPointerCapture(e.pointerId);
+});
+
+canvasWrap.addEventListener('click', e => {
+  if (suppressNextCanvasClick) {
+    suppressNextCanvasClick = false;
+    e.stopPropagation();
+    return;
+  }
+  if (placementActive) {
+    /* Don't hijack clicks on the library panel itself. */
+    if (e.target.closest('#library-panel')) return;
+    if (e.target.closest('#new-agent-toolbar')) return;
+    /* Drop a new agent at this world position — intercept BEFORE any
+       child card's click handler so clicking on/over a card still drops. */
+    e.stopPropagation();
+    const w = toWorldCoords(e.clientX, e.clientY);
+    placeArmedAt(w.x, w.y);
+    setPlacementMode(false);
+    return;
+  }
+  if (e.target === canvasWrap || e.target === world || e.target === edgesSvg) {
+    deselect();
+  }
+}, true);
+
+/* ── Wheel zoom ──────────────────────────────────────────── */
+canvasWrap.addEventListener('wheel', e => {
+  e.preventDefault();
+  const factor = e.deltaY < 0 ? 1.1 : 0.909;
+  const rect   = canvasWrap.getBoundingClientRect();
+  const mx     = e.clientX - rect.left;
+  const my     = e.clientY - rect.top;
+  const newZoom = Math.min(1.75, Math.max(0.3, cam.zoom * factor));
+  const scale   = newZoom / cam.zoom;
+  cam.x = mx - scale * (mx - cam.x);
+  cam.y = my - scale * (my - cam.y);
+  cam.zoom = newZoom;
+  applyCamera();
+}, { passive: false });
+
+document.getElementById('zoom-in').addEventListener('click', () => {
+  const c = { x: canvasWrap.clientWidth / 2, y: canvasWrap.clientHeight / 2 };
+  const nz = Math.min(1.75, cam.zoom * 1.18);
+  const s  = nz / cam.zoom;
+  cam.x = c.x - s * (c.x - cam.x);
+  cam.y = c.y - s * (c.y - cam.y);
+  cam.zoom = nz; applyCamera();
+});
+document.getElementById('zoom-out').addEventListener('click', () => {
+  const c = { x: canvasWrap.clientWidth / 2, y: canvasWrap.clientHeight / 2 };
+  const nz = Math.max(0.3, cam.zoom / 1.18);
+  const s  = nz / cam.zoom;
+  cam.x = c.x - s * (c.x - cam.x);
+  cam.y = c.y - s * (c.y - cam.y);
+  cam.zoom = nz; applyCamera();
+});
+
+/* ═══════════════════════════════════════════════════════════
+   Concept F — Agent Dock (replaces the inspector panel)
+   Clicking an agent card selects it (indigo ring) and slides
+   in a compact right-side dock: Steer · Model & Limits · Tools.
+   Each tool row has a drag-handle grip that starts a tool-wire
+   drag using the same startDrag() machinery as output chips.
+═══════════════════════════════════════════════════════════ */
+const dockEl       = document.getElementById('agent-dock');
+const dockAvatar   = document.getElementById('dock-avatar');
+const dockName     = document.getElementById('dock-name');
+const dockRole     = document.getElementById('dock-role');
+const dockSteer    = document.getElementById('dock-steer');
+const dockSteerBtn = document.getElementById('dock-steer-send');
+const dockModel    = document.getElementById('dock-model');
+const dockMaxSteps = document.getElementById('dock-maxsteps');
+const dockRerun    = document.getElementById('dock-rerun');
+const dockTools    = document.getElementById('dock-tools');
+const dockClose    = document.getElementById('dock-close');
+
+let dockOpen      = false;
+let selectedAgent = null;
+
+/* Per-agent tool state — { agentId: { toolName: enabled } } */
+const agentToolState = {};
+function getAgentTools(agent) {
+  /* Derive distinct tool names from data.js; fall back to defaults */
+  const fromData = Array.from(new Set((agent.tools || []).map(t => t.tool)));
+  return fromData.length > 0 ? fromData : ['bash', 'http', 'read'];
+}
+
+/* Toast (shared with edge palette) */
+const fToast = document.getElementById('f-toast');
+let   fToastTimer = null;
+function showToast(msg) {
+  fToast.textContent = msg;
+  fToast.classList.add('show');
+  clearTimeout(fToastTimer);
+  fToastTimer = setTimeout(() => fToast.classList.remove('show'), 1800);
+}
+
+function selectAgent(agentId) {
+  const flat = window.WS_ALL_AGENTS.find(a => a.id === agentId);
+  if (!flat) return;
+
+  selectedAgent = agentId;
+  dockOpen      = true;
+  dockEl.classList.add('open');
+
+  Object.keys(nodeEls).forEach(id => nodeEls[id].classList.remove('selected','path-lit'));
+  edgeData.forEach(e => e.el.classList.remove('lit','dimmed'));
+  document.querySelectorAll('.data-edge-path, .tool-edge-path').forEach(p => p.classList.remove('lit','dimmed'));
+  world.classList.add('has-selection');
+
+  const planId = flat.plan.id;
+  const taskId = flat.task.id;
+  nodeEls[agentId]?.classList.add('selected','path-lit');
+  nodeEls[taskId]?.classList.add('path-lit');
+  nodeEls[planId]?.classList.add('path-lit');
+
+  edgeData.forEach(e => {
+    const onPath = (e.planId === planId && e.taskId === taskId &&
+      (e.agentId === agentId || e.agentId === null));
+    if (onPath) e.el.classList.add('lit');
+    else         e.el.classList.add('dimmed');
+  });
+
+  /* Light data + tool edges connected to selected agent */
+  const allBindings = [...bindings, ...toolBindings];
+  allBindings.forEach(b => {
+    if (b.fromAgentId === agentId || b.toAgentId === agentId) {
+      b.edgeEl?.classList.add('lit');
+      const other = b.fromAgentId === agentId ? b.toAgentId : b.fromAgentId;
+      nodeEls[other]?.classList.add('path-lit');
+    } else {
+      b.edgeEl?.classList.add('dimmed');
+    }
+  });
+
+  populateDock(flat);
+}
+
+function deselect() {
+  selectedAgent = null;
+  dockOpen      = false;
+  dockEl.classList.remove('open');
+  world.classList.remove('has-selection');
+  Object.keys(nodeEls).forEach(id => nodeEls[id].classList.remove('selected','path-lit','dimmed'));
+  edgeData.forEach(e => e.el.classList.remove('lit','dimmed'));
+  document.querySelectorAll('.data-edge-path, .tool-edge-path').forEach(p => p.classList.remove('lit','dimmed'));
+}
+dockClose.addEventListener('click', deselect);
+
+function populateDock(a) {
+  dockAvatar.textContent = agentGlyph(a);
+  dockName.textContent   = a.name;
+  dockRole.textContent   = `${a.role} · ${a.model}`;
+
+  dockSteer.value = '';
+  dockModel.value = ['haiku','sonnet-4','opus-4'].includes(a.model) ? a.model : 'sonnet-4';
+  dockMaxSteps.value = 24;
+
+  /* Tools */
+  dockTools.innerHTML = '';
+  const state = agentToolState[a.id] || (agentToolState[a.id] = {});
+  const tools = getAgentTools(a);
+  tools.forEach(tname => {
+    if (!(tname in state)) state[tname] = true;
+    const row = document.createElement('div');
+    row.className = 'dock-tool-row';
+    row.innerHTML = `
+      <span class="dock-tool-name">${escHtml(tname)}</span>
+      <span class="dock-toggle ${state[tname] ? 'on' : ''}" data-toggle="${escHtml(tname)}"></span>
+      <span class="dock-tool-grip" title="Drag onto another card to wire this tool">⠿</span>`;
+    /* toggle */
+    row.querySelector('.dock-toggle').addEventListener('click', () => {
+      state[tname] = !state[tname];
+      row.querySelector('.dock-toggle').classList.toggle('on', state[tname]);
+    });
+    /* Drag grip — starts a tool-payload drag using the shared drag system */
+    const grip = row.querySelector('.dock-tool-grip');
+    grip.addEventListener('pointerdown', e => {
+      e.stopPropagation();
+      startDrag(e, { kind: 'tool', fromAgentId: a.id, fromKey: tname });
+    });
+    dockTools.appendChild(row);
+  });
+}
+
+/* ── Steer / re-run buttons — mock toasts ────────────────── */
+dockSteerBtn.addEventListener('click', () => {
+  const v = dockSteer.value.trim();
+  showToast(v ? `Steer sent to ${dockName.textContent}` : `Steer sent (empty)`);
+  dockSteer.value = '';
+});
+dockRerun.addEventListener('click', () => {
+  showToast(`Re-run queued · ${dockModel.value} · max ${dockMaxSteps.value} steps`);
+});
+
+/* ═══════════════════════════════════════════════════════════
+   Tool bindings — dashed VIOLET edges from source agent card
+   to a target card, labeled with the tool name. Reuses the
+   same edge-drawing routing (right→right when same-column).
+═══════════════════════════════════════════════════════════ */
+const toolBindings = [];
+let   toolBindingSeq = 0;
+
+function addToolBinding(fromAgentId, toolName, toAgentId) {
+  /* De-dupe */
+  if (toolBindings.some(b => b.fromAgentId === fromAgentId &&
+                             b.toolName    === toolName &&
+                             b.toAgentId   === toAgentId)) return;
+
+  const srcAgent = window.WS_ALL_AGENTS.find(a => a.id === fromAgentId);
+  const srcName  = srcAgent ? srcAgent.name.replace('-agent', '') : fromAgentId;
+
+  const binding = {
+    id: `toolbind-${++toolBindingSeq}`,
+    fromAgentId, toolName, toAgentId,
+    pillText: `tool: ${toolName} (from ${srcName})`,
+    edgeEl: null, labelEl: null,
+  };
+  toolBindings.push(binding);
+  drawToolEdge(binding);
+  addToolPillToCard(binding);
+  showToast(`Wired ${toolName} → ${nodeEls[toAgentId]?.querySelector('.agent-name')?.textContent || toAgentId}`);
+}
+
+function drawToolEdge(binding) {
+  const fromP = nodePos[binding.fromAgentId];
+  const toP   = nodePos[binding.toAgentId];
+  if (!fromP || !toP) return;
+
+  /* Anchor on source card's mid-right (the tool "comes from" that agent) */
+  const fx = fromP.x + fromP.w + 4;
+  const fy = fromP.y + fromP.h / 2;
+
+  /* Lane index across all tool bindings targeting the same card */
+  const lane   = toolBindings.filter(b => b.toAgentId === binding.toAgentId).indexOf(binding);
+  const incIdx = lane;
+  const sameColumn = toP.x < fx + 40;
+
+  let d;
+  if (!sameColumn) {
+    const tx = toP.x;
+    const ty = toP.y + toP.h / 2;
+    const cpx = Math.abs(tx - fx) * 0.5;
+    d = `M ${fx} ${fy} C ${fx + cpx} ${fy}, ${tx - cpx} ${ty}, ${tx} ${ty}`;
+  } else {
+    /* Same-column → bulge out to the right. Offset the tool bulge
+       slightly further out than data edges so the two families
+       don't overlap. */
+    const bulgeX = Math.max(fx, toP.x + toP.w) + 110 + lane * 24;
+    const tx = toP.x + toP.w;
+    const ty = toP.y + toP.h / 2 + (incIdx * 14) - 30;
+    d = `M ${fx} ${fy} C ${bulgeX} ${fy}, ${bulgeX} ${ty}, ${tx} ${ty}`;
+  }
+
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('class', 'tool-edge-path');
+  path.setAttribute('data-binding-id', binding.id);
+  path.setAttribute('d', d);
+  edgesSvg.appendChild(path);
+  binding.edgeEl = path;
+
+  try {
+    const len = path.getTotalLength();
+    const pt  = path.getPointAtLength(len / 2);
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('class', 'tool-edge-label');
+    text.setAttribute('data-binding-id', binding.id);
+    text.setAttribute('x', pt.x);
+    text.setAttribute('y', pt.y - 6);
+    text.setAttribute('text-anchor', 'middle');
+    text.textContent = binding.toolName;
+    edgesSvg.appendChild(text);
+    binding.labelEl = text;
+  } catch (e) {}
+}
+
+function addToolPillToCard(binding) {
+  const row = ensureInputsRow(binding.toAgentId);
+  if (!row) return;
+  const pill = document.createElement('span');
+  pill.className = 'tool-pill';
+  pill.dataset.toolBindingId = binding.id;
+  pill.innerHTML = `<span class="pill-dot"></span>${escHtml(binding.pillText)}`;
+  pill.title = 'Click to unbind';
+  pill.addEventListener('click', e => {
+    e.stopPropagation();
+    /* Simple unbind on click */
+    binding.edgeEl?.remove();
+    binding.labelEl?.remove();
+    pill.remove();
+    const idx = toolBindings.indexOf(binding);
+    if (idx >= 0) toolBindings.splice(idx, 1);
+    const card = nodeEls[binding.toAgentId];
+    const r = card?.querySelector('.agent-inputs-row');
+    if (r && r.querySelectorAll('.mapped-pill,.tool-pill').length === 0) {
+      r.remove();
+      nodePos[binding.toAgentId].h = card.offsetHeight;
+    }
+  });
+  row.appendChild(pill);
+}
+
+/* Live-updated stats (used to be updateInspStats — dock has no
+   stats block, so this is now a no-op stub to keep the tickers
+   loop happy). */
+function updateInspStats(a) { /* no-op in Concept F */ }
+
+/* ── Live tickers ────────────────────────────────────────── */
+const RUNNING_AGENTS = window.WS_ALL_AGENTS.filter(a => a.status === 'running');
+const liveStats = {};
+RUNNING_AGENTS.forEach(a => {
+  liveStats[a.id] = { elapsed: parseElapsedToSecs(a.stats?.elapsed), tokens: a.stats?.tokens ?? 0 };
+});
+
+function parseElapsedToSecs(s) {
+  if (!s || s === '—') return 0;
+  const m = String(s).match(/(?:(\d+)m\s*)?(\d+)s/);
+  return m ? (parseInt(m[1]||'0') * 60) + parseInt(m[2]||'0') : 0;
+}
+function fmtElapsed(secs) {
+  const m = Math.floor(secs/60), s = Math.floor(secs%60);
+  return m > 0 ? `${m}m ${String(s).padStart(2,'0')}s` : `${s}s`;
+}
+
+let tickInterval = null;
+function startTickers() {
+  if (tickInterval) clearInterval(tickInterval);
+  tickInterval = setInterval(() => {
+    RUNNING_AGENTS.forEach(a => {
+      const s = liveStats[a.id]; if (!s) return;
+      s.elapsed += 1; s.tokens += 47/1000;
+      const elEl = document.querySelector(`[data-stat-elapsed="${a.id}"]`);
+      if (elEl) elEl.textContent = fmtElapsed(s.elapsed);
+      const tkEl = document.querySelector(`[data-stat-tokens="${a.id}"]`);
+      if (tkEl) tkEl.textContent = s.tokens.toFixed(1)+'k';
+      if (selectedAgent === a.id) updateInspStats(a);
+    });
+  }, 1000);
+}
+startTickers();
+
+/* Thinking ticker cycling */
+const thinkState = {};
+RUNNING_AGENTS.forEach(a => { thinkState[a.id] = { idx: 0, lines: a.thinking || [] }; });
+
+function cycleThinking() {
+  RUNNING_AGENTS.forEach(a => {
+    const ts = thinkState[a.id];
+    if (!ts || ts.lines.length < 2) return;
+    ts.idx = (ts.idx + 1) % ts.lines.length;
+    const el = document.querySelector(`[data-thinking="${a.id}"]`);
+    if (el) el.innerHTML = `<span>${escHtml(ts.lines[ts.idx])}</span>`;
+  });
+}
+setInterval(cycleThinking, 2600);
+
+/* ═══════════════════════════════════════════════════════════
+   Minimal Edge Palette + "+" inserter (ported verbatim from
+   concept-b — the counter-zoom .edge-plus pattern and fat
+   invisible .edge-hitbox path are already debugged; we just
+   restyle the popover to be crisp and text-only.
+═══════════════════════════════════════════════════════════ */
+const palette   = document.getElementById('edge-palette');
+const palLabel  = document.getElementById('palette-edge-label');
+let   activeEdgeId = null;
+
+function edgeLabel(entry) {
+  function nameOf(id) {
+    for (const p of plans) {
+      if (p.id === id) return p.name;
+      for (const t of p.tasks) {
+        if (t.id === id) return t.name;
+        for (const a of t.agents) if (a.id === id) return a.name;
+      }
+    }
+    return id;
+  }
+  if (entry.agentId) return nameOf(entry.taskId) + ' → ' + nameOf(entry.agentId);
+  return nameOf(entry.planId) + ' → ' + nameOf(entry.taskId);
+}
+
+function openPalette(edgeId, x, y) {
+  activeEdgeId = edgeId;
+  const entry = edgeData.find(e => e.id === edgeId);
+  palLabel.textContent = entry ? edgeLabel(entry) : edgeId;
+  palette.style.left = x + 'px';
+  palette.style.top  = y + 'px';
+  palette.classList.add('visible');
+}
+function closePalette() {
+  palette.classList.remove('visible');
+  activeEdgeId = null;
+  document.querySelectorAll('.edge-plus.active').forEach(b => b.classList.remove('active'));
+}
+
+palette.addEventListener('click', e => {
+  const btn = e.target.closest('.palette-action');
+  if (!btn || !activeEdgeId) return;
+  const action = btn.dataset.action;
+  const entry  = edgeData.find(x => x.id === activeEdgeId);
+  const label  = entry ? edgeLabel(entry) : '';
+
+  if (action === 'insert' && entry && entry.el) {
+    /* Drop a new custom agent near this edge's midpoint (offset below
+       so the card doesn't overlap the line). Same code path as manual
+       placement so the new node is fully wired into every system. */
+    try {
+      const len = entry.el.getTotalLength();
+      const mid = entry.el.getPointAtLength(len / 2);
+      const wx  = mid.x - AGENT_W / 2;
+      const wy  = mid.y + 40;
+      createCustomAgent(wx, wy);
+      showToast('Agent inserted near edge');
+    } catch (_) {
+      showToast('Could not insert here');
+    }
+    closePalette();
+    return;
+  }
+
+  const msgs = {
+    gate:   `Gate added to: ${label}`,
+    mute:   `Muted: ${label}`,
+    boost:  `Boosted: ${label}`,
+  };
+  showToast(msgs[action] || action);
+  closePalette();
+});
+
+/* Close on outside click */
+document.addEventListener('pointerdown', e => {
+  if (!palette.classList.contains('visible')) return;
+  if (palette.contains(e.target)) return;
+  if (e.target.closest('.edge-plus')) return;
+  closePalette();
+}, true);
+
+function wireEdgeInteractions() {
+  edgeData.forEach(entry => {
+    if (!entry.el || entry.el._wiredF) return;
+    entry.el._wiredF = true;
+    const el = entry.el;
+
+    /* Always-visible "+" — lives inside #world (world coords), so pan/zoom
+       carry it along. Counter-scale via --invz keeps it a constant screen
+       size regardless of camera zoom. */
+    try {
+      const len = el.getTotalLength();
+      const mid = el.getPointAtLength(len / 2);
+      const plus = document.createElement('button');
+      plus.type = 'button';
+      plus.className = 'edge-plus';
+      plus.textContent = '+';
+      plus.title = 'Edge actions';
+      plus.style.left = mid.x + 'px';
+      plus.style.top  = mid.y + 'px';
+      plus.addEventListener('pointerdown', e => e.stopPropagation());
+      plus.addEventListener('click', e => {
+        e.stopPropagation();
+        const r = plus.getBoundingClientRect();
+        document.querySelectorAll('.edge-plus.active').forEach(b => b.classList.remove('active'));
+        plus.classList.add('active');
+        openPalette(entry.id, r.right + 6, r.top);
+      });
+      world.appendChild(plus);
+      entry.plusEl = plus;
+    } catch (e) { /* zero-length path — skip */ }
+
+    /* Fat invisible hitbox clone of the path */
+    const hit = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    hit.setAttribute('class', 'edge-hitbox');
+    hit.setAttribute('d', el.getAttribute('d'));
+    edgesSvg.appendChild(hit);
+    entry.hitEl = hit;
+
+    el.style.pointerEvents = 'stroke';
+    el.style.cursor = 'context-menu';
+    const openFromEvent = (e) => {
+      e.stopPropagation();
+      const anchor = entry.plusEl ? entry.plusEl.getBoundingClientRect() : { right: e.clientX, top: e.clientY };
+      document.querySelectorAll('.edge-plus.active').forEach(b => b.classList.remove('active'));
+      if (entry.plusEl) entry.plusEl.classList.add('active');
+      openPalette(entry.id, anchor.right + 6, anchor.top);
+    };
+    for (const target of [el, hit]) {
+      target.addEventListener('click', e => { if (e.button === 0) openFromEvent(e); });
+      target.addEventListener('contextmenu', e => { e.preventDefault(); openFromEvent(e); });
+    }
+  });
+}
+
+/* Wait for edges to render, then wire */
+(function waitForEdges() {
+  if (edgeData.length > 0) wireEdgeInteractions();
+  else requestAnimationFrame(waitForEdges);
+})();
+
+/* ── Keyboard ────────────────────────────────────────────── */
+document.addEventListener('keydown', e => {
+  /* Ignore typing in inputs / editable */
+  const t = e.target;
+  const typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' ||
+                       t.isContentEditable);
+  if (e.key === 'Escape') {
+    if (placementActive) { setPlacementMode(false); return; }
+    deselect(); closePillPopover();
+    return;
+  }
+  if (!typing && (e.key === 'n' || e.key === 'N')) {
+    /* 'n' now toggles the library PANEL (which replaces the old +New button). */
+    const panel = document.getElementById('library-panel');
+    const chev  = document.getElementById('lib-chevron');
+    const collapsed = panel.classList.toggle('collapsed');
+    if (chev) chev.textContent = collapsed ? '›' : '‹';
+    canvasWrap.classList.toggle('lib-open', !collapsed);
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════
+   Manual agent creation + free placement + drag-to-move
+   ─ New-agent toolbar button ("+" or 'n' key) arms placement.
+   ─ A ghost card (world-space, dashed) tracks the cursor.
+   ─ Click empty canvas → drops a real agent card at that
+     world position, fully registered in nodePos/nodeEls/
+     WS_ALL_AGENTS so all downstream systems (chip drag drops,
+     tool drops, dock, edge-palette) treat it as a first-class
+     agent. It also gains a default `result` output chip so it
+     can be a drag SOURCE as well as a target.
+   ─ Every agent card (existing + new) is draggable via its body.
+     Uses a 5px threshold so plain clicks still select. Edges
+     anchored to the moved card are recomputed live in rAF.
+═══════════════════════════════════════════════════════════ */
+
+let placementActive = false;
+let customAgentSeq  = 0;
+let armedArchetype  = null;  /* which library row is currently armed */
+let armedRowEl      = null;
+
+const ghostEl     = document.getElementById('ghost-agent');
+const ghostTitleEl = ghostEl.querySelector('.ghost-title');
+const ghostSubEl   = ghostEl.querySelector('.ghost-sub');
+
+/* ── Archetype registry ─────────────────────────────────── */
+const ARCHETYPES = {
+  researcher: {
+    name: 'researcher', role: 'Researcher · web research', model: 'sonnet-4',
+    tools: [{ tool: 'web' }, { tool: 'summarize' }],
+    outputs: [{ key: 'findings', sample: '"{...}"' }],
+    label: 'Researcher',
+  },
+  coder: {
+    name: 'coder', role: 'Coder · edits + shell', model: 'sonnet-4',
+    tools: [{ tool: 'bash' }, { tool: 'edit' }],
+    outputs: [{ key: 'diff', sample: '"@@ ..."' }],
+    label: 'Coder',
+  },
+  qa: {
+    name: 'qa', role: 'QA · verification', model: 'sonnet-4',
+    tools: [{ tool: 'playwright' }, { tool: 'http' }],
+    outputs: [{ key: 'test_report', sample: '"{pass:..}"' }],
+    label: 'QA',
+  },
+  writer: {
+    name: 'writer', role: 'Writer · drafting', model: 'sonnet-4',
+    tools: [{ tool: 'draft' }, { tool: 'tone' }],
+    outputs: [{ key: 'copy', sample: '"..."' }],
+    label: 'Writer',
+  },
+  custom: {
+    name: 'new-agent', role: 'Custom', model: 'sonnet-4',
+    tools: [],
+    outputs: [{ key: 'result', sample: '"{...}"' }],
+    label: 'New agent',
+  },
+};
+
+function setPlacementMode(on, opts) {
+  placementActive = !!on;
+  canvasWrap.classList.toggle('placing', placementActive);
+  if (placementActive) {
+    /* Update ghost label to match the armed archetype/kind. */
+    const kind = opts && opts.kind || 'agent';
+    if (kind === 'gate') {
+      ghostTitleEl.textContent = 'Approval gate';
+      ghostSubEl.textContent   = 'click to place · Esc to cancel';
+    } else if (kind === 'note') {
+      ghostTitleEl.textContent = 'Note';
+      ghostSubEl.textContent   = 'click to place · Esc to cancel';
+    } else if (kind === 'template') {
+      const t = opts.template;
+      ghostTitleEl.textContent = t === 'deploy-qa' ? 'Deploy + QA pair' : 'Research trio';
+      ghostSubEl.textContent   = 'click to drop group · Esc to cancel';
+    } else {
+      const arch = ARCHETYPES[(opts && opts.archetype) || 'custom'];
+      ghostTitleEl.textContent = arch.label;
+      ghostSubEl.textContent   = 'click to place · Esc to cancel';
+    }
+  } else {
+    ghostEl.classList.remove('visible');
+    armedArchetype = null;
+    if (armedRowEl) { armedRowEl.classList.remove('armed'); armedRowEl = null; }
+  }
+}
+
+/* placeArmedAt — drop whatever the armed row is at (worldX, worldY).
+   Called from the placement-click handler (click-to-arm flow) AND from
+   the drag-out release handler. Coords are the CENTER world point. */
+function placeArmedAt(wx, wy) {
+  const spec = armedArchetype || { kind: 'agent', archetype: 'custom' };
+  if (spec.kind === 'gate') {
+    createGateNode(wx - 70, wy - 34);
+    showToast('Gate placed');
+  } else if (spec.kind === 'note') {
+    createNoteNode(wx - 80, wy - 30);
+    showToast('Note placed');
+  } else if (spec.kind === 'template') {
+    dropTemplate(spec.template, wx, wy);
+  } else {
+    const arch = ARCHETYPES[spec.archetype] || ARCHETYPES.custom;
+    createCustomAgent(wx - AGENT_W / 2, wy - CARD_H_AGENT / 2, arch);
+    showToast(`${arch.label} placed — drag chips or tools to wire it in`);
+  }
+}
+
+/* Ghost tracks the cursor in WORLD coords (it lives in #world). */
+canvasWrap.addEventListener('pointermove', e => {
+  if (!placementActive) return;
+  const w = toWorldCoords(e.clientX, e.clientY);
+  ghostEl.style.left = (w.x - AGENT_W / 2) + 'px';
+  ghostEl.style.top  = (w.y - CARD_H_AGENT / 2) + 'px';
+  if (!ghostEl.classList.contains('visible')) ghostEl.classList.add('visible');
+});
+canvasWrap.addEventListener('pointerleave', () => {
+  if (placementActive) ghostEl.classList.remove('visible');
+});
+
+/* ── Custom-agent card factory ──────────────────────────── */
+function customAgentCardHtml(agent) {
+  return `
+    <div class="agent-card-header">
+      <div class="agent-avatar">🤖<div class="pulse-ring"></div></div>
+      <div class="agent-info">
+        <div class="agent-name" contenteditable="true" spellcheck="false">${escHtml(agent.name)}</div>
+        <div class="agent-role">${escHtml(agent.role)} · ${escHtml(agent.model)}</div>
+      </div>
+      ${chipHtml(agent.status)}
+    </div>
+    <div class="agent-card-body">
+      <div class="agent-stats">
+        <div class="stat-cell"><div class="stat-val">—</div><div class="stat-label">Elapsed</div></div>
+        <div class="stat-cell"><div class="stat-val">0.0k</div><div class="stat-label">Tokens</div></div>
+        <div class="stat-cell"><div class="stat-val">0</div><div class="stat-label">Tool calls</div></div>
+      </div>
+    </div>`;
+}
+
+/* createCustomAgent — now archetype-aware. Pass an ARCHETYPES entry
+   (or omit for the "custom" blank). Card wiring is otherwise identical
+   to the original single-flavor factory. */
+function createCustomAgent(worldX, worldY, archetype) {
+  const arch = archetype || ARCHETYPES.custom;
+  customAgentSeq += 1;
+  const id   = `ag-custom-${customAgentSeq}`;
+  const name = `${arch.name}-${customAgentSeq}`;
+
+  /* Register in the flat agent list so selectAgent, addBinding etc. see it.
+     Also give it a synthetic plan/task pair so path-lighting in selectAgent
+     doesn't blow up on missing refs. */
+  const flat = {
+    id, name,
+    role: arch.role,
+    model: arch.model,
+    status: 'queued',
+    tools: (arch.tools || []).map(t => ({ ...t })),  /* shape matches data.js */
+    thinking: [],
+    stats: { elapsed: '—', tokens: 0, toolCalls: 0 },
+    plan: { id: `plan-custom-${id}` },
+    task: { id: `task-custom-${id}` },
+  };
+  window.WS_ALL_AGENTS = window.WS_ALL_AGENTS || [];
+  window.WS_ALL_AGENTS.push(flat);
+
+  /* Register outputs so the card can also be a DRAG SOURCE */
+  AGENT_OUTPUTS[id] = (arch.outputs || [{ key: 'result', sample: '"{...}"' }]).map(o => ({ ...o }));
+
+  /* Build DOM */
+  const el = document.createElement('div');
+  el.className = `node-card agent-card ${flat.status}`;
+  el.id = `node-${id}`;
+  el.style.left = worldX + 'px';
+  el.style.top  = worldY + 'px';
+  el.dataset.agentId = id;
+  el.dataset.custom  = '1';
+  el.innerHTML = customAgentCardHtml(flat);
+  world.appendChild(el);
+
+  nodeEls[id] = el;
+  nodePos[id] = { x: worldX, y: worldY, w: AGENT_W, h: CARD_H_AGENT };
+
+  /* Click → select (same pattern as seeded cards) */
+  el.addEventListener('click', e => {
+    if (e.target.closest('.output-chips')) return;
+    if (e.target.closest('.mapped-pill')) return;
+    if (e.target.closest('.tool-pill')) return;
+    if (e.target.closest('.agent-inputs-row .pop-unbind')) return;
+    if (e.target.closest('[contenteditable="true"]')) return;
+    if (el._suppressClick) { el._suppressClick = false; return; }
+    e.stopPropagation();
+    selectAgent(id);
+  });
+
+  /* Editable name — commit on blur/Enter, and prevent card selection */
+  const nameEl = el.querySelector('.agent-name');
+  nameEl.addEventListener('pointerdown', e => e.stopPropagation());
+  nameEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); nameEl.blur(); }
+  });
+  nameEl.addEventListener('blur', () => {
+    const v = nameEl.textContent.trim() || flat.name;
+    flat.name = v;
+    nameEl.textContent = v;
+    if (selectedAgent === id) dockName.textContent = v;
+  });
+
+  /* Output chip(s) so this card can be a drag SOURCE */
+  const chipsWrap = document.createElement('div');
+  chipsWrap.className = 'output-chips';
+  chipsWrap.dataset.fromAgent = id;
+  AGENT_OUTPUTS[id].forEach(({ key }) => {
+    const chip = document.createElement('div');
+    chip.className = `out-chip ${flat.status}`;
+    chip.dataset.fromAgent = id;
+    chip.dataset.key = key;
+    chip.innerHTML = `<span class="chip-icon"></span>${key}`;
+    chip.title = `Drag to wire ${flat.name}.${key} into another agent`;
+    chip.addEventListener('pointerdown', e => {
+      e.stopPropagation();
+      startChipDrag(e, id, key, flat.status);
+    });
+    chipsWrap.appendChild(chip);
+  });
+  el.appendChild(chipsWrap);
+
+  /* Measure real height after render, then wire drag-to-move */
+  requestAnimationFrame(() => {
+    nodePos[id].h = el.offsetHeight;
+    wireAgentCardMove(el, id);
+    /* Auto-select the new agent so the dock slides open */
+    selectAgent(id);
+  });
+
+  return id;
+}
+
+/* ── Gate node (approval checkpoint) ─────────────────────
+   Registers in nodePos so it can be a drop target for chips
+   and route through flows. Uses the same move wiring as agent
+   cards. No dock beyond a toast on select. */
+let gateSeq = 0;
+function createGateNode(worldX, worldY) {
+  gateSeq += 1;
+  const id = `gate-${gateSeq}`;
+  const el = document.createElement('div');
+  el.className = 'node-card gate-card';
+  el.id = `node-${id}`;
+  el.style.left = worldX + 'px';
+  el.style.top  = worldY + 'px';
+  el.dataset.gateId = id;
+  el.innerHTML = `
+    <div class="gate-label">Approval gate</div>
+    <div class="gate-name">Gate ${gateSeq}</div>
+    <div class="gate-sub">holds downstream until approved</div>`;
+  world.appendChild(el);
+  nodeEls[id] = el;
+  nodePos[id] = { x: worldX, y: worldY, w: 140, h: 78 };
+  requestAnimationFrame(() => {
+    nodePos[id].h = el.offsetHeight;
+    nodePos[id].w = el.offsetWidth;
+    wireAgentCardMove(el, id);  /* reuse move wiring */
+  });
+  el.addEventListener('click', e => {
+    if (el._suppressClick) { el._suppressClick = false; return; }
+    e.stopPropagation();
+    showToast('Approval gate — approve to release downstream');
+  });
+  return id;
+}
+
+/* ── Note (sticky annotation) ────────────────────────────
+   Not a chip target: NOT registered in nodePos. Still movable
+   via the same wiring, but its move never triggers edge redraws. */
+let noteSeq = 0;
+function createNoteNode(worldX, worldY) {
+  noteSeq += 1;
+  const id = `note-${noteSeq}`;
+  const el = document.createElement('div');
+  el.className = 'node-card note-card';
+  el.id = `node-${id}`;
+  el.style.left = worldX + 'px';
+  el.style.top  = worldY + 'px';
+  el.dataset.noteId = id;
+  el.innerHTML = `<div class="note-text" contenteditable="true" spellcheck="false">Note…</div>`;
+  world.appendChild(el);
+  /* Register a "position-only" entry so wireAgentCardMove can move it,
+     but do NOT add to nodeEls (which would make selectAgent/highlight
+     code try to treat it as an agent). We store a private ref. */
+  nodePos[id] = { x: worldX, y: worldY, w: 160, h: 66 };
+  requestAnimationFrame(() => {
+    nodePos[id].h = el.offsetHeight;
+    nodePos[id].w = el.offsetWidth;
+    wireAgentCardMove(el, id);
+  });
+  /* Prevent card select side-effects when editing text. */
+  const textEl = el.querySelector('.note-text');
+  textEl.addEventListener('pointerdown', e => e.stopPropagation());
+  textEl.addEventListener('focus', () => { if (textEl.textContent === 'Note…') textEl.textContent = ''; });
+  return id;
+}
+
+/* ── Templates — multi-node drops ───────────────────────── */
+function dropTemplate(kind, wx, wy) {
+  const GAP = 40;
+  if (kind === 'deploy-qa') {
+    /* Two agents side-by-side, pre-wired tool edge Deploy(bash) → QA */
+    const leftX  = wx - AGENT_W - GAP / 2;
+    const rightX = wx + GAP / 2;
+    const yTop   = wy - CARD_H_AGENT / 2;
+    /* Deploy = a Coder-flavored agent renamed */
+    const deployArch = { ...ARCHETYPES.coder, name: 'deploy', label: 'Deploy',
+                          role: 'Deploy · shell + edit' };
+    const idA = createCustomAgent(leftX,  yTop, deployArch);
+    const idB = createCustomAgent(rightX, yTop, ARCHETYPES.qa);
+    /* Pre-wired dashed tool edge (uses existing tool-binding pipeline
+       which draws a .tool-edge-path). */
+    requestAnimationFrame(() => addToolBinding(idA, 'bash', idB));
+    showToast('Deploy + QA pair placed');
+  } else if (kind === 'research-trio') {
+    const yTop = wy - CARD_H_AGENT / 2;
+    const x0 = wx - AGENT_W * 1.5 - GAP;
+    const x1 = wx - AGENT_W / 2;
+    const x2 = wx + AGENT_W / 2 + GAP;
+    createCustomAgent(x0, yTop, ARCHETYPES.researcher);
+    createCustomAgent(x1, yTop, ARCHETYPES.researcher);
+    createCustomAgent(x2, yTop, ARCHETYPES.writer);
+    showToast('Research trio placed');
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Library panel — click-to-arm + drag-out placement.
+═══════════════════════════════════════════════════════════ */
+const libraryPanel = document.getElementById('library-panel');
+const libChevron   = document.getElementById('lib-chevron');
+
+function specFromRow(row) {
+  const kind = row.dataset.kind;
+  if (kind === 'agent')    return { kind: 'agent', archetype: row.dataset.archetype };
+  if (kind === 'gate')     return { kind: 'gate' };
+  if (kind === 'note')     return { kind: 'note' };
+  if (kind === 'template') return { kind: 'template', template: row.dataset.template };
+  return { kind: 'agent', archetype: 'custom' };
+}
+
+function armFromRow(row) {
+  const spec = specFromRow(row);
+  /* Toggle-off if already armed on this row. */
+  if (armedRowEl === row && placementActive) { setPlacementMode(false); return; }
+  if (armedRowEl) armedRowEl.classList.remove('armed');
+  armedRowEl = row;
+  row.classList.add('armed');
+  armedArchetype = spec;
+  setPlacementMode(true, spec);
+}
+
+/* Panel is applied to canvas-wrap for the .lib-open shift. */
+canvasWrap.classList.add('lib-open');
+
+/* Chevron collapse/expand */
+libChevron.addEventListener('click', e => {
+  e.stopPropagation();
+  const collapsed = libraryPanel.classList.toggle('collapsed');
+  libChevron.textContent = collapsed ? '›' : '‹';
+  canvasWrap.classList.toggle('lib-open', !collapsed);
+});
+/* Click anywhere on the collapsed rail to expand */
+libraryPanel.addEventListener('click', e => {
+  if (!libraryPanel.classList.contains('collapsed')) return;
+  if (e.target.closest('.lib-chevron')) return;
+  libraryPanel.classList.remove('collapsed');
+  libChevron.textContent = '‹';
+  canvasWrap.classList.add('lib-open');
+});
+
+/* Wire every row: pointerdown starts a potential drag; a plain click
+   (no movement past threshold) → click-to-arm mode. */
+const DRAG_THRESH = 5;
+libraryPanel.querySelectorAll('.lib-row').forEach(row => {
+  row.addEventListener('pointerdown', e => {
+    if (e.button !== 0) return;
+    if (libraryPanel.classList.contains('collapsed')) return;  /* rail click expands */
+    e.stopPropagation();  /* don't let it reach the panel-expand handler */
+    const startX = e.clientX, startY = e.clientY;
+    let dragging = false;
+    const spec = specFromRow(row);
+
+    const onMove = ev => {
+      const dx = ev.clientX - startX, dy = ev.clientY - startY;
+      if (!dragging && Math.hypot(dx, dy) < DRAG_THRESH) return;
+      if (!dragging) {
+        dragging = true;
+        /* Arm placement mode for the drag; ghost follows pointer. */
+        if (armedRowEl) armedRowEl.classList.remove('armed');
+        armedRowEl = row; row.classList.add('armed');
+        armedArchetype = spec;
+        setPlacementMode(true, spec);
+      }
+      /* Feed the ghost position ourselves — canvasWrap's pointermove
+         only fires when the pointer is over the wrap; while dragging
+         we're still inside the panel or above the wrap. */
+      const w = toWorldCoords(ev.clientX, ev.clientY);
+      ghostEl.style.left = (w.x - AGENT_W / 2) + 'px';
+      ghostEl.style.top  = (w.y - CARD_H_AGENT / 2) + 'px';
+      /* Only show ghost when pointer is over the canvas, not the panel. */
+      const overPanel = ev.target && ev.target.closest && ev.target.closest('#library-panel');
+      ghostEl.classList.toggle('visible', !overPanel);
+    };
+    const onUp = ev => {
+      window.removeEventListener('pointermove', onMove, true);
+      window.removeEventListener('pointerup', onUp, true);
+      if (!dragging) {
+        /* Plain click → click-to-arm */
+        armFromRow(row);
+        return;
+      }
+      /* Release: if over panel, cancel; else drop at pointer world coords. */
+      const overPanel = ev.target && ev.target.closest && ev.target.closest('#library-panel');
+      if (overPanel) {
+        setPlacementMode(false);
+        return;
+      }
+      const w = toWorldCoords(ev.clientX, ev.clientY);
+      placeArmedAt(w.x, w.y);
+      setPlacementMode(false);
+    };
+    window.addEventListener('pointermove', onMove, true);
+    window.addEventListener('pointerup', onUp, true);
+  });
+});
+
+/* ── Drag-to-move (all agent cards, existing + custom) ─── */
+function wireAgentCardMove(el, agentId) {
+  const THRESH = 5;
+  let mv = null; /* {startX,startY,origX,origY,active,rafId,pending} */
+
+  el.addEventListener('pointerdown', e => {
+    if (placementActive) return;
+    if (e.button !== 0) return;
+    /* Skip interactive children — chips, pills, tool grips, editable name */
+    if (e.target.closest('.output-chips')) return;
+    if (e.target.closest('.mapped-pill, .tool-pill')) return;
+    if (e.target.closest('.agent-inputs-row')) return;
+    if (e.target.closest('[contenteditable="true"]')) return;
+    if (e.target.closest('.dock-tool-grip')) return;
+
+    const p = nodePos[agentId];
+    if (!p) return;
+    mv = {
+      startX: e.clientX, startY: e.clientY,
+      origX: p.x, origY: p.y,
+      active: false, rafId: 0, pending: null,
+    };
+    try { el.setPointerCapture(e.pointerId); } catch (_) {}
+  });
+
+  el.addEventListener('pointermove', e => {
+    if (!mv) return;
+    const dx = e.clientX - mv.startX;
+    const dy = e.clientY - mv.startY;
+    if (!mv.active) {
+      if (Math.abs(dx) < THRESH && Math.abs(dy) < THRESH) return;
+      mv.active = true;
+      el.classList.add('moving');
+    }
+    /* Convert screen delta → world delta */
+    const wdx = dx / cam.zoom;
+    const wdy = dy / cam.zoom;
+    mv.pending = { x: mv.origX + wdx, y: mv.origY + wdy };
+    if (!mv.rafId) {
+      mv.rafId = requestAnimationFrame(() => {
+        mv.rafId = 0;
+        if (!mv || !mv.pending) return;
+        const p = nodePos[agentId];
+        p.x = mv.pending.x;
+        p.y = mv.pending.y;
+        el.style.left = p.x + 'px';
+        el.style.top  = p.y + 'px';
+        redrawEdgesFor(agentId);
+      });
+    }
+  });
+
+  const finish = e => {
+    if (!mv) return;
+    if (mv.active) {
+      el.classList.remove('moving');
+      /* Suppress the click that fires after this pointerup */
+      el._suppressClick = true;
+    }
+    try { el.releasePointerCapture(e.pointerId); } catch (_) {}
+    mv = null;
+  };
+  el.addEventListener('pointerup', finish);
+  el.addEventListener('pointercancel', finish);
+}
+
+/* Wire drag-to-move on every seeded agent card */
+Object.keys(nodeEls).forEach(id => {
+  const el = nodeEls[id];
+  if (!el.classList.contains('agent-card')) return;
+  wireAgentCardMove(el, id);
+  /* Also install the click-suppress guard on seeded cards' existing
+     click handler chain — we already stopPropagation on chips, but a
+     drag-then-mouseup should NOT flip selection. Because the seeded
+     click listener was added before this one, we install a capture-
+     phase listener to intercept when _suppressClick is set. */
+  el.addEventListener('click', e => {
+    if (el._suppressClick) {
+      el._suppressClick = false;
+      e.stopImmediatePropagation();
+      e.preventDefault();
+    }
+  }, true);
+});
+
+/* ── Redraw all edges anchored to a given agent id ──────── */
+function redrawEdgesFor(agentId) {
+  /* 1) Structural DAG edges (edgeData): plan→task, task→agent */
+  edgeData.forEach(entry => {
+    const touches = (entry.planId === agentId) ||
+                    (entry.taskId === agentId) ||
+                    (entry.agentId === agentId);
+    if (!touches) return;
+    /* Recompute d from current nodePos */
+    let fromId, toId;
+    if (entry.agentId) { fromId = entry.taskId; toId = entry.agentId; }
+    else               { fromId = entry.planId; toId = entry.taskId; }
+    const from = midRight(fromId);
+    const to   = midLeft(toId);
+    const cp   = Math.abs(to.x - from.x) * 0.45;
+    const d = `M ${from.x} ${from.y} C ${from.x + cp} ${from.y}, ${to.x - cp} ${to.y}, ${to.x} ${to.y}`;
+    entry.el.setAttribute('d', d);
+    if (entry.hitEl) entry.hitEl.setAttribute('d', d);
+    if (entry.plusEl) {
+      try {
+        const len = entry.el.getTotalLength();
+        const mid = entry.el.getPointAtLength(len / 2);
+        entry.plusEl.style.left = mid.x + 'px';
+        entry.plusEl.style.top  = mid.y + 'px';
+      } catch (_) {}
+    }
+  });
+
+  /* 2) Data-edge bindings (source or target = moved card) */
+  bindings.forEach(b => {
+    if (b.fromAgentId !== agentId && b.toAgentId !== agentId) return;
+    /* Preserve any lit/dimmed classes so highlight state survives */
+    const cls = b.edgeEl ? b.edgeEl.getAttribute('class') : null;
+    removeDataEdge(b);
+    drawDataEdge(b);
+    if (cls && b.edgeEl) b.edgeEl.setAttribute('class', cls);
+  });
+
+  /* 3) Tool-edge bindings */
+  toolBindings.forEach(b => {
+    if (b.fromAgentId !== agentId && b.toAgentId !== agentId) return;
+    const cls = b.edgeEl ? b.edgeEl.getAttribute('class') : null;
+    b.edgeEl?.remove();
+    b.labelEl?.remove();
+    b.edgeEl = null; b.labelEl = null;
+    drawToolEdge(b);
+    if (cls && b.edgeEl) b.edgeEl.setAttribute('class', cls);
+  });
+}
+
+/* ── Initial camera ──────────────────────────────────────── */
+applyCamera();
+</script>
+<script>
+// Concept-only marketing links must not navigate into the portfolio.
+document.addEventListener('click', function (event) {
+  const link = event.target.closest('a[href]');
+  if (!link) return;
+  const url = new URL(link.href, location.href);
+  if (url.origin === location.origin && !url.pathname.startsWith('/demos')) {
+    event.preventDefault();
+    alert('This is a design concept. This destination is not part of the demo.');
+  }
+});
+</script></body>
+</html>

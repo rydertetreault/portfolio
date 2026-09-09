@@ -1,0 +1,107 @@
+/* ── Shared design tokens · Praxis workspace visualization concepts ──────
+   Mirrors src/prototype/priaConceptTheme.css palette. Dark-first.        */
+:root {
+  --font-sans: "Manrope", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+
+  --indigo: #4f46e5;
+  --violet: #7c3aed;
+  --blue-2: #0c29eb;
+  --cyan: #06b6d4;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+
+  --bg: #0b1120;
+  --surface: #0f172a;
+  --surface-2: #16213a;
+  --surface-3: #1e2a4a;
+  --border: rgba(96, 165, 250, 0.24);
+  --border-soft: rgba(148, 163, 184, 0.16);
+  --text: #e2e8f0;
+  --text-soft: #94a3b8;
+  --text-faint: #64748b;
+  --accent-text: #a5b4fc;
+
+  --radius: 14px;
+  --radius-sm: 9px;
+  --shadow: 0 10px 40px rgba(2, 12, 27, 0.55);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+body::before {
+  content: "";
+  position: fixed; inset: 0; z-index: -1;
+  background:
+    radial-gradient(1100px 520px at 85% -10%, rgba(124, 58, 237, 0.16), transparent 60%),
+    radial-gradient(900px 480px at -10% 110%, rgba(12, 41, 235, 0.14), transparent 60%);
+}
+
+a { color: var(--accent-text); }
+button { font-family: inherit; }
+
+.cc-topbar {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; gap: 14px;
+  padding: 12px 22px;
+  background: rgba(11, 17, 32, 0.86);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border-soft);
+}
+.cc-topbar .brand {
+  font-weight: 800; font-size: 15px; letter-spacing: 0.02em;
+  background: linear-gradient(90deg, #93c5fd, #c4b5fd);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  text-decoration: none;
+}
+.cc-topbar .crumb { color: var(--text-faint); font-size: 13px; }
+.cc-topbar .spacer { flex: 1; }
+.cc-topbar .nav-pill {
+  font-size: 12.5px; font-weight: 600; text-decoration: none;
+  color: var(--text-soft); padding: 6px 12px; border-radius: 999px;
+  border: 1px solid transparent; transition: all .15s ease;
+}
+.cc-topbar .nav-pill:hover { color: var(--text); border-color: var(--border-soft); }
+.cc-topbar .nav-pill.active {
+  color: #fff; background: var(--indigo); border-color: var(--indigo);
+}
+
+/* Status chips — shared across every concept so status reads identically. */
+.ws-status {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+  padding: 3px 8px; border-radius: 999px;
+}
+.ws-status.running { background: rgba(79, 70, 229, .16); color: #a5b4fc; border: 1px solid rgba(79, 70, 229, .5); }
+.ws-status.queued  { background: rgba(148, 163, 184, .1); color: var(--text-soft); border: 1px solid var(--border-soft); }
+.ws-status.done    { background: rgba(16, 185, 129, .12); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, .4); }
+
+.ws-dot { width: 8px; height: 8px; min-width: 8px; border-radius: 999px; background: var(--text-faint); }
+.ws-dot.running { background: var(--indigo); animation: ws-pulse 1.6s ease infinite; }
+.ws-dot.done { background: var(--success); }
+@keyframes ws-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, .45); }
+  50% { box-shadow: 0 0 0 6px rgba(79, 70, 229, 0); }
+}
+
+/* Concept explainer strip at the top of each demo page. */
+.ws-explain {
+  display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--border-soft);
+  background: rgba(15, 23, 42, .5);
+}
+.ws-explain h1 { font-size: 16px; font-weight: 800; margin: 0; }
+.ws-explain p { font-size: 12.5px; color: var(--text-soft); margin: 0; line-height: 1.5; }
+.ws-explain .scores { margin-left: auto; display: flex; gap: 10px; font-size: 11px; color: var(--text-faint); }
+.ws-explain .scores b { color: var(--accent-text); font-weight: 700; }
+
+.embedded .cc-topbar { display: none; }

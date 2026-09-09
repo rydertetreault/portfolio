@@ -1,0 +1,118 @@
+/* ── Shared design tokens · Praxis creation concepts ─────────────────────
+   Mirrors src/prototype/priaConceptTheme.css palette. Dark-first.        */
+:root {
+  --font-sans: "Manrope", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+
+  --navy: #001d41;
+  --navy-2: #082447;
+  --blue: #0070c0;
+  --blue-2: #0c29eb;
+  --indigo: #4f46e5;
+  --violet: #7c3aed;
+  --cyan: #06b6d4;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+
+  --bg: #0b1120;
+  --surface: #0f172a;
+  --surface-2: #16213a;
+  --surface-3: #1e2a4a;
+  --border: rgba(96, 165, 250, 0.24);
+  --border-soft: rgba(148, 163, 184, 0.16);
+  --text: #e2e8f0;
+  --text-soft: #94a3b8;
+  --text-faint: #64748b;
+  --accent-text: #a5b4fc;
+
+  --hero-from: #0c29eb;
+  --hero-mid: #7c3aed;
+  --hero-to: #06b6d4;
+
+  --personal-from: #4f46e5;
+  --personal-to: #0c29eb;
+  --community-from: #7c3aed;
+  --community-to: #db2777;
+
+  --radius: 14px;
+  --radius-sm: 9px;
+  --shadow: 0 10px 40px rgba(2, 12, 27, 0.55);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+body::before {
+  content: "";
+  position: fixed; inset: 0; z-index: -1;
+  background:
+    radial-gradient(1100px 520px at 85% -10%, rgba(124, 58, 237, 0.16), transparent 60%),
+    radial-gradient(900px 480px at -10% 110%, rgba(12, 41, 235, 0.14), transparent 60%);
+}
+
+a { color: var(--accent-text); }
+
+.cc-topbar {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; gap: 14px;
+  padding: 12px 22px;
+  background: rgba(11, 17, 32, 0.86);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border-soft);
+}
+.cc-topbar .brand {
+  font-weight: 800; font-size: 15px; letter-spacing: 0.02em;
+  background: linear-gradient(90deg, #93c5fd, #c4b5fd);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  text-decoration: none;
+}
+.cc-topbar .crumb { color: var(--text-faint); font-size: 13px; }
+.cc-topbar .spacer { flex: 1; }
+.cc-topbar .nav-pill {
+  font-size: 12.5px; font-weight: 600; text-decoration: none;
+  color: var(--text-soft); padding: 6px 12px; border-radius: 999px;
+  border: 1px solid transparent; transition: all .15s ease;
+}
+.cc-topbar .nav-pill:hover { color: var(--text); border-color: var(--border-soft); }
+.cc-topbar .nav-pill.active {
+  color: #fff; background: var(--indigo); border-color: var(--indigo);
+}
+
+.cc-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 4px 10px; border-radius: 999px;
+}
+.cc-badge.personal { background: rgba(79, 70, 229, 0.18); color: #a5b4fc; border: 1px solid rgba(79,70,229,.45); }
+.cc-badge.community { background: rgba(219, 39, 119, 0.14); color: #f9a8d4; border: 1px solid rgba(219,39,119,.4); }
+
+button { font-family: inherit; }
+.cc-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  font-size: 14px; font-weight: 700; color: #fff;
+  background: linear-gradient(90deg, var(--indigo), var(--blue-2));
+  border: none; border-radius: var(--radius-sm);
+  padding: 12px 22px; cursor: pointer;
+  transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
+}
+.cc-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(79, 70, 229, 0.35); }
+.cc-btn:disabled { opacity: .45; cursor: not-allowed; transform: none; box-shadow: none; }
+.cc-btn.ghost {
+  background: transparent; color: var(--text-soft);
+  border: 1px solid var(--border-soft);
+}
+.cc-btn.ghost:hover { color: var(--text); border-color: var(--border); box-shadow: none; }
+
+/* ── Embedded mode ────────────────────────────────────────────────────────
+   When a concept page runs inside the concept-site lightbox iframe, the
+   review-only topbar (brand + A–E concept pills) is hidden — the host
+   lightbox provides its own title bar and close control. The .embedded
+   class is set by a one-line inline script on each page. */
+.embedded .cc-topbar { display: none; }

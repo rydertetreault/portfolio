@@ -1,0 +1,1280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Concept E — Combined Flow · Praxis AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="./shared.css" />
+<script>if (window.self !== window.top) document.documentElement.classList.add('embedded')</script>
+<style>
+/* ── STAGE SHELL ──────────────────────────────────────────────────── */
+.stage { display: none; }
+.stage.active { display: block; }
+
+/* ── STAGE 1 — GALLERY ───────────────────────────────────────────── */
+.page-wrap { max-width: 1080px; margin: 0 auto; padding: 36px 24px 80px; }
+.hero { margin-bottom: 32px; }
+.hero-label { font-size: 11px; font-weight: 700; letter-spacing:.1em; text-transform:uppercase; color:var(--text-faint); margin-bottom:8px; }
+.hero h1 {
+  font-size: clamp(1.5rem,3vw,2rem); font-weight:800; margin:0 0 8px;
+  background: linear-gradient(110deg,#e2e8f0 30%,#a5b4fc 70%,#c084fc 100%);
+  -webkit-background-clip:text; background-clip:text; color:transparent; line-height:1.2;
+}
+.hero p { color:var(--text-soft); font-size:15px; max-width:560px; margin:0; line-height:1.6; }
+.speed-badge {
+  display:inline-flex; align-items:center; gap:6px; margin-top:12px;
+  padding:5px 12px; border-radius:999px;
+  background:rgba(16,185,129,.12); border:1px solid rgba(16,185,129,.3); color:#6ee7b7;
+  font-size:12px; font-weight:700; letter-spacing:.04em;
+}
+.tab-bar { display:flex; gap:8px; margin-bottom:6px; flex-wrap:wrap; }
+.tab-pill {
+  position:relative; display:flex; align-items:center; gap:8px;
+  padding:11px 22px; border-radius:var(--radius); border:1px solid var(--border-soft);
+  background:var(--surface); cursor:pointer; transition:all .18s ease;
+  font-size:14px; font-weight:700; color:var(--text-soft); user-select:none;
+}
+.tab-pill:hover { border-color:var(--border); color:var(--text); }
+.tab-pill.act-personal { background:rgba(79,70,229,.13); border-color:rgba(79,70,229,.55); color:#c7d2fe; }
+.tab-pill.act-personal::after {
+  content:''; position:absolute; bottom:-1px; left:20%; right:20%; height:2px;
+  border-radius:2px 2px 0 0; background:linear-gradient(90deg,var(--personal-from),var(--personal-to));
+}
+.tab-pill.act-community { background:rgba(124,58,237,.13); border-color:rgba(219,39,119,.45); color:#f9a8d4; }
+.tab-pill.act-community::after {
+  content:''; position:absolute; bottom:-1px; left:20%; right:20%; height:2px;
+  border-radius:2px 2px 0 0; background:linear-gradient(90deg,var(--community-from),var(--community-to));
+}
+.tab-desc { font-size:13px; color:var(--text-faint); margin:0 0 24px; padding-left:2px; min-height:18px; }
+.tpl-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+@media(max-width:860px){ .tpl-grid { grid-template-columns:repeat(2,1fr); } }
+@media(max-width:540px){ .tpl-grid { grid-template-columns:1fr; } }
+.tpl-card {
+  position:relative; padding:22px 20px 18px; border-radius:var(--radius);
+  border:1px solid var(--border-soft); background:var(--surface);
+  cursor:pointer; transition:transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+  display:flex; flex-direction:column; gap:10px;
+}
+.tpl-card:hover { transform:translateY(-3px); border-color:var(--border); box-shadow:0 10px 30px rgba(2,12,27,.5); }
+.tpl-card.blank-card { border-style:dashed; background:transparent; }
+.tpl-card.blank-card:hover { border-color:var(--text-faint); }
+.tpl-emoji { font-size:28px; line-height:1; }
+.tpl-title { font-size:15px; font-weight:700; color:var(--text); }
+.tpl-desc { font-size:13px; color:var(--text-soft); line-height:1.5; flex:1; }
+.tpl-traits { display:flex; flex-wrap:wrap; gap:5px; }
+.trait-chip {
+  font-size:11px; font-weight:600; padding:3px 9px; border-radius:999px;
+  background:var(--surface-3); color:var(--text-faint); border:1px solid var(--border-soft);
+}
+.tpl-card .tpl-corner-badge {
+  position:absolute; top:12px; right:12px;
+  font-size:10px; font-weight:700; padding:2px 8px; border-radius:999px;
+}
+.personal-grad { background:linear-gradient(135deg,var(--personal-from),var(--personal-to)); }
+.community-grad { background:linear-gradient(135deg,var(--community-from),var(--community-to)); }
+
+/* ── START FRESH BANNER ──────────────────────────────────────────── */
+.fresh-banner {
+  margin-top: 32px; padding: 20px 24px;
+  border-radius: var(--radius); border: 1px dashed var(--border-soft);
+  background: var(--surface); display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap;
+}
+.fresh-banner-text h3 { margin:0 0 4px; font-size:14px; font-weight:700; color:var(--text); }
+.fresh-banner-text p  { margin:0; font-size:13px; color:var(--text-soft); }
+
+/* ── STAGE 2 — CHAT ──────────────────────────────────────────────── */
+#stage-chat { display:none; height:100vh; flex-direction:column; overflow:hidden; }
+#stage-chat.active { display:flex; }
+.chat-topbar {
+  flex-shrink:0; display:flex; align-items:center; gap:12px; padding:12px 20px;
+  background:rgba(11,17,32,.88); backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--border-soft);
+}
+.chat-topbar .back-btn {
+  background:transparent; border:1px solid var(--border-soft); color:var(--text-soft);
+  font-size:12px; font-weight:600; padding:6px 13px; border-radius:999px; cursor:pointer;
+  transition:all .15s ease;
+}
+.chat-topbar .back-btn:hover { color:var(--text); border-color:var(--border); }
+.pria-dot {
+  width:36px; height:36px; border-radius:50%; flex-shrink:0;
+  background:linear-gradient(135deg,var(--indigo),var(--violet));
+  display:flex; align-items:center; justify-content:center; font-size:16px;
+  box-shadow:0 0 0 2px rgba(79,70,229,.3),0 0 16px rgba(79,70,229,.22);
+}
+.chat-topbar-info h2 { margin:0; font-size:14px; font-weight:700; color:var(--text); }
+.chat-topbar-info p  { margin:0; font-size:11px; color:var(--text-soft); }
+.chat-topbar .spacer { flex:1; }
+.chat-topbar .progress-pill {
+  font-size:11px; font-weight:700; color:var(--text-faint);
+  padding:5px 12px; border-radius:999px; background:var(--surface-2);
+  border:1px solid var(--border-soft);
+}
+.chat-scroll {
+  flex:1; overflow-y:auto; padding:16px 16px 8px;
+  display:flex; flex-direction:column; gap:8px; scroll-behavior:smooth;
+  /* Match Pria chat interaction column (--pria-concept-chat-reply-width) */
+  width:100%; max-width:750px; margin:0 auto;
+}
+.chat-scroll::-webkit-scrollbar { width:4px; }
+.chat-scroll::-webkit-scrollbar-thumb { background:var(--border-soft); border-radius:4px; }
+.msg-row { display:flex; gap:10px; align-items:flex-end; animation:msgIn .28s cubic-bezier(.22,.68,0,1.2) both; }
+@keyframes msgIn { from{opacity:0;transform:translateY(8px) scale(.97)} to{opacity:1;transform:none} }
+.msg-row.user { flex-direction:row-reverse; }
+.av {
+  width:28px; height:28px; border-radius:50%; flex-shrink:0;
+  background:linear-gradient(135deg,var(--indigo),var(--violet));
+  display:flex; align-items:center; justify-content:center; font-size:13px;
+  box-shadow:0 0 0 1.5px rgba(79,70,229,.4);
+}
+.bubble {
+  max-width:70%; padding:11px 15px; border-radius:16px 16px 16px 4px;
+  font-size:14px; line-height:1.55; color:var(--text); background:var(--surface-2);
+  border:1px solid var(--border-soft);
+}
+.msg-row.user .bubble {
+  border-radius:16px 16px 4px 16px; background:rgba(79,70,229,.22);
+  border-color:rgba(79,70,229,.4); color:#c7d2fe;
+}
+.bubble strong { color:var(--text); }
+.typing-dot { display:inline-flex; gap:4px; padding:4px 0; }
+.typing-dot span {
+  width:7px; height:7px; border-radius:50%; background:var(--text-faint);
+  animation:blink 1.2s ease-in-out infinite;
+}
+.typing-dot span:nth-child(2){animation-delay:.18s} .typing-dot span:nth-child(3){animation-delay:.36s}
+@keyframes blink { 0%,80%,100%{opacity:.25} 40%{opacity:1} }
+.quick-chips { display:flex; flex-wrap:wrap; gap:7px; padding:6px 0 2px; }
+.qchip {
+  padding:7px 14px; border-radius:999px; border:1px solid var(--border);
+  background:var(--surface-2); color:var(--accent-text); font-size:13px; font-weight:600;
+  cursor:pointer; transition:all .15s ease;
+}
+.qchip:hover { background:rgba(79,70,229,.2); border-color:rgba(79,70,229,.6); }
+.chat-input-bar {
+  flex-shrink:0; display:flex; gap:10px; align-items:flex-end;
+  padding:14px 16px; border-top:1px solid var(--border-soft);
+  background:rgba(11,17,32,.6); backdrop-filter:blur(8px);
+}
+/* Inner 750px column so the input aligns with the message stream */
+.chat-input-inner {
+  display:flex; gap:10px; align-items:flex-end;
+  width:100%; max-width:750px; margin:0 auto;
+}
+.chat-textarea {
+  flex:1; resize:none; max-height:120px; min-height:44px;
+  background:var(--surface-2); border:1px solid var(--border-soft); border-radius:12px;
+  color:var(--text); font-family:inherit; font-size:14px; padding:11px 14px;
+  outline:none; transition:border-color .15s ease; line-height:1.5;
+}
+.chat-textarea:focus { border-color:rgba(79,70,229,.6); }
+.send-btn {
+  width:44px; height:44px; border-radius:12px; border:none; flex-shrink:0;
+  background:linear-gradient(135deg,var(--indigo),var(--blue-2)); color:#fff;
+  font-size:18px; cursor:pointer; transition:all .15s ease; display:flex; align-items:center; justify-content:center;
+}
+.send-btn:hover { transform:scale(1.06); box-shadow:0 4px 16px rgba(79,70,229,.4); }
+.send-btn:disabled { opacity:.4; cursor:not-allowed; transform:none; }
+
+/* ── STAGE 3 — REVIEW ────────────────────────────────────────────── */
+.review-wrap { display:grid; grid-template-columns:1fr 380px; gap:0; min-height:calc(100vh - 53px); }
+@media(max-width:900px){ .review-wrap { grid-template-columns:1fr; } }
+.review-form-col {
+  padding:32px 28px 80px; overflow-y:auto; border-right:1px solid var(--border-soft);
+}
+.review-form-col::-webkit-scrollbar { width:4px; }
+.review-form-col::-webkit-scrollbar-thumb { background:var(--border-soft); border-radius:4px; }
+.review-preview-col {
+  padding:32px 24px; position:sticky; top:53px; height:calc(100vh - 53px);
+  overflow-y:auto; display:flex; flex-direction:column; gap:20px;
+}
+.review-heading { font-size:22px; font-weight:800; color:var(--text); margin:0 0 4px; }
+.review-sub { font-size:13px; color:var(--text-soft); margin:0 0 28px; }
+.form-section { margin-bottom:28px; }
+.form-section-title {
+  font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--text-faint); margin-bottom:14px; padding-bottom:8px;
+  border-bottom:1px solid var(--border-soft);
+}
+.form-row { display:flex; gap:14px; }
+.form-group { display:flex; flex-direction:column; gap:6px; flex:1; margin-bottom:16px; }
+.form-label { font-size:12px; font-weight:700; color:var(--text-soft); letter-spacing:.04em; }
+.form-input, .form-textarea, .form-select {
+  background:var(--surface-2); border:1px solid var(--border-soft); border-radius:var(--radius-sm);
+  color:var(--text); font-family:inherit; font-size:14px; padding:10px 13px;
+  outline:none; transition:border-color .15s ease; width:100%;
+}
+.form-input:focus, .form-textarea:focus, .form-select:focus { border-color:rgba(79,70,229,.6); }
+.form-textarea { resize:vertical; min-height:80px; line-height:1.5; }
+.form-select option { background:var(--surface-2); }
+.form-hint { font-size:11px; color:var(--text-faint); }
+.slider-row { display:flex; align-items:center; gap:12px; }
+.slider-row input[type=range] {
+  flex:1; -webkit-appearance:none; appearance:none; height:4px;
+  background:var(--surface-3); border-radius:4px; outline:none; cursor:pointer;
+}
+.slider-row input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance:none; width:16px; height:16px; border-radius:50%;
+  background:var(--indigo); border:2px solid var(--bg); cursor:pointer;
+  transition:transform .12s ease; box-shadow:0 0 0 2px rgba(79,70,229,.35);
+}
+.slider-row input[type=range]::-webkit-slider-thumb:hover { transform:scale(1.2); }
+.slider-val { font-size:13px; font-weight:700; color:var(--accent-text); width:28px; text-align:right; }
+.slider-labels { display:flex; justify-content:space-between; font-size:11px; color:var(--text-faint); margin-top:3px; }
+.tag-input-wrap {
+  display:flex; flex-wrap:wrap; gap:6px; padding:8px; min-height:44px;
+  background:var(--surface-2); border:1px solid var(--border-soft); border-radius:var(--radius-sm);
+  cursor:text; transition:border-color .15s ease; align-items:center;
+}
+.tag-input-wrap:focus-within { border-color:rgba(79,70,229,.6); }
+.tag-chip {
+  display:inline-flex; align-items:center; gap:5px; padding:3px 9px;
+  border-radius:999px; background:rgba(79,70,229,.2); border:1px solid rgba(79,70,229,.4);
+  color:#a5b4fc; font-size:12px; font-weight:600;
+}
+.tag-chip .rm { cursor:pointer; opacity:.6; font-size:11px; }
+.tag-chip .rm:hover { opacity:1; }
+.tag-raw-input {
+  border:none; background:transparent; color:var(--text); font-family:inherit; font-size:14px;
+  outline:none; min-width:80px; flex:1;
+}
+.tag-hint { font-size:11px; color:var(--text-faint); margin-top:3px; }
+
+/* ── PREVIEW CARD ────────────────────────────────────────────────── */
+.preview-label { font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--text-faint); }
+.preview-card {
+  border-radius:var(--radius); border:1px solid var(--border-soft);
+  background:var(--surface); overflow:hidden;
+}
+.preview-card-banner {
+  height:70px; display:flex; align-items:center; justify-content:center; font-size:28px;
+  background:linear-gradient(135deg,var(--personal-from),var(--personal-to));
+}
+.preview-card-banner.community { background:linear-gradient(135deg,var(--community-from),var(--community-to)); }
+.preview-card-body { padding:16px; }
+.preview-name { font-size:16px; font-weight:800; color:var(--text); margin:0 0 4px; }
+.preview-tagline { font-size:12px; color:var(--text-soft); margin:0 0 12px; }
+.preview-sliders { display:flex; flex-direction:column; gap:8px; }
+.preview-slider-row { display:flex; align-items:center; gap:10px; font-size:12px; color:var(--text-faint); }
+.preview-bar-track { flex:1; height:4px; background:var(--surface-3); border-radius:4px; overflow:hidden; }
+.preview-bar-fill { height:100%; border-radius:4px; background:linear-gradient(90deg,var(--indigo),var(--violet)); transition:width .25s ease; }
+.preview-traits { display:flex; flex-wrap:wrap; gap:5px; margin-top:12px; }
+
+/* ── CREATE OVERLAY ──────────────────────────────────────────────── */
+.create-overlay {
+  position:fixed; inset:0; z-index:200;
+  background:rgba(11,17,32,.97); backdrop-filter:blur(12px);
+  display:none; flex-direction:column; align-items:center; justify-content:center; gap:24px;
+}
+.create-overlay.active { display:flex; }
+.create-spinner {
+  width:64px; height:64px; border-radius:50%;
+  background:linear-gradient(135deg,var(--indigo),var(--violet));
+  display:flex; align-items:center; justify-content:center; font-size:28px;
+  animation:spinGlow 2s ease-in-out infinite;
+  box-shadow:0 0 0 0 rgba(79,70,229,.5);
+}
+@keyframes spinGlow {
+  0%  { box-shadow:0 0 0 0 rgba(79,70,229,.5); transform:scale(1); }
+  50% { box-shadow:0 0 0 16px rgba(79,70,229,0); transform:scale(1.08); }
+  100%{ box-shadow:0 0 0 0 rgba(79,70,229,0); transform:scale(1); }
+}
+.create-steps { display:flex; flex-direction:column; gap:10px; width:340px; }
+.create-step {
+  display:flex; align-items:center; gap:12px; padding:12px 16px;
+  border-radius:var(--radius-sm); border:1px solid var(--border-soft);
+  background:var(--surface); font-size:14px; color:var(--text-soft); transition:all .3s ease;
+}
+.create-step.done { color:var(--text); border-color:rgba(16,185,129,.4); background:rgba(16,185,129,.07); }
+.create-step.active { color:var(--text); border-color:rgba(79,70,229,.5); background:rgba(79,70,229,.1); }
+.create-step-icon { font-size:18px; width:24px; text-align:center; }
+.create-step-label { flex:1; }
+.create-step-sub { font-size:11px; color:var(--text-faint); margin-top:1px; }
+.step-check { color:#6ee7b7; font-size:16px; margin-left:auto; }
+
+/* ── SUCCESS CARD ────────────────────────────────────────────────── */
+.success-card {
+  width:380px; max-width:90vw; border-radius:var(--radius); background:var(--surface);
+  border:1px solid var(--border); padding:32px; text-align:center;
+  display:none; flex-direction:column; align-items:center; gap:14px;
+  animation:msgIn .4s cubic-bezier(.22,.68,0,1.2) both;
+}
+.success-card.active { display:flex; }
+.success-icon { font-size:48px; }
+.success-title { font-size:20px; font-weight:800; color:var(--text); }
+.success-sub { font-size:13px; color:var(--text-soft); line-height:1.5; }
+.success-actions { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:4px; }
+
+/* ── TOAST ───────────────────────────────────────────────────────── */
+.toast {
+  position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(12px);
+  padding:11px 20px; border-radius:999px; font-size:13px; font-weight:600;
+  background:var(--surface-2); border:1px solid var(--border-soft); color:var(--text);
+  opacity:0; transition:all .25s ease; z-index:300; white-space:nowrap;
+  pointer-events:none;
+}
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+.toast.ok { border-color:rgba(16,185,129,.4); color:#6ee7b7; }
+.toast.warn { border-color:rgba(245,158,11,.4); color:#fcd34d; }
+
+/* Embedded (lightbox iframe): topbar is hidden, drop its 53px offsets */
+.embedded .review-wrap { min-height: 100vh; }
+.embedded .review-preview-col { top: 0; height: 100vh; }
+</style>
+</head>
+<body>
+
+<!-- ═══ TOPBAR (shared) ═══════════════════════════════════════════ -->
+<header class="cc-topbar">
+  <a class="brand" href="./index.html">Praxis · Creation Concepts</a>
+  <span class="crumb" id="topbar-crumb">/ Concept E — Combined</span>
+  <span class="spacer"></span>
+  <a class="nav-pill" href="./concept-a-express.html">A</a>
+  <a class="nav-pill" href="./concept-b-conversational.html">B</a>
+  <a class="nav-pill" href="./concept-c-single-page.html">C</a>
+  <a class="nav-pill" href="./concept-d-templates.html">D</a>
+  <a class="nav-pill active" href="./concept-e-combined.html">E ★</a>
+</header>
+
+<!-- ═══ STAGE 1 — GALLERY ═══════════════════════════════════════════ -->
+<div class="stage active" id="stage-gallery">
+<main class="page-wrap">
+
+  <div class="hero">
+    <div class="hero-label">Concept E · Combined Flow</div>
+    <h1>How do you want to start?</h1>
+    <p>Pick a template to pre-fill most answers instantly, then chat to personalize — or start fresh from a blank conversation.</p>
+    <div class="speed-badge">⚡ Template + chat ≈ 60 seconds</div>
+  </div>
+
+  <div class="tab-bar">
+    <button class="tab-pill act-personal" id="tab-personal" onclick="switchTab('personal')">
+      <span>🧍</span> Personal
+    </button>
+    <button class="tab-pill" id="tab-community" onclick="switchTab('community')">
+      <span>🌟</span> Community
+    </button>
+  </div>
+  <div class="tab-desc" id="tab-desc">A twin of yourself — your knowledge, your voice.</div>
+
+  <div class="tpl-grid" id="tpl-grid"></div>
+
+  <div class="fresh-banner">
+    <div class="fresh-banner-text">
+      <h3>✏️ Start Fresh — Pure Conversation</h3>
+      <p>Skip templates entirely. Praxis will guide you through 8 quick questions to build your twin from scratch.</p>
+    </div>
+    <button class="cc-btn ghost" onclick="startFresh()">Start fresh →</button>
+  </div>
+
+</main>
+</div><!-- /stage-gallery -->
+
+<!-- ═══ STAGE 2 — CHAT ════════════════════════════════════════════ -->
+<div class="stage" id="stage-chat">
+
+  <div class="chat-topbar">
+    <button class="back-btn" onclick="goTo('gallery')">← Gallery</button>
+    <div class="pria-dot">✦</div>
+    <div class="chat-topbar-info">
+      <h2>Praxis · Setup Chat</h2>
+      <p id="chat-sub">Personalizing your twin</p>
+    </div>
+    <span class="spacer"></span>
+    <div class="progress-pill" id="progress-pill">Step 1 of 8</div>
+  </div>
+
+  <div class="chat-scroll" id="chat-scroll"></div>
+
+  <div class="chat-input-bar">
+    <div class="chat-input-inner">
+      <textarea class="chat-textarea" id="chat-input" rows="1"
+        placeholder="Type your answer…" onkeydown="chatKeydown(event)" oninput="autoResize(this)"></textarea>
+      <button class="send-btn" id="send-btn" onclick="sendMsg()" disabled>↑</button>
+    </div>
+  </div>
+
+</div><!-- /stage-chat -->
+
+<!-- ═══ STAGE 3 — REVIEW ══════════════════════════════════════════ -->
+<div class="stage" id="stage-review">
+
+  <div class="review-wrap">
+
+    <!-- Left column: form -->
+    <div class="review-form-col">
+      <div class="review-heading" id="review-heading">Review Your Twin</div>
+      <p class="review-sub">Everything Praxis gathered. Edit any field before you create.</p>
+
+      <div class="form-section">
+        <div class="form-section-title">Identity</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Twin Name</label>
+            <input class="form-input" id="r-name" type="text" oninput="syncPreview()" />
+          </div>
+          <div class="form-group" style="max-width:140px">
+            <label class="form-label">Category</label>
+            <select class="form-select" id="r-category" onchange="syncPreview()">
+              <option value="personal">Personal</option>
+              <option value="community">Community</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tagline / Role</label>
+          <input class="form-input" id="r-tagline" type="text" placeholder="One sentence about this twin…" oninput="syncPreview()" />
+          <div class="form-hint">Shown under the twin's name in the marketplace.</div>
+        </div>
+        <div class="form-group" id="based-on-group">
+          <label class="form-label">Who is this based on?</label>
+          <input class="form-input" id="r-based-on" type="text" placeholder="Real name (Community twins only)" oninput="syncPreview()" />
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">Persona & Voice</div>
+        <div class="form-group">
+          <label class="form-label">What this twin helps with</label>
+          <input class="form-input" id="r-helps" type="text" oninput="syncPreview()" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Communication style</label>
+          <textarea class="form-textarea" id="r-style" rows="2" oninput="syncPreview()"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Domain / Expertise</label>
+          <input class="form-input" id="r-domain" type="text" oninput="syncPreview()" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Things this twin avoids</label>
+          <textarea class="form-textarea" id="r-avoids" rows="2"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Signature phrases (optional)</label>
+          <input class="form-input" id="r-phrases" type="text" placeholder="Catchphrases or verbal tics…" />
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">Traits</div>
+        <div class="form-group">
+          <div class="tag-input-wrap" id="trait-wrap">
+            <input class="tag-raw-input" id="trait-raw" placeholder="Add trait and press Enter…"
+              onkeydown="traitKey(event)" />
+          </div>
+          <div class="tag-hint">Press Enter or comma to add · click × to remove</div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">Style Fine-Tune</div>
+        <div class="form-group">
+          <label class="form-label">Tone (Formal ↔ Casual)</label>
+          <div class="slider-row">
+            <input type="range" id="s-tone" min="0" max="100" value="50"
+              oninput="document.getElementById('v-tone').textContent=this.value;syncPreview()" />
+            <span class="slider-val" id="v-tone">50</span>
+          </div>
+          <div class="slider-labels"><span>Formal</span><span>Casual</span></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Detail Level (Brief ↔ Thorough)</label>
+          <div class="slider-row">
+            <input type="range" id="s-detail" min="0" max="100" value="50"
+              oninput="document.getElementById('v-detail').textContent=this.value;syncPreview()" />
+            <span class="slider-val" id="v-detail">50</span>
+          </div>
+          <div class="slider-labels"><span>Brief</span><span>Thorough</span></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Warmth (Analytical ↔ Empathetic)</label>
+          <div class="slider-row">
+            <input type="range" id="s-warmth" min="0" max="100" value="50"
+              oninput="document.getElementById('v-warmth').textContent=this.value;syncPreview()" />
+            <span class="slider-val" id="v-warmth">50</span>
+          </div>
+          <div class="slider-labels"><span>Analytical</span><span>Empathetic</span></div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+        <button class="cc-btn" onclick="createTwin()" id="create-btn">🚀 Create Twin</button>
+        <button class="cc-btn ghost" onclick="goTo('chat')">← Back to chat</button>
+        <span style="font-size:12px;color:var(--text-faint);" id="field-count"></span>
+      </div>
+    </div>
+
+    <!-- Right column: live preview -->
+    <div class="review-preview-col">
+      <div class="preview-label">Live Preview</div>
+      <div class="preview-card">
+        <div class="preview-card-banner" id="prev-banner">✦</div>
+        <div class="preview-card-body">
+          <div class="preview-name" id="prev-name">Twin Name</div>
+          <div class="preview-tagline" id="prev-tagline">Tagline will appear here…</div>
+          <div style="display:flex;gap:6px;margin-bottom:10px;" id="prev-badges"></div>
+          <div class="preview-sliders">
+            <div class="preview-slider-row">
+              <span style="width:52px">Tone</span>
+              <div class="preview-bar-track"><div class="preview-bar-fill" id="pb-tone" style="width:50%"></div></div>
+              <span id="pv-tone">50</span>
+            </div>
+            <div class="preview-slider-row">
+              <span style="width:52px">Detail</span>
+              <div class="preview-bar-track"><div class="preview-bar-fill" id="pb-detail" style="width:50%;background:linear-gradient(90deg,var(--violet),var(--cyan))"></div></div>
+              <span id="pv-detail">50</span>
+            </div>
+            <div class="preview-slider-row">
+              <span style="width:52px">Warmth</span>
+              <div class="preview-bar-track"><div class="preview-bar-fill" id="pb-warmth" style="width:50%;background:linear-gradient(90deg,var(--community-from),var(--community-to))"></div></div>
+              <span id="pv-warmth">50</span>
+            </div>
+          </div>
+          <div class="preview-traits" id="prev-traits"></div>
+        </div>
+      </div>
+
+      <div style="padding:16px;border-radius:var(--radius);border:1px solid var(--border-soft);background:var(--surface);font-size:13px;color:var(--text-soft);line-height:1.6;">
+        <div style="font-weight:700;color:var(--text);margin-bottom:6px;">📋 Gathered from chat</div>
+        <div id="summary-list" style="display:flex;flex-direction:column;gap:4px;"></div>
+      </div>
+    </div>
+
+  </div>
+</div><!-- /stage-review -->
+
+<!-- ═══ CREATION OVERLAY ══════════════════════════════════════════ -->
+<div class="create-overlay" id="create-overlay">
+  <div class="create-spinner" id="create-spinner">✦</div>
+  <div style="text-align:center;">
+    <div style="font-size:18px;font-weight:800;color:var(--text);">Creating your twin…</div>
+    <div style="font-size:13px;color:var(--text-soft);margin-top:4px;" id="create-status">Initializing</div>
+  </div>
+  <div class="create-steps" id="create-steps"></div>
+  <div class="success-card" id="success-card">
+    <div class="success-icon">🎉</div>
+    <div class="success-title" id="success-name"></div>
+    <div class="success-sub">Your twin is live and ready for conversations. Share the link or chat with it now.</div>
+    <div class="success-actions">
+      <button class="cc-btn" onclick="dismissSuccess()">Open Twin ↗</button>
+      <button class="cc-btn ghost" onclick="dismissSuccess()">Back to gallery</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TOAST ═════════════════════════════════════════════════════ -->
+<div class="toast" id="toast"></div>
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   DATA
+   ═══════════════════════════════════════════════════════════════════ */
+const TEMPLATES = [
+  /* ── PERSONAL ─────────────────────────────────────────────────── */
+  { id:'mentor-me', cat:'personal', emoji:'🎯', title:'Mentor Me',
+    desc:'A career-mentor version of you — gives your perspective on growth, decisions, and career paths.',
+    traits:['Strategic','Encouraging','Direct'],
+    suggestedName:'Mentor Max', prefilledCount:12,
+    keyQ:'What field or industry do you mentor in?', keyP:'e.g. Product management, software engineering…',
+    sliders:{tone:72,detail:65,warmth:80},
+    pre:[
+      {k:'Role',v:'Career mentor and strategic advisor'},
+      {k:'Helps with',v:'Career pivots, promotions, salary negotiations, leadership growth'},
+      {k:'Communication',v:'Concise, direct, warm — no corporate fluff'},
+      {k:'Avoids',v:'Vague platitudes, unsolicited life advice, oversharing'},
+    ]},
+  { id:'second-brain', cat:'personal', emoji:'🧠', title:'Second Brain',
+    desc:'A knowledge-retrieval assistant trained on your notes, docs, and ideas.',
+    traits:['Precise','Structured','Recall-first'],
+    suggestedName:'BrainBot', prefilledCount:11,
+    keyQ:'What topics or domains are your notes primarily about?', keyP:'e.g. UX research, indie game dev, philosophy…',
+    sliders:{tone:45,detail:90,warmth:40},
+    pre:[
+      {k:'Role',v:'Personal knowledge retrieval and synthesis assistant'},
+      {k:'Helps with',v:'Finding, connecting, and elaborating on notes and ideas'},
+      {k:'Communication',v:'Structured lists, headers, and summaries by default'},
+      {k:'Avoids',v:'Speculation, hallucination, adding ideas not in the source material'},
+    ]},
+  { id:'study-buddy', cat:'personal', emoji:'📚', title:'Study Buddy',
+    desc:'A tutor version of you — explains your subject the way you wish someone had explained it to you.',
+    traits:['Patient','Pedagogical','Analogy-rich'],
+    suggestedName:'Study Pal', prefilledCount:12,
+    keyQ:'What subject or skill do you want this tutor to teach?', keyP:'e.g. Calculus, Python, music theory, finance…',
+    sliders:{tone:58,detail:85,warmth:75},
+    pre:[
+      {k:'Role',v:'Patient, enthusiastic subject tutor'},
+      {k:'Helps with',v:'Breaking down complex concepts, practice questions, study plans'},
+      {k:'Communication',v:'Friendly, encouraging; uses "we" — "let\'s figure this out together"'},
+      {k:'Avoids',v:'Talking down, skipping steps, assuming prior knowledge'},
+    ]},
+  { id:'creator-assistant', cat:'personal', emoji:'✍️', title:'Creator Assistant',
+    desc:'Answers your DMs and comments as you — same voice, same opinions, same audience love.',
+    traits:['Voice-matched','Audience-aware','On-brand'],
+    suggestedName:'My Creator Twin', prefilledCount:12,
+    keyQ:'Describe your content style in one sentence (tone, topics, platform vibe):', keyP:'e.g. Brutally honest takes on SaaS marketing, dry humor, Twitter-native…',
+    sliders:{tone:80,detail:50,warmth:60},
+    pre:[
+      {k:'Role',v:'Creator\'s virtual twin for audience interaction'},
+      {k:'Helps with',v:'Replying to questions, DMs, comments, and FAQs in the creator\'s voice'},
+      {k:'Communication',v:'Platform-native — short and punchy for social; longer for newsletters'},
+      {k:'Avoids',v:'Going off-brand, sharing personal contact info, controversial statements'},
+    ]},
+  { id:'exec-proxy', cat:'personal', emoji:'💼', title:'Executive Proxy',
+    desc:'Handles recurring FAQs and meeting prep in your leadership style so your team gets instant answers.',
+    traits:['Efficient','Authoritative','Decisive'],
+    suggestedName:'Exec Twin', prefilledCount:11,
+    keyQ:'What are the top 3 decisions or FAQs your team brings to you most often?', keyP:'e.g. Prioritization calls, vendor approvals, hiring criteria…',
+    sliders:{tone:68,detail:70,warmth:42},
+    pre:[
+      {k:'Role',v:'Executive decision-making proxy and leadership voice'},
+      {k:'Helps with',v:'FAQ answers, meeting prep, decision frameworks, status summaries'},
+      {k:'Communication',v:'Crisp, professional; zero filler, no hedging'},
+      {k:'Avoids',v:'Endless caveats, undermining team autonomy, sharing confidential strategy'},
+    ]},
+  /* ── COMMUNITY ─────────────────────────────────────────────────── */
+  { id:'honored-mentor', cat:'community', emoji:'🏆', title:'Honored Mentor',
+    desc:'A coach or teacher your community loves — subscribers get to keep learning from them at scale.',
+    traits:['Inspiring','Community-loved','Prescriptive'],
+    suggestedName:'Coach Twin', prefilledCount:11,
+    keyQ:'What is this mentor best known for teaching or coaching?', keyP:'e.g. Sales mindset, leadership presence, athletic performance…',
+    sliders:{tone:78,detail:62,warmth:88},
+    pre:[
+      {k:'Role',v:'Beloved coach / mentor twin for community-scale access'},
+      {k:'Helps with',v:'Guidance, frameworks, accountability, Q&A in the mentor\'s voice'},
+      {k:'Communication',v:'Warm but no-nonsense; the kind of mentor who tells you the truth'},
+      {k:'Avoids',v:'Generic advice; always ties back to this mentor\'s specific philosophy'},
+    ]},
+  { id:'legacy-twin', cat:'community', emoji:'🕯️', title:'Legacy Twin',
+    desc:'Preserve a family member\'s stories, wisdom, and voice so future generations can keep listening.',
+    traits:['Warmth-first','Story-rich','Gentle pacing'],
+    suggestedName:'Grandma Rose', prefilledCount:11,
+    keyQ:'Tell us one thing this person always says — a phrase, belief, or piece of wisdom:', keyP:'e.g. "Hard work beats talent when talent won\'t work hard."',
+    sliders:{tone:40,detail:55,warmth:98},
+    pre:[
+      {k:'Role',v:'Living legacy twin preserving voice, stories, and wisdom'},
+      {k:'Helps with',v:'Sharing life stories, dispensing wisdom, answering "what would they say?"'},
+      {k:'Communication',v:'Unhurried, gentle; doesn\'t rush; lets silences exist in text'},
+      {k:'Avoids',v:'Modern slang, corporate language, anything out of character'},
+    ]},
+  { id:'creator-icon', cat:'community', emoji:'🌐', title:'Creator Icon',
+    desc:'A public figure twin that fans subscribe to — interact with their ideas and perspective at scale.',
+    traits:['High-fidelity','Fan-facing','Always on'],
+    suggestedName:'Creator Icon Twin', prefilledCount:12,
+    keyQ:'What is this creator most famous for? (topics, medium, platform):', keyP:'e.g. Minimalist design philosophy, YouTube tech reviews, self-help books…',
+    sliders:{tone:82,detail:58,warmth:65},
+    pre:[
+      {k:'Role',v:'Subscriber-facing public figure twin'},
+      {k:'Helps with',v:'Answering fan questions, sharing the creator\'s perspective on topics'},
+      {k:'Communication',v:'Platform-aware: punchy for social, nuanced for long-form conversations'},
+      {k:'Avoids',v:'Statements that contradict the creator\'s known public positions'},
+    ]},
+  { id:'author-speaker', cat:'community', emoji:'🎤', title:'Author / Speaker',
+    desc:'An interactive companion to their books and talks — readers continue the conversation past the last page.',
+    traits:['Book-grounded','Idea-expansive','Intellectual'],
+    suggestedName:'Author Twin', prefilledCount:12,
+    keyQ:'Which book, talk, or body of work is this twin primarily based on?', keyP:'e.g. "Atomic Habits", the TED talk "The Power of Vulnerability", their newsletter…',
+    sliders:{tone:63,detail:82,warmth:70},
+    pre:[
+      {k:'Role',v:'Interactive companion to the author\'s published ideas'},
+      {k:'Helps with',v:'Deep-dive Q&A on the author\'s frameworks, applying ideas to reader\'s life'},
+      {k:'Communication',v:'Intellectual but accessible; the author\'s written voice, spoken naturally'},
+      {k:'Avoids',v:'Going beyond what\'s in the source work without flagging it clearly'},
+    ]},
+];
+
+const CHAT_FLOW = [
+  { key:'role',        mode:'text',       q:(s)=>`In one sentence — what role should <strong>${s.name||'your twin'}</strong> play? (e.g. "startup mentor", "physics tutor", "my grandmother's stories")` },
+  { key:'helps',       mode:'text',       q:(s)=>`What should ${s.name||'your twin'} help people with most often?` },
+  { key:'audience',    mode:'text-chips', q:(s)=>`Who'll be talking to ${s.name||'your twin'} the most?`,
+      chips:(s)=> s.cat==='community' ? ['My subscribers','Students','Fans'] : ['Just me','My team','My clients'] },
+  { key:'adviceStyle', mode:'chips',      q:(s)=>`Pick ${s.name||'your twin'}'s advice style:`,
+      chips:()=>['Direct','Encouraging','Analytical','Balanced'] },
+  { key:'vibe',        mode:'sliders',    q:(s)=>`Last one — drag the vibe:` },
+  { key:'done',        q:(s)=>`Perfect — I've drafted <strong>${s.name||'your twin'}</strong>'s full profile. Taking you to the review page, where you can add more detail if you like… →` },
+];
+
+const ADVICE_DESC = {
+  'Direct': 'Direct — say it straight',
+  'Encouraging': 'Encouraging — supportive and positive',
+  'Analytical': 'Analytical — thorough and reasoned',
+  'Balanced': 'Balanced — adapt to the situation',
+};
+
+/* ═══════════════════════════════════════════════════════════════════
+   STATE
+   ═══════════════════════════════════════════════════════════════════ */
+let activeTab = 'personal';
+let state = {};   // accumulated twin data
+let chatStep = 0;
+let chatBusy = false;
+let traits = [];
+
+/* ═══════════════════════════════════════════════════════════════════
+   NAVIGATION
+   ═══════════════════════════════════════════════════════════════════ */
+function goTo(id) {
+  document.querySelectorAll('.stage').forEach(el => el.classList.remove('active'));
+  const el = document.getElementById('stage-'+id);
+  if (el) el.classList.add('active');
+  // Stage-specific setup
+  if (id === 'chat') initChatIfNeeded();
+  if (id === 'review') populateReview();
+  window.scrollTo(0,0);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   STAGE 1 — GALLERY
+   ═══════════════════════════════════════════════════════════════════ */
+const TAB_DESCS = {
+  personal:  'A twin of yourself — your knowledge, your voice.',
+  community: 'A twin of someone else, for your community to access.'
+};
+
+function switchTab(cat) {
+  activeTab = cat;
+  document.getElementById('tab-personal').className =
+    'tab-pill' + (cat==='personal' ? ' act-personal' : '');
+  document.getElementById('tab-community').className =
+    'tab-pill' + (cat==='community' ? ' act-community' : '');
+  document.getElementById('tab-desc').textContent = TAB_DESCS[cat];
+  renderGrid();
+}
+
+function renderGrid() {
+  const grid = document.getElementById('tpl-grid');
+  const items = TEMPLATES.filter(t => t.cat === activeTab);
+  grid.innerHTML = items.map(t => `
+    <div class="tpl-card ${t.cat === 'community' ? 'community-card' : ''}" onclick="selectTemplate('${t.id}')">
+      <span class="tpl-corner-badge cc-badge ${t.cat}">${t.cat==='personal'?'Personal':'Community'}</span>
+      <div class="tpl-emoji">${t.emoji}</div>
+      <div class="tpl-title">${t.title}</div>
+      <div class="tpl-desc">${t.desc}</div>
+      <div class="tpl-traits">${t.traits.map(tr=>`<span class="trait-chip">${tr}</span>`).join('')}</div>
+      <div style="font-size:11px;color:var(--text-faint);margin-top:4px;">⚡ ${t.prefilledCount} of 14 pre-filled</div>
+    </div>
+  `).join('');
+}
+
+function selectTemplate(id) {
+  const tpl = TEMPLATES.find(t => t.id === id);
+  if (!tpl) return;
+  // Seed state from template
+  state = {
+    templateId: id,
+    cat: tpl.cat,
+    name: tpl.suggestedName,
+    traits: [...tpl.traits],
+    sliders: { ...tpl.sliders },
+    pre: tpl.pre,
+    keyQ: tpl.keyQ,
+    keyP: tpl.keyP,
+    emoji: tpl.emoji,
+  };
+  traits = [...tpl.traits];
+  chatStep = 0;
+  chatBusy = false;
+  document.getElementById('chat-sub').textContent = `Template: ${tpl.title} · personalizing`;
+  goTo('chat');
+}
+
+function startFresh() {
+  state = { cat: activeTab, name: '', traits: [], sliders: {tone:50,detail:50,warmth:50}, pre: [], keyQ: null };
+  traits = [];
+  chatStep = 0;
+  chatBusy = false;
+  document.getElementById('chat-sub').textContent = 'Building from scratch';
+  goTo('chat');
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   STAGE 2 — CHAT
+   ═══════════════════════════════════════════════════════════════════ */
+let chatInited = false;
+
+function initChatIfNeeded() {
+  const scroll = document.getElementById('chat-scroll');
+  scroll.innerHTML = '';
+  chatInited = true;
+  chatBusy = false;
+  document.getElementById('chat-input').value = '';
+  document.getElementById('send-btn').disabled = true;
+
+  const fromTpl = !!state.templateId;
+  if (fromTpl) {
+    const tpl = TEMPLATES.find(t => t.id === state.templateId);
+    addBubble('pria', `Hi! I've pre-filled <strong>${tpl.prefilledCount} of 14</strong> fields from the <strong>${tpl.title}</strong> template. I just need a few answers to personalize the rest. 🎯`);
+    setTimeout(() => {
+      addBubble('pria', `First — what should we call your twin? (I suggested <em>${tpl.suggestedName}</em> — change it or press ↵ to keep it)`);
+      enableInput();
+      addQuickChips([tpl.suggestedName, 'Keep it', 'Something else…']);
+      updateProgress(1);
+    }, 700);
+    chatStep = -1; // name step for template flow
+  } else {
+    addBubble('pria', `Let's shape your ${state.cat === 'community' ? 'community' : 'personal'} twin! Just <strong>${state.cat==='community' ? 7 : 6} quick questions</strong> — most are a single tap. ✦`);
+    setTimeout(() => {
+      addBubble('pria', `First, what should we call your twin?`);
+      enableInput();
+      updateProgress(1);
+    }, 700);
+    chatStep = -1; // name step
+  }
+}
+
+function updateProgress(step) {
+  const total = state.templateId ? 3 : (state.cat === 'community' ? 7 : 6);
+  document.getElementById('progress-pill').textContent =
+    step >= 99 ? 'Done ✓' : `Step ${Math.min(step, total)} of ${total}`;
+}
+
+function enableInput() {
+  chatBusy = false;
+  const inp = document.getElementById('chat-input');
+  inp.disabled = false;
+  inp.focus();
+  document.getElementById('send-btn').disabled = false;
+}
+
+function disableInput() {
+  chatBusy = true;
+  document.getElementById('chat-input').disabled = true;
+  document.getElementById('send-btn').disabled = true;
+}
+
+function addBubble(who, html, skipAnim) {
+  const scroll = document.getElementById('chat-scroll');
+  const row = document.createElement('div');
+  row.className = 'msg-row' + (who==='user' ? ' user' : '');
+  if (who !== 'user') {
+    row.innerHTML = `<div class="av">✦</div><div class="bubble">${html}</div>`;
+  } else {
+    row.innerHTML = `<div class="bubble">${html}</div>`;
+  }
+  scroll.appendChild(row);
+  scroll.scrollTop = scroll.scrollHeight;
+  return row;
+}
+
+function addTyping() {
+  const row = addBubble('pria', '<div class="typing-dot"><span></span><span></span><span></span></div>');
+  return row;
+}
+
+function removeEl(el) { if (el && el.parentNode) el.parentNode.removeChild(el); }
+
+function addQuickChips(chips) {
+  const scroll = document.getElementById('chat-scroll');
+  const wrap = document.createElement('div');
+  wrap.className = 'quick-chips';
+  wrap.id = 'quick-chips';
+  chips.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'qchip';
+    btn.textContent = c;
+    btn.onclick = () => { pickChip(c); };
+    wrap.appendChild(btn);
+  });
+  scroll.appendChild(wrap);
+  scroll.scrollTop = scroll.scrollHeight;
+}
+
+function pickChip(val) {
+  // Chips must work even in chips-only steps where the text input is
+  // locked (chatBusy true) — post the bubble and process directly
+  // instead of routing through sendMsg's busy guard.
+  const chips = document.getElementById('quick-chips');
+  if (chips) removeEl(chips);
+  addBubble('user', escHtml(val));
+  document.getElementById('chat-input').value = '';
+  disableInput();
+  processAnswer(val);
+}
+
+function chatKeydown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  document.getElementById('send-btn').disabled = el.value.trim().length === 0;
+}
+
+function sendMsg() {
+  const inp = document.getElementById('chat-input');
+  const val = inp.value.trim();
+  if (!val || chatBusy) return;
+  // Remove chips
+  const chips = document.getElementById('quick-chips');
+  if (chips) removeEl(chips);
+  addBubble('user', escHtml(val));
+  inp.value = '';
+  inp.style.height = 'auto';
+  document.getElementById('send-btn').disabled = true;
+  disableInput();
+  processAnswer(val);
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function processAnswer(val) {
+  const fromTpl = !!state.templateId;
+  // step -1 = name step
+  if (chatStep === -1) {
+    const name = (val === 'Keep it' || val === 'keep it') ? (state.name || val) : val;
+    state.name = name;
+    const typing = addTyping();
+    setTimeout(() => {
+      removeEl(typing);
+      if (fromTpl) {
+        // template flow: ask key question
+        const tpl = TEMPLATES.find(t => t.id === state.templateId);
+        addBubble('pria', `Love it — <strong>${name}</strong>! Now, ${tpl.keyQ}`);
+        enableInput();
+        updateProgress(2);
+        chatStep = 99; // key question step
+      } else if (state.cat === 'community') {
+        addBubble('pria', `Nice. And who is <strong>${name}</strong> based on?`);
+        enableInput();
+        updateProgress(2);
+        chatStep = -2; // based-on step
+      } else {
+        chatStep = 0;
+        presentStep();
+      }
+    }, 600);
+    return;
+  }
+
+  // step -2 = community based-on step
+  if (chatStep === -2) {
+    state.basedOn = val;
+    chatStep = 0;
+    const typing = addTyping();
+    setTimeout(() => { removeEl(typing); presentStep(); }, 600);
+    return;
+  }
+
+  if (chatStep === 99) {
+    // key answer for template flow
+    state.keyAnswer = val;
+    const tpl = TEMPLATES.find(t => t.id === state.templateId);
+    // Merge pre-filled data into state answers
+    tpl.pre.forEach(p => { state[p.k.toLowerCase().replace(/\s+/g,'_')] = p.v; });
+    state.helps = tpl.pre.find(p=>p.k==='Helps with')?.v || val;
+    state.style = tpl.pre.find(p=>p.k==='Communication')?.v || '';
+    state.avoids = tpl.pre.find(p=>p.k==='Avoids')?.v || '';
+    state.tagline = `${tpl.pre.find(p=>p.k==='Role')?.v || tpl.title} · ${val}`;
+    state.domain = val;
+    const typing = addTyping();
+    setTimeout(() => {
+      removeEl(typing);
+      addBubble('pria', `Excellent! With the template data + your answer, I have everything needed for <strong>${state.name}</strong>. Ready to review the full profile?`);
+      addQuickChips(['Yes, show me the review →']);
+      updateProgress(3);
+    }, 800);
+    chatStep = 100; // waiting for proceed
+    return;
+  }
+
+  if (chatStep === 100) {
+    goTo('review');
+    return;
+  }
+
+  // Fresh flow: record answer for the current step, then present the next
+  const step = CHAT_FLOW[chatStep];
+  if (step && step.key !== 'done' && step.mode !== 'sliders') state[step.key] = val;
+  chatStep++;
+  const typing = addTyping();
+  setTimeout(() => { removeEl(typing); presentStep(); }, 650);
+}
+
+/* Present the current CHAT_FLOW step with the right input mode:
+   text → free input · text-chips → input + tappable suggestions ·
+   chips → chips only (input stays locked) · sliders → inline vibe card */
+function presentStep() {
+  const step = CHAT_FLOW[chatStep];
+  const baseProgress = state.cat === 'community' ? 3 : 2;
+
+  if (!step || step.key === 'done') {
+    addBubble('pria', CHAT_FLOW[CHAT_FLOW.length-1].q(state));
+    updateProgress(99);
+    setTimeout(() => goTo('review'), 1200);
+    return;
+  }
+
+  addBubble('pria', step.q(state));
+  updateProgress(baseProgress + chatStep);
+
+  if (step.mode === 'sliders') {
+    addVibeCard();
+    return; // input stays disabled — card confirm advances
+  }
+  if (step.mode === 'chips') {
+    addQuickChips(step.chips(state));
+    return; // chips only, no typing
+  }
+  enableInput();
+  if (step.mode === 'text-chips') addQuickChips(step.chips(state));
+}
+
+/* Inline 3-slider "vibe" message card (matches Concept B) */
+function addVibeCard() {
+  const scroll = document.getElementById('chat-scroll');
+  const wrap = document.createElement('div');
+  wrap.className = 'msg-row';
+  wrap.id = 'vibe-card';
+  wrap.innerHTML = `<div class="av">✦</div><div class="bubble" style="width:100%;max-width:420px;">
+    ${['tone','detail','warmth'].map(k => {
+      const labels = { tone:['Tone','Direct','Expressive'], detail:['Detail','Concise','Thorough'], warmth:['Warmth','Professional','Warm'] };
+      const [title, lo, hi] = labels[k];
+      return `<div style="margin-bottom:12px;">
+        <div style="font-size:12px;font-weight:700;margin-bottom:4px;">${title}</div>
+        <input type="range" min="0" max="100" value="50" id="vibe-${k}" style="width:100%;accent-color:var(--indigo);" />
+        <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--text-faint);"><span>${lo}</span><span>${hi}</span></div>
+      </div>`;
+    }).join('')}
+    <button class="cc-btn" style="width:100%;padding:9px;" onclick="confirmVibe()">That's the vibe ✓</button>
+  </div>`;
+  scroll.appendChild(wrap);
+  scroll.scrollTop = scroll.scrollHeight;
+}
+
+function confirmVibe() {
+  state.sliders = {
+    tone: +document.getElementById('vibe-tone').value,
+    detail: +document.getElementById('vibe-detail').value,
+    warmth: +document.getElementById('vibe-warmth').value,
+  };
+  // freeze the card
+  const card = document.getElementById('vibe-card');
+  card.querySelectorAll('input,button').forEach(el => el.disabled = true);
+  card.querySelector('button').textContent = 'Vibe locked ✓';
+  addBubble('user', 'That\'s the vibe ✓');
+  chatStep++;
+  const typing = addTyping();
+  setTimeout(() => { removeEl(typing); presentStep(); }, 700);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   STAGE 3 — REVIEW
+   ═══════════════════════════════════════════════════════════════════ */
+function populateReview() {
+  // Identity
+  document.getElementById('r-name').value = state.name || '';
+  document.getElementById('r-category').value = state.cat || 'personal';
+  document.getElementById('r-tagline').value = state.tagline || '';
+  document.getElementById('r-based-on').value = state.basedOn || '';
+  document.getElementById('based-on-group').style.display = (state.cat==='community') ? 'flex' : 'none';
+  // Persona — fresh-chat answers map: role → domain field, adviceStyle → style
+  document.getElementById('r-helps').value = state.helps || '';
+  document.getElementById('r-style').value = state.style || (state.adviceStyle ? (ADVICE_DESC[state.adviceStyle] || state.adviceStyle) : '');
+  document.getElementById('r-domain').value = state.role || state.domain || state.keyAnswer || '';
+  document.getElementById('r-avoids').value = state.avoids || '';
+  document.getElementById('r-phrases').value = state.phrases || '';
+  // Sliders
+  const sl = state.sliders || {tone:50,detail:50,warmth:50};
+  ['tone','detail','warmth'].forEach(k => {
+    document.getElementById('s-'+k).value = sl[k] || 50;
+    document.getElementById('v-'+k).textContent = sl[k] || 50;
+  });
+  // Traits
+  traits = [...(state.traits || [])];
+  renderTraits();
+  // Summary list
+  const sum = document.getElementById('summary-list');
+  const items = [
+    ['Name', state.name],
+    ['Category', state.cat],
+    ['Based on', state.basedOn],
+    ['Role', state.role || state.domain || state.keyAnswer],
+    ['Audience', state.audience],
+    ['Helps with', state.helps],
+    ['Advice style', state.adviceStyle || state.style],
+    ['Avoids', state.avoids],
+  ].filter(([,v])=>v);
+  sum.innerHTML = items.map(([k,v])=>`
+    <div style="display:flex;gap:6px;align-items:flex-start;">
+      <span style="color:var(--text-faint);width:80px;flex-shrink:0;font-size:11px;padding-top:1px;">${k}</span>
+      <span style="font-size:12px;color:var(--text-soft);">${escHtml(String(v))}</span>
+    </div>
+  `).join('');
+  // Count fields
+  const filled = items.length;
+  document.getElementById('field-count').textContent = `${filled} fields filled`;
+  // Sync preview
+  syncPreview();
+}
+
+function syncPreview() {
+  const name = document.getElementById('r-name').value || 'Twin Name';
+  const tagline = document.getElementById('r-tagline').value || 'Tagline will appear here…';
+  const cat = document.getElementById('r-category').value;
+  document.getElementById('prev-name').textContent = name;
+  document.getElementById('prev-tagline').textContent = tagline;
+  // Banner
+  const banner = document.getElementById('prev-banner');
+  banner.className = 'preview-card-banner' + (cat==='community'?' community':'');
+  banner.textContent = (TEMPLATES.find(t=>t.id===state.templateId)?.emoji) || '✦';
+  // Badges
+  const badges = document.getElementById('prev-badges');
+  badges.innerHTML = `<span class="cc-badge ${cat}">${cat==='personal'?'Personal':'Community'}</span>`;
+  // Sliders
+  ['tone','detail','warmth'].forEach(k => {
+    const v = document.getElementById('s-'+k).value;
+    document.getElementById('pb-'+k).style.width = v+'%';
+    document.getElementById('pv-'+k).textContent = v;
+  });
+  // Traits
+  const prev = document.getElementById('prev-traits');
+  prev.innerHTML = traits.map(t=>`<span class="trait-chip">${t}</span>`).join('');
+}
+
+/* ── Trait tag input ─────────────────────────────────────────────── */
+function renderTraits() {
+  const wrap = document.getElementById('trait-wrap');
+  // Remove old chips (keep input)
+  wrap.querySelectorAll('.tag-chip').forEach(c => c.remove());
+  const raw = document.getElementById('trait-raw');
+  traits.forEach((t,i) => {
+    const chip = document.createElement('span');
+    chip.className = 'tag-chip';
+    chip.innerHTML = `${escHtml(t)} <span class="rm" onclick="removeTrait(${i})">×</span>`;
+    wrap.insertBefore(chip, raw);
+  });
+  syncPreview();
+}
+
+function removeTrait(i) {
+  traits.splice(i,1);
+  renderTraits();
+}
+
+function traitKey(e) {
+  const raw = document.getElementById('trait-raw');
+  if ((e.key === 'Enter' || e.key === ',') && raw.value.trim()) {
+    e.preventDefault();
+    const val = raw.value.replace(/,/g,'').trim();
+    if (val && !traits.includes(val)) { traits.push(val); renderTraits(); }
+    raw.value = '';
+  }
+  if (e.key === 'Backspace' && !raw.value && traits.length) {
+    traits.pop(); renderTraits();
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   CREATION OVERLAY
+   ═══════════════════════════════════════════════════════════════════ */
+const CREATE_STEPS = [
+  { icon:'🌱', label:'Seeding Digital Twin',  sub:'Laying the foundation from your data' },
+  { icon:'🧬', label:'Encoding Persona',       sub:'Calibrating voice, tone, and knowledge' },
+  { icon:'⚙️', label:'Applying Style Fine-Tune',sub:'Setting tone, detail, and warmth' },
+  { icon:'✦',  label:'Activating Twin',        sub:'Running final checks and going live' },
+];
+
+function createTwin() {
+  const name = document.getElementById('r-name').value.trim();
+  if (!name) { showToast('Please enter a twin name', 'warn'); document.getElementById('r-name').focus(); return; }
+  const overlay = document.getElementById('create-overlay');
+  overlay.classList.add('active');
+  document.getElementById('success-card').classList.remove('active');
+  document.getElementById('create-spinner').style.display = '';
+
+  // Render steps
+  const stepsEl = document.getElementById('create-steps');
+  stepsEl.innerHTML = CREATE_STEPS.map((s,i)=>`
+    <div class="create-step" id="cstep-${i}">
+      <div class="create-step-icon">${s.icon}</div>
+      <div>
+        <div class="create-step-label">${s.label}</div>
+        <div class="create-step-sub">${s.sub}</div>
+      </div>
+    </div>
+  `).join('');
+
+  let i = 0;
+  function runStep() {
+    if (i >= CREATE_STEPS.length) {
+      // Done
+      document.getElementById('create-status').textContent = 'Twin created!';
+      setTimeout(() => {
+        document.getElementById('create-spinner').style.display = 'none';
+        stepsEl.style.display = 'none';
+        document.getElementById('success-name').textContent = `${name} is live! 🎉`;
+        document.getElementById('success-card').classList.add('active');
+      }, 400);
+      return;
+    }
+    const stepEl = document.getElementById('cstep-'+i);
+    stepEl.classList.add('active');
+    document.getElementById('create-status').textContent = CREATE_STEPS[i].label + '…';
+    setTimeout(() => {
+      stepEl.classList.remove('active');
+      stepEl.classList.add('done');
+      stepEl.querySelector('.create-step-icon').textContent = '';
+      stepEl.insertAdjacentHTML('beforeend','<span class="step-check">✓</span>');
+      i++;
+      setTimeout(runStep, 180);
+    }, 650 + Math.random()*300);
+  }
+  setTimeout(runStep, 300);
+}
+
+function dismissSuccess() {
+  document.getElementById('create-overlay').classList.remove('active');
+  document.getElementById('create-steps').style.display = '';
+  goTo('gallery');
+  showToast(`Twin created! 🎉`, 'ok');
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   TOAST
+   ═══════════════════════════════════════════════════════════════════ */
+let toastTimer;
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type ? ' '+type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   KEYBOARD
+   ═══════════════════════════════════════════════════════════════════ */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    const overlay = document.getElementById('create-overlay');
+    if (overlay.classList.contains('active')) {
+      overlay.classList.remove('active');
+      document.getElementById('create-steps').style.display = '';
+    }
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════════════
+   INIT
+   ═══════════════════════════════════════════════════════════════════ */
+renderGrid();
+</script>
+<script>
+// Concept-only marketing links must not navigate into the portfolio.
+document.addEventListener('click', function (event) {
+  const link = event.target.closest('a[href]');
+  if (!link) return;
+  const url = new URL(link.href, location.href);
+  if (url.origin === location.origin && !url.pathname.startsWith('/demos')) {
+    event.preventDefault();
+    alert('This is a design concept. This destination is not part of the demo.');
+  }
+});
+</script></body>
+</html>

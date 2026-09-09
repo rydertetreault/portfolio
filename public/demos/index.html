@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Praxis AI · Website Concept Lab</title>
+  <link rel="icon" href="/demos/assets/brand/icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    body { background: #08090a; min-height: 100vh; }
+    .hub { width: min(1100px, 100% - 48px); margin: 0 auto; padding: 72px 0 96px; }
+    .hub-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 32px; flex-wrap: wrap; margin-bottom: 48px; }
+    .hub-head img { height: 34px; margin-bottom: 18px; }
+    .hub h1 { font-size: clamp(34px, 5vw, 56px); letter-spacing: -0.03em; }
+    .hub h1 span { background: var(--px-gradient); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .hub p.lede { max-width: 620px; color: var(--px-text-dim); font-size: 17px; margin-top: 12px; }
+    .meta { font: 500 12px/1.6 var(--font-mono); color: var(--px-text-mute); text-align: right; letter-spacing: .04em; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 18px; }
+    .card { position: relative; display: block; padding: 24px 24px 78px; border: 1px solid var(--px-line); border-radius: 18px; background: linear-gradient(180deg, #111318, #0b0d11); overflow: hidden; transition: transform .35s var(--ease-out), border-color .3s; }
+    .card::before { content: ''; position: absolute; inset: -1px; background: radial-gradient(420px 220px at var(--mx, 50%) var(--my, 0%), var(--c, #ff6b4a) , transparent 60%); opacity: 0; transition: opacity .35s; mix-blend-mode: screen; pointer-events: none; filter: blur(30px); }
+    .card:hover { transform: translateY(-4px); border-color: rgba(255,255,255,.18); }
+    .card:hover::before { opacity: .28; }
+    .card .num { font: 600 11px/1 var(--font-mono); letter-spacing: .14em; color: var(--px-text-mute); }
+    .card h2 { margin-top: 14px; font-size: 26px; }
+    .card .ref { margin-top: 6px; font: 500 12px/1.4 var(--font-mono); color: var(--c, var(--px-accent-text)); }
+    .card p { margin-top: 12px; color: var(--px-text-dim); font-size: 14px; line-height: 1.6; }
+    .card .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }
+    .card .tags span { font: 500 11px/1 var(--font-mono); padding: 6px 8px; border-radius: 6px; background: rgba(255,255,255,.05); border: 1px solid var(--px-line); color: var(--px-text-dim); }
+    .card .go { position: absolute; right: 20px; top: 20px; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--px-line-2); color: #fff; transition: background .25s, transform .25s; }
+    .card:hover .go { background: var(--px-blue); transform: rotate(-45deg); }
+    .foot { margin-top: 56px; padding-top: 24px; border-top: 1px solid var(--px-line); display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; color: var(--px-text-mute); font: 500 12px/1.6 var(--font-mono); }
+    .foot a { color: var(--px-text-dim); border-bottom: 1px solid var(--px-line-2); }
+    .ver { position: absolute; right: 20px; bottom: 20px; }
+    .ver a { display: inline-flex; align-items: center; gap: 8px; font: 600 11px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; padding: 10px 14px; border-radius: 999px; border: 1px solid var(--px-line-2); color: var(--px-text); transition: background .2s, border-color .2s, transform .2s; }
+    .ver a:hover { background: var(--px-blue); border-color: var(--px-blue); transform: translateY(-1px); }
+    .ver a.v2 { background: var(--px-gradient); border-color: transparent; }
+    .card { cursor: default; }
+    .legend { display: flex; gap: 18px; flex-wrap: wrap; margin: 0 0 24px; font: 500 12px/1.6 var(--font-mono); color: var(--px-text-mute); }
+    .legend b { color: var(--px-text); font-weight: 600; }
+    .legend .g { color: var(--px-green); }
+  </style>
+  <script type="module" crossorigin src="/demos/assets/main-Dg4hDBSO.js"></script>
+  <link rel="modulepreload" crossorigin href="/demos/assets/modulepreload-polyfill-B5Qt9EMX.js">
+  <link rel="stylesheet" crossorigin href="/demos/assets/base-BAgu-4YE.css">
+</head>
+<body>
+  <main class="hub">
+    <header class="hub-head">
+      <div>
+        <img src="/demos/assets/brand/logo.svg" alt="Praxis AI" />
+        <h1>Website concept lab<span>.</span></h1>
+        <p class="lede">Product and storytelling directions built around Praxis AI content, brand, and the real PRIA 2026 UI. Each explores a distinct way to bring the Human-First Digital Twin platform to life.</p>
+      </div>
+      <div class="meta">Praxis AI · Website concept lab<br/>Static product previews · no sign-in required</div>
+    </header>
+
+    <section class="grid">
+      <div class="card" style="--c:#9ab8ed">
+        <span class="num">NEW · OMEGA × PRAXIS ORIGINAL</span><h2>Human Orbit</h2>
+        <div class="ref">Cinematic scroll · The Human Thread</div>
+        <p>Omega-inspired orbital zooms, pinned portrait reveals, and a cinematic product landing meet the Praxis original’s human source, interactive answer provenance, four P’s, and industry journeys.</p>
+        <div class="tags"><span>pinned cinema</span><span>orbital zoom</span><span>human source</span><span>answer tracing</span></div>
+        <div class="ver"><a class="v2" href="/demos/v2/human-orbit/">View concept <span aria-hidden="true">↗</span></a></div>
+      </div>
+      <div class="card" style="--c:#9dbfff">
+        <span class="num">NEW · THREADLINE VARIATION</span>
+        <h2>Threadline: Continuum</h2>
+        <div class="ref">The human thread · A new motion study</div>
+        <p>A human-centered knowledge constellation, animated source connections, a scroll-tracked preserve → amplify → govern story, interactive PRIA product views, four principles, industry journeys, a middleware routing scene, and a guided starting-point selector.</p>
+        <div class="tags"><span>source flow</span><span>knowledge constellation</span><span>scroll narrative</span><span>product tabs</span></div>
+        <div class="ver"><a class="v2" href="/demos/v2/threadline/">View concept <span aria-hidden="true">↗</span></a></div>
+      </div>
+      <div class="card" style="--c:#c7aeff">
+        <span class="num">01 · TECHNICAL / BLUEPRINT</span>
+        <h2>Systems &amp; Governance</h2>
+        <div class="ref">Design cues: Warp · Middleware + PraxisShield™</div>
+        <p>Keyboard section nav <code>[S][T][G]</code>, <code>[ fig. ]</code> captions, live <code>twin.yaml</code> as hero, numbered 01–06 feature list, governance dashboard mock, multi-tab code sample.</p>
+        <div class="tags"><span>keyboard nav</span><span>fig captions</span><span>config hero</span><span>dashboard</span><span>marquee</span></div>
+        
+      <div class="ver"><a class="v2" href="/demos/v2/warp/">View concept <span aria-hidden="true">↗</span></a></div></div>
+      <div class="card" style="--c:#a5ffd6">
+        <span class="num">03 · PERSONALITY / STUDIO</span>
+        <h2>Human-First Brand</h2>
+        <div class="ref">Design cues: Manual Labor · Brand and services</div>
+        <p>Two-line statement hero, hand-drawn scribble underlines, sticky service headers with scrolling case studies, service ↔ proof pairing, slide-out full-screen nav, bright single accent on navy.</p>
+        <div class="tags"><span>scribble</span><span>sticky headers</span><span>service↔proof</span><span>slide-out nav</span></div>
+        
+      <div class="ver"><a class="v2" href="/demos/v2/manual-labor/">View concept <span aria-hidden="true">↗</span></a></div></div>
+      <div class="card" style="--c:#d7b56d">
+        <span class="num">04 · CINEMATIC / STORY</span>
+        <h2>Mission Narrative</h2>
+        <div class="ref">Design cues: Omega ClearSpace · Brand story</div>
+        <p>Pinned cinematic chapters with weighty easing, tracked-out display type, sticky image + scrolling text, horizontal mission timeline, side chapter indicator — done the lightweight way (CSS layers, no 4K video).</p>
+        <div class="tags"><span>pinned chapters</span><span>timeline</span><span>progress rail</span><span>lightweight</span></div>
+        
+      <div class="ver"><a class="v2" href="/demos/v2/omega/">View concept <span aria-hidden="true">↗</span></a></div></div>
+      <div class="card" style="--c:#7126ff">
+        <span class="num">06 · MAGAZINE / RELEASE NOTES</span>
+        <h2>Product Release</h2>
+        <div class="ref">Design cues: Shopify Editions · Summer ’26</div>
+        <p>Chapter rail that tracks scroll, sticky section headers, per-feature animated illustrations, snap-scroll carousels, prompt chips, slash-command list, previous-editions switcher.</p>
+        <div class="tags"><span>chapter rail</span><span>snap carousel</span><span>prompt chips</span><span>sticky h3</span></div>
+        
+      <div class="ver"><a class="v2" href="/demos/v2/shopify/">View concept <span aria-hidden="true">↗</span></a></div></div>
+      <div class="card" style="--c:#00e08a">
+        <span class="num">08 · ORIGINAL — designed for Praxis</span>
+        <h2>Human Knowledge</h2>
+        <div class="ref">Original Praxis concept · Source-backed intelligence</div>
+        <p>Self-running “Answer Card” (prompt → grounded reply → citation → thread to the expert → approved), a page-long scroll-drawn thread, pinned 4 P’s, live PRIA with tabs, human wall with filters, Twin-DNA micro-quiz, ⌘K palette.</p>
+        <div class="tags"><span>answer card</span><span>scroll thread</span><span>4 P’s</span><span>twin DNA quiz</span><span>⌘K</span></div>
+        <div class="ver"><a class="v2" href="/demos/v2/praxis/">View concept <span aria-hidden="true">↗</span></a></div>
+      </div>
+      <div class="card" style="--c:#006aff">
+        <span class="num">09 · LIGHT / PRODUCT-LED — v2 only</span>
+        <h2>Product Ecosystem</h2>
+        <div class="ref">Design cues: Attio · Amplified Intelligence™</div>
+        <p>Blur-in reveals + blue-glow settle, hero product window with side windows, direction-aware nav panels, and four purpose-built product stories: Human-First Digital Twin™ studio, AI Middleware routing canvas, responsive LXP journey, and PraxisShield™ governance command center. Plus IP Vault™ horizon, ecosystem connectivity, word-scrubbed proof, and ruler-tick changelog.</p>
+        <div class="tags"><span>four product systems</span><span>middleware routing</span><span>LXP journey</span><span>governance</span><span>product motion</span></div>
+        <div class="ver"><a class="v2" href="/demos/v2/attio/">View concept <span aria-hidden="true">↗</span></a></div>
+      </div>
+    </section>
+
+    <section style="margin-top:40px"><h2>All concepts &amp; reference studies</h2><p style="line-height:2"><a href="/demos/warp/">warp v1</a> · <a href="/demos/v2/warp/">warp v2</a> &nbsp; / &nbsp; <a href="/demos/mercury/">mercury v1</a> · <a href="/demos/v2/mercury/">mercury v2</a> &nbsp; / &nbsp; <a href="/demos/manual-labor/">manual-labor v1</a> · <a href="/demos/v2/manual-labor/">manual-labor v2</a> &nbsp; / &nbsp; <a href="/demos/omega/">omega v1</a> · <a href="/demos/v2/omega/">omega v2</a> &nbsp; / &nbsp; <a href="/demos/shopify/">shopify v1</a> · <a href="/demos/v2/shopify/">shopify v2</a></p></section><footer class="foot">
+      <span>Research: <a href="/demos/research/reference-sites-research.md" target="_blank">reference-sites-research.md</a></span>
+      <span>© 2026 Praxis AI · Human-First Digital Twins™ · concept demos · not a production product</span>
+    </footer>
+  </main>
+<script>
+// Concept-only marketing links must not navigate into the portfolio.
+document.addEventListener('click', function (event) {
+  const link = event.target.closest('a[href]');
+  if (!link) return;
+  const url = new URL(link.href, location.href);
+  if (url.origin === location.origin && !url.pathname.startsWith('/demos')) {
+    event.preventDefault();
+    alert('This is a design concept. This destination is not part of the demo.');
+  }
+});
+</script></body>
+</html>

@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Concept C — Single-Page Smart Form · Praxis Creation Concepts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap"/>
+<link rel="stylesheet" href="./shared.css"/>
+<script>if (window.self !== window.top) document.documentElement.classList.add('embedded')</script>
+<style>
+/* ── Page layout ────────────────────────────────────────────────────────── */
+.page-wrap{display:flex;flex-direction:column;min-height:100vh}
+.page-body{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:28px;
+  max-width:1180px;width:100%;margin:0 auto;padding:28px 22px 80px;align-items:start}
+
+/* ── Accent vars (toggled by JS) ─────────────────────────────────────────── */
+:root{
+  --acc-from:var(--personal-from);
+  --acc-to:var(--personal-to);
+  --acc-badge:personal;
+}
+body.community-mode{
+  --acc-from:var(--community-from);
+  --acc-to:var(--community-to);
+}
+
+/* ── Cards ──────────────────────────────────────────────────────────────── */
+.card{background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius);
+  padding:24px 26px;margin-bottom:18px;transition:border-color .2s}
+.card-title{font-size:13px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--text-faint);margin:0 0 18px}
+
+/* ── Category segmented control ─────────────────────────────────────────── */
+.seg-wrap{display:flex;background:var(--surface-2);border:1px solid var(--border-soft);
+  border-radius:var(--radius);padding:5px;gap:5px}
+.seg-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;
+  padding:14px 10px;border:1px solid transparent;border-radius:10px;
+  background:none;cursor:pointer;transition:all .18s ease;color:var(--text-soft)}
+.seg-btn .seg-icon{font-size:22px;line-height:1}
+.seg-btn .seg-label{font-size:13px;font-weight:700;color:inherit;line-height:1.1}
+.seg-btn .seg-sub{font-size:11px;color:var(--text-faint);margin-top:2px;line-height:1.3}
+.seg-btn.active{background:linear-gradient(135deg,var(--acc-from),var(--acc-to));
+  border-color:transparent;color:#fff;box-shadow:0 4px 16px rgba(79,70,229,.3)}
+.seg-btn.active .seg-sub{color:rgba(255,255,255,.7)}
+
+/* ── Inputs ─────────────────────────────────────────────────────────────── */
+.field{margin-bottom:16px}
+.field:last-child{margin-bottom:0}
+.field label{display:block;font-size:12px;font-weight:700;letter-spacing:.04em;
+  color:var(--text-soft);margin-bottom:6px}
+.field label .req{color:#f87171;margin-left:2px}
+.field label .hint{font-weight:400;color:var(--text-faint);font-size:11px;
+  letter-spacing:0;text-transform:none;margin-left:6px}
+.field input[type=text],.field input[type=number],.field textarea{
+  width:100%;background:var(--surface-2);border:1px solid var(--border-soft);
+  border-radius:var(--radius-sm);padding:10px 13px;color:var(--text);
+  font-family:inherit;font-size:14px;outline:none;transition:border-color .15s,box-shadow .15s}
+.field input[type=text]:focus,.field input[type=number]:focus,.field textarea:focus{
+  border-color:var(--acc-from);box-shadow:0 0 0 3px rgba(79,70,229,.18)}
+.field .helper{font-size:11px;color:var(--text-faint);margin-top:5px;line-height:1.45}
+
+/* ── Avatar picker ───────────────────────────────────────────────────────── */
+.avatar-row{display:flex;align-items:center;gap:16px;margin-bottom:18px}
+.avatar-circle{width:64px;height:64px;border-radius:50%;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:28px;
+  border:3px solid transparent;transition:all .18s ease;flex-shrink:0;
+  position:relative;overflow:hidden}
+.avatar-circle:hover{transform:scale(1.06)}
+.avatar-circle::after{content:"✎";position:absolute;inset:0;
+  background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;
+  font-size:16px;opacity:0;transition:opacity .15s;border-radius:50%}
+.avatar-circle:hover::after{opacity:1}
+.avatar-meta{font-size:12px;color:var(--text-faint);line-height:1.5}
+.avatar-meta strong{display:block;color:var(--text-soft);font-size:13px;margin-bottom:2px}
+
+/* ── Community-only fields ───────────────────────────────────────────────── */
+.community-only{overflow:hidden;max-height:0;opacity:0;
+  transition:max-height .35s cubic-bezier(.4,0,.2,1),opacity .25s ease,margin .25s ease;
+  margin-top:0}
+body.community-mode .community-only{max-height:260px;opacity:1;margin-top:16px}
+
+/* ── Radio chips (advice style) ─────────────────────────────────────────── */
+.chip-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:999px;
+  border:1px solid var(--border-soft);background:var(--surface-2);color:var(--text-soft);
+  font-size:12.5px;font-weight:600;cursor:pointer;transition:all .15s ease}
+.chip:hover{border-color:var(--acc-from);color:var(--text)}
+.chip.selected{background:linear-gradient(90deg,var(--acc-from),var(--acc-to));
+  border-color:transparent;color:#fff;box-shadow:0 2px 10px rgba(79,70,229,.3)}
+
+/* ── Sliders ─────────────────────────────────────────────────────────────── */
+.slider-row{display:grid;grid-template-columns:1fr;gap:14px;margin-top:4px}
+.slider-item label{display:flex;justify-content:space-between;align-items:center;
+  font-size:12px;font-weight:600;color:var(--text-soft);margin-bottom:5px}
+.slider-item label span{color:var(--acc-from);font-size:11px;
+  background:var(--surface-2);border:1px solid var(--border-soft);
+  border-radius:4px;padding:1px 6px;min-width:22px;text-align:center}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;
+  background:var(--surface-3);border-radius:999px;outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+  width:16px;height:16px;border-radius:50%;
+  background:linear-gradient(135deg,var(--acc-from),var(--acc-to));
+  border:2px solid var(--bg);box-shadow:0 2px 6px rgba(79,70,229,.4);
+  transition:transform .12s}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.2)}
+
+/* ── Accordion ───────────────────────────────────────────────────────────── */
+.accordion{border:1px solid var(--border-soft);border-radius:var(--radius);
+  background:var(--surface);overflow:hidden;margin-bottom:18px}
+.accordion-hd{display:flex;align-items:center;justify-content:space-between;
+  padding:16px 22px;cursor:pointer;user-select:none;
+  border:none;background:none;color:var(--text);width:100%;text-align:left;
+  transition:background .15s}
+.accordion-hd:hover{background:var(--surface-2)}
+.accordion-hd-left{display:flex;align-items:center;gap:10px}
+.accordion-hd-icon{font-size:16px;line-height:1}
+.accordion-hd-title{font-size:13.5px;font-weight:700;color:var(--text)}
+.accordion-hd-sub{font-size:11.5px;color:var(--text-faint);margin-top:1px}
+.accordion-chevron{font-size:12px;color:var(--text-faint);
+  transition:transform .28s cubic-bezier(.4,0,.2,1)}
+.accordion.open .accordion-chevron{transform:rotate(180deg)}
+.accordion-body{max-height:0;overflow:hidden;
+  transition:max-height .35s cubic-bezier(.4,0,.2,1)}
+.accordion.open .accordion-body{max-height:700px}
+.accordion-body-inner{padding:6px 22px 22px}
+.accordion-body-inner .field:not(:last-child){margin-bottom:14px}
+
+/* ── Subscription card ───────────────────────────────────────────────────── */
+.toggle-pair{display:flex;background:var(--surface-2);border:1px solid var(--border-soft);
+  border-radius:var(--radius-sm);padding:3px;gap:3px}
+.toggle-opt{flex:1;padding:7px 12px;border-radius:7px;border:none;background:none;
+  color:var(--text-soft);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
+.toggle-opt.active{background:var(--surface-3);color:var(--text);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+.vis-radios{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.vis-radio{display:flex;align-items:flex-start;gap:10px;padding:10px 13px;
+  border:1px solid var(--border-soft);border-radius:var(--radius-sm);cursor:pointer;
+  transition:border-color .15s,background .15s}
+.vis-radio:hover,.vis-radio.checked{border-color:var(--acc-from);background:var(--surface-2)}
+.vis-radio-dot{width:15px;height:15px;border-radius:50%;border:2px solid var(--border-soft);
+  flex-shrink:0;margin-top:1px;transition:all .15s;position:relative}
+.vis-radio.checked .vis-radio-dot{border-color:var(--acc-from)}
+.vis-radio.checked .vis-radio-dot::after{content:"";position:absolute;inset:3px;
+  border-radius:50%;background:var(--acc-from)}
+.vis-radio-text{font-size:13px;font-weight:600;color:var(--text);line-height:1.3}
+.vis-radio-sub{font-size:11px;color:var(--text-faint);margin-top:2px}
+
+/* ── Price input ─────────────────────────────────────────────────────────── */
+.price-row{display:flex;align-items:center;gap:8px;overflow:hidden;
+  max-height:0;opacity:0;transition:max-height .3s,opacity .25s,margin .25s}
+.price-row.visible{max-height:60px;opacity:1;margin-top:14px}
+.price-prefix{font-size:15px;font-weight:700;color:var(--text-soft)}
+.price-row input{width:100px}
+
+/* ── Preview panel ───────────────────────────────────────────────────────── */
+.preview-panel{position:sticky;top:76px;display:flex;flex-direction:column;gap:14px}
+.preview-card{background:var(--surface);border:1px solid var(--border-soft);
+  border-radius:var(--radius);padding:20px 18px}
+.preview-card-header{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.preview-avatar{width:48px;height:48px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:22px}
+.preview-name{font-size:16px;font-weight:800;color:var(--text);line-height:1.1;
+  margin-bottom:4px}
+.preview-tagline{font-size:11.5px;color:var(--text-faint);margin-top:3px;line-height:1.4}
+.preview-role{font-size:12px;color:var(--text-soft);margin-bottom:8px;
+  padding-bottom:8px;border-bottom:1px solid var(--border-soft)}
+.preview-row{display:flex;align-items:flex-start;gap:7px;margin-bottom:7px;font-size:12px}
+.preview-row-label{color:var(--text-faint);flex-shrink:0}
+.preview-row-val{color:var(--text-soft);line-height:1.35}
+.preview-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.preview-chip{font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:999px;
+  background:var(--surface-2);border:1px solid var(--border-soft);color:var(--text-soft)}
+.mini-meters{margin-top:14px;display:flex;flex-direction:column;gap:8px}
+.mini-meter-row{display:flex;align-items:center;gap:8px}
+.mini-meter-label{font-size:10.5px;color:var(--text-faint);width:42px;flex-shrink:0}
+.mini-meter-track{flex:1;height:4px;background:var(--surface-3);border-radius:999px;overflow:hidden}
+.mini-meter-fill{height:100%;border-radius:999px;
+  background:linear-gradient(90deg,var(--acc-from),var(--acc-to));
+  transition:width .3s ease}
+.mini-meter-val{font-size:10.5px;color:var(--text-faint);width:12px;text-align:right}
+
+/* ── Instructions preview ────────────────────────────────────────────────── */
+.instr-box{background:var(--surface);border:1px solid var(--border-soft);
+  border-radius:var(--radius);padding:16px 16px 14px}
+.instr-title{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--text-faint);margin-bottom:10px;display:flex;justify-content:space-between}
+.instr-title span{font-weight:400;letter-spacing:0;text-transform:none;color:var(--text-faint);font-size:10.5px}
+.instr-text{font-size:12px;color:var(--text-soft);line-height:1.65;min-height:64px;
+  font-family:var(--font-mono);white-space:pre-wrap}
+
+/* shimmer */
+.shimmer-line{height:11px;border-radius:4px;background:linear-gradient(
+  90deg,var(--surface-2) 25%,var(--surface-3) 50%,var(--surface-2) 75%);
+  background-size:300% 100%;animation:shimmer 1.1s ease-in-out infinite;margin-bottom:7px}
+@keyframes shimmer{0%{background-position:100% 0}100%{background-position:-100% 0}}
+.shimmer-line:nth-child(2){width:88%}
+.shimmer-line:nth-child(3){width:70%}
+
+/* ── Completion meter ────────────────────────────────────────────────────── */
+.completion-box{background:var(--surface);border:1px solid var(--border-soft);
+  border-radius:var(--radius);padding:16px}
+.completion-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.completion-label{font-size:12px;font-weight:700;color:var(--text-soft)}
+.completion-frac{font-size:18px;font-weight:800;
+  background:linear-gradient(90deg,var(--acc-from),var(--acc-to));
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+.completion-track{height:5px;background:var(--surface-3);border-radius:999px;overflow:hidden;margin-bottom:12px}
+.completion-fill{height:100%;border-radius:999px;
+  background:linear-gradient(90deg,var(--acc-from),var(--acc-to));
+  transition:width .4s cubic-bezier(.4,0,.2,1)}
+.completion-items{display:flex;flex-direction:column;gap:5px}
+.completion-item{display:flex;align-items:center;gap:7px;font-size:11.5px}
+.ci-dot{width:14px;height:14px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700}
+.ci-dot.done{background:var(--success)}
+.ci-dot.miss{background:var(--surface-3);border:1px solid var(--border-soft)}
+.ci-label{color:var(--text-soft)}
+.ci-label.done{color:var(--text-faint);text-decoration:line-through}
+
+/* ── Create button ───────────────────────────────────────────────────────── */
+.create-btn-wrap{position:sticky;bottom:20px}
+.create-btn{width:100%;padding:14px 20px;font-size:15px;font-weight:800;border-radius:var(--radius);
+  background:linear-gradient(90deg,var(--acc-from),var(--acc-to));
+  border:none;color:#fff;cursor:pointer;
+  transition:transform .14s,box-shadow .14s,opacity .14s;
+  box-shadow:0 6px 24px rgba(79,70,229,.35)}
+.create-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 10px 30px rgba(79,70,229,.45)}
+.create-btn:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+
+/* ── Creation overlay ────────────────────────────────────────────────────── */
+.creation-overlay{position:fixed;inset:0;z-index:200;
+  background:rgba(11,17,32,.97);backdrop-filter:blur(12px);
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity .25s}
+.creation-overlay.visible{opacity:1;pointer-events:all}
+.creation-modal{width:min(440px,90vw);background:var(--surface);
+  border:1px solid var(--border-soft);border-radius:var(--radius);
+  padding:36px 32px;text-align:center}
+.creation-modal .cm-phase{font-size:15px;font-weight:700;color:var(--text);
+  margin:18px 0 6px;min-height:24px;transition:opacity .3s}
+.creation-modal .cm-sub{font-size:12px;color:var(--text-faint);margin-bottom:20px}
+.creation-prog-track{height:5px;background:var(--surface-2);border-radius:999px;overflow:hidden}
+.creation-prog-fill{height:100%;border-radius:999px;
+  background:linear-gradient(90deg,var(--acc-from),var(--acc-to));
+  transition:width .9s cubic-bezier(.4,0,.2,1)}
+.creation-spinner{width:52px;height:52px;border-radius:50%;
+  border:3px solid var(--surface-2);
+  border-top-color:var(--acc-from);
+  animation:spin .8s linear infinite;margin:0 auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* success state */
+.cm-success{display:none;flex-direction:column;align-items:center;gap:14px}
+.cm-success.visible{display:flex}
+.cm-success-avatar{width:72px;height:72px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:32px;
+  border:3px solid var(--acc-from);box-shadow:0 0 30px rgba(79,70,229,.35)}
+.cm-success-name{font-size:20px;font-weight:800;color:var(--text)}
+.cm-success-stat{font-size:11.5px;color:var(--text-faint);
+  background:var(--surface-2);border:1px solid var(--border-soft);
+  border-radius:var(--radius-sm);padding:10px 14px;line-height:1.7;text-align:left;width:100%}
+.cm-success-stat strong{color:var(--success)}
+.cm-success-btns{display:flex;gap:10px;width:100%}
+.cm-success-btns button{flex:1}
+
+.cm-loading{display:flex;flex-direction:column;align-items:center}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media(max-width:960px){
+  .page-body{grid-template-columns:1fr;padding:18px 14px 60px}
+  .preview-panel{position:static;order:-1}
+}
+@media(max-width:540px){
+  .cc-topbar .crumb{display:none}
+  .cc-topbar .nav-pill{padding:5px 9px;font-size:11.5px}
+}
+</style>
+</head>
+<body>
+
+<!-- ── Topbar ─────────────────────────────────────────────────────────────── -->
+<header class="cc-topbar">
+  <a class="brand" href="./index.html">Praxis · Creation Concepts</a>
+  <span class="crumb">/ Concept C — Single-Page Smart Form</span>
+  <div class="spacer"></div>
+  <a class="nav-pill" href="./concept-a-express.html">A</a>
+  <a class="nav-pill" href="./concept-b-conversational.html">B</a>
+  <a class="nav-pill active" href="./concept-c-single-page.html">C</a>
+  <a class="nav-pill" href="./concept-d-templates.html">D</a>
+    <a class="nav-pill" href="./concept-e-combined.html">E ★</a>
+</header>
+
+<!-- ── Page body ──────────────────────────────────────────────────────────── -->
+<main class="page-wrap">
+  <div class="page-body">
+
+    <!-- ═══════════════════════════════ FORM COLUMN ═════════════════════════ -->
+    <div class="form-col">
+
+      <!-- 0 · Category ─────────────────────────────────────────────────── -->
+      <div class="card" style="margin-bottom:18px">
+        <p class="card-title">What type of twin?</p>
+        <div class="seg-wrap">
+          <button class="seg-btn active" id="seg-personal" onclick="setCategory('personal')">
+            <span class="seg-icon">🧠</span>
+            <span class="seg-label">Personal Twin</span>
+            <span class="seg-sub">A twin of yourself</span>
+          </button>
+          <button class="seg-btn" id="seg-community" onclick="setCategory('community')">
+            <span class="seg-icon">🌐</span>
+            <span class="seg-label">Community Twin</span>
+            <span class="seg-sub">A twin of a significant person others subscribe to</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 1 · Identity ─────────────────────────────────────────────────── -->
+      <div class="card">
+        <p class="card-title">Identity</p>
+
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px">
+          <div class="avatar-circle" id="avatar-preview" onclick="cycleAvatar()"
+               style="background:linear-gradient(135deg,#4f46e5,#0c29eb)">🧠</div>
+          <div class="avatar-meta">
+            <strong>Avatar</strong>Click to cycle options
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Twin name <span class="req">*</span><span class="hint">What should people call this twin?</span></label>
+          <input type="text" id="f-name" placeholder="e.g. Aria, Max, Dr. Chen…" oninput="sync()"/>
+        </div>
+
+        <!-- Community-only fields -->
+        <div class="community-only" id="community-fields">
+          <div class="field">
+            <label>Based on (person's name) <span class="req">*</span></label>
+            <input type="text" id="f-based-on" placeholder="e.g. Brené Brown, Elon Musk…" oninput="sync()"/>
+          </div>
+          <div class="field">
+            <label>Public tagline</label>
+            <input type="text" id="f-tagline" placeholder="One line that captures this twin's essence…" oninput="sync()"/>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2 · Personality ──────────────────────────────────────────────── -->
+      <div class="card">
+        <p class="card-title">Personality</p>
+
+        <div class="field">
+          <label>Role / identity <span class="req">*</span></label>
+          <input type="text" id="f-role" placeholder="e.g. Strategic coach, creative writing mentor, life advisor…" oninput="sync()"/>
+          <p class="helper">Describe this twin's core identity and purpose in one line.</p>
+        </div>
+        <div class="field">
+          <label>Helps with <span class="req">*</span></label>
+          <input type="text" id="f-helps" placeholder="e.g. Career decisions, creative blocks, product strategy…" oninput="sync()"/>
+          <p class="helper">What problems, goals, or topics does this twin specialise in?</p>
+        </div>
+        <div class="field">
+          <label>Audience <span class="req">*</span></label>
+          <input type="text" id="f-audience" placeholder="e.g. Early-career designers, founders, curious generalists…" oninput="sync()"/>
+          <p class="helper">Who is this twin built for? Describe the ideal person seeking help.</p>
+        </div>
+
+        <div class="field" style="margin-top:20px">
+          <label>Advice style <span class="req">*</span></label>
+          <div class="chip-row" id="chip-row">
+            <button class="chip" data-style="Direct"       onclick="pickStyle(this)">⚡ Direct</button>
+            <button class="chip" data-style="Encouraging"  onclick="pickStyle(this)">🌱 Encouraging</button>
+            <button class="chip" data-style="Analytical"   onclick="pickStyle(this)">🔬 Analytical</button>
+            <button class="chip" data-style="Balanced"     onclick="pickStyle(this)">⚖️ Balanced</button>
+          </div>
+        </div>
+
+        <div class="field" style="margin-top:22px">
+          <label>Communication style <span class="hint">Drag to calibrate</span></label>
+          <div class="slider-row" id="slider-row">
+            <div class="slider-item">
+              <label>Tone <span id="tone-val">4</span></label>
+              <input type="range" min="1" max="7" value="4" id="sl-tone"
+                     oninput="document.getElementById('tone-val').textContent=this.value;sync()"/>
+            </div>
+            <div class="slider-item">
+              <label>Detail <span id="detail-val">4</span></label>
+              <input type="range" min="1" max="7" value="4" id="sl-detail"
+                     oninput="document.getElementById('detail-val').textContent=this.value;sync()"/>
+            </div>
+            <div class="slider-item">
+              <label>Warmth <span id="warmth-val">4</span></label>
+              <input type="range" min="1" max="7" value="4" id="sl-warmth"
+                     oninput="document.getElementById('warmth-val').textContent=this.value;sync()"/>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3 · Optional details (accordion) ────────────────────────────── -->
+      <div class="accordion" id="acc-optional">
+        <button class="accordion-hd" onclick="toggleAccordion('acc-optional')">
+          <div class="accordion-hd-left">
+            <span class="accordion-hd-icon">📋</span>
+            <div>
+              <div class="accordion-hd-title">More detail <span style="font-weight:400;color:var(--text-faint);font-size:12px;margin-left:6px">optional</span></div>
+              <div class="accordion-hd-sub">9 more persona questions — answer now or later from the twin's profile</div>
+            </div>
+          </div>
+          <span class="accordion-chevron">▾</span>
+        </button>
+        <div class="accordion-body">
+          <div class="accordion-body-inner">
+            <div class="field">
+              <label>Signature phrases or expressions</label>
+              <input type="text" placeholder="Phrases this twin naturally uses…" oninput="sync()"/>
+            </div>
+            <div class="field">
+              <label>Topics to avoid</label>
+              <input type="text" placeholder="e.g. Politics, personal finances, medical advice…" oninput="sync()"/>
+            </div>
+            <div class="field">
+              <label>Common questions people ask</label>
+              <input type="text" placeholder="The top 3 things users will want to know…" oninput="sync()"/>
+            </div>
+            <div class="field">
+              <label>One thing to start doing tomorrow</label>
+              <input type="text" placeholder="The single most actionable piece of advice this twin gives…" oninput="sync()"/>
+            </div>
+            <p style="font-size:11.5px;color:var(--text-faint);margin-top:8px">+ 5 more fields available from your twin's profile page after creation.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4 · Subscription (community-only card) ───────────────────────── -->
+      <div class="card community-only" id="subscription-card" style="margin-bottom:18px">
+        <p class="card-title">Subscription</p>
+
+        <div class="field">
+          <label>Pricing</label>
+          <div class="toggle-pair">
+            <button class="toggle-opt active" id="sub-free" onclick="setSubType('free')">Free</button>
+            <button class="toggle-opt" id="sub-paid" onclick="setSubType('paid')">Paid</button>
+          </div>
+          <div class="price-row" id="price-row">
+            <span class="price-prefix">$</span>
+            <div class="field" style="margin:0">
+              <input type="number" min="1" max="999" placeholder="9" id="f-price" oninput="sync()"/>
+            </div>
+            <span style="font-size:13px;color:var(--text-faint)">/month</span>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Listing visibility</label>
+          <div class="vis-radios">
+            <div class="vis-radio checked" id="vis-public" onclick="setVisibility('public')">
+              <div class="vis-radio-dot"></div>
+              <div>
+                <div class="vis-radio-text">Public directory</div>
+                <div class="vis-radio-sub">Anyone can discover and subscribe to this twin</div>
+              </div>
+            </div>
+            <div class="vis-radio" id="vis-invite" onclick="setVisibility('invite')">
+              <div class="vis-radio-dot"></div>
+              <div>
+                <div class="vis-radio-text">Invite link only</div>
+                <div class="vis-radio-sub">Only people with your link can access this twin</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5 · Advanced settings (accordion) ───────────────────────────── -->
+      <div class="accordion" id="acc-advanced">
+        <button class="accordion-hd" onclick="toggleAccordion('acc-advanced')">
+          <div class="accordion-hd-left">
+            <span class="accordion-hd-icon">⚙️</span>
+            <div>
+              <div class="accordion-hd-title">Advanced settings</div>
+              <div class="accordion-hd-sub">Joining, credits, voice &amp; knowledge</div>
+            </div>
+          </div>
+          <span class="accordion-chevron">▾</span>
+        </button>
+        <div class="accordion-body">
+          <div class="accordion-body-inner">
+            <div class="field">
+              <label>Joining mode</label>
+              <div class="toggle-pair" style="max-width:320px">
+                <button class="toggle-opt active" id="join-auto" onclick="setJoinMode('auto')" style="flex:none;padding:7px 16px">Auto-join</button>
+                <button class="toggle-opt" id="join-sub" onclick="setJoinMode('sub')" style="flex:none;padding:7px 16px">Subscription only</button>
+              </div>
+              <p style="font-size:11px;color:var(--text-faint);margin-top:6px" id="join-note">Personal twins use auto-join by default.</p>
+            </div>
+            <div class="field" style="display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <div style="font-size:13px;font-weight:600;color:var(--text-soft)">Pool credits with subscribers</div>
+                <div style="font-size:11px;color:var(--text-faint);margin-top:2px">Shared credit pool across all users of this twin</div>
+              </div>
+              <div class="toggle-track" id="credits-toggle" onclick="toggleSwitch('credits-toggle')" style="width:40px;height:22px;border-radius:999px;background:var(--surface-3);border:1px solid var(--border-soft);cursor:pointer;position:relative;flex-shrink:0;transition:background .2s">
+                <div style="position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:var(--text-faint);transition:all .2s" id="credits-thumb"></div>
+              </div>
+            </div>
+            <div class="field" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0">
+              <div>
+                <div style="font-size:13px;font-weight:600;color:var(--text-soft)">Real-time voice</div>
+                <div style="font-size:11px;color:var(--text-faint);margin-top:2px">Enable live voice conversations with this twin</div>
+              </div>
+              <div class="toggle-track" id="voice-toggle" onclick="toggleSwitch('voice-toggle')" style="width:40px;height:22px;border-radius:999px;background:var(--surface-3);border:1px solid var(--border-soft);cursor:pointer;position:relative;flex-shrink:0;transition:background .2s">
+                <div style="position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:var(--text-faint);transition:all .2s" id="voice-thumb"></div>
+              </div>
+            </div>
+            <div style="margin-top:14px;padding:10px 13px;background:var(--surface-2);border:1px solid var(--border-soft);border-radius:var(--radius-sm)">
+              <p style="font-size:11.5px;color:var(--text-faint);margin:0;line-height:1.55">
+                📁 <strong style="color:var(--text-soft)">Knowledge files:</strong> Upload PDFs, docs, and URLs after creation from the twin's vault — no need to do it now.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /form-col -->
+
+    <!-- ═══════════════════════════════ PREVIEW PANEL ════════════════════ -->
+    <aside class="preview-panel">
+
+      <!-- Twin card -->
+      <div class="preview-card">
+        <div class="preview-card-header">
+          <div class="preview-avatar" id="pv-avatar" style="background:linear-gradient(135deg,#4f46e5,#0c29eb)">🧠</div>
+          <div>
+            <div class="preview-name" id="pv-name">Pria</div>
+            <span class="cc-badge personal" id="pv-badge">Personal</span>
+            <div class="preview-tagline" id="pv-tagline" style="display:none"></div>
+          </div>
+        </div>
+        <div class="preview-role" id="pv-role" style="color:var(--text-faint);font-style:italic">Role will appear here…</div>
+        <div class="preview-row">
+          <span class="preview-row-label">Helps:</span>
+          <span class="preview-row-val" id="pv-helps">—</span>
+        </div>
+        <div class="preview-row">
+          <span class="preview-row-label">Audience:</span>
+          <span class="preview-row-val" id="pv-audience">—</span>
+        </div>
+        <div class="preview-chips">
+          <span class="preview-chip" id="pv-style">No style yet</span>
+        </div>
+        <div class="mini-meters">
+          <div class="mini-meter-row">
+            <span class="mini-meter-label">Tone</span>
+            <div class="mini-meter-track"><div class="mini-meter-fill" id="mm-tone" style="width:50%"></div></div>
+            <span class="mini-meter-val" id="mm-tone-v">4</span>
+          </div>
+          <div class="mini-meter-row">
+            <span class="mini-meter-label">Detail</span>
+            <div class="mini-meter-track"><div class="mini-meter-fill" id="mm-detail" style="width:50%"></div></div>
+            <span class="mini-meter-val" id="mm-detail-v">4</span>
+          </div>
+          <div class="mini-meter-row">
+            <span class="mini-meter-label">Warmth</span>
+            <div class="mini-meter-track"><div class="mini-meter-fill" id="mm-warmth" style="width:50%"></div></div>
+            <span class="mini-meter-val" id="mm-warmth-v">4</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Instructions preview -->
+      <div class="instr-box">
+        <div class="instr-title">
+          Instructions preview
+          <span>auto-generates as you type</span>
+        </div>
+        <div id="instr-content">
+          <div style="color:var(--text-faint);font-size:12px;line-height:1.6;font-family:var(--font-mono)">
+            Start filling in the form and a persona preview will appear here…
+          </div>
+        </div>
+      </div>
+
+      <!-- Completion meter -->
+      <div class="completion-box">
+        <div class="completion-header">
+          <span class="completion-label">Required fields</span>
+          <span class="completion-frac" id="comp-frac">0 / 5</span>
+        </div>
+        <div class="completion-track">
+          <div class="completion-fill" id="comp-fill" style="width:0%"></div>
+        </div>
+        <div class="completion-items" id="comp-items"></div>
+      </div>
+
+      <!-- Create button -->
+      <div class="create-btn-wrap">
+        <button class="create-btn" id="create-btn" disabled onclick="startCreation()">
+          Create Twin
+        </button>
+      </div>
+
+    </aside><!-- /preview-panel -->
+
+  </div><!-- /page-body -->
+</main>
+
+<!-- ── Creation overlay ───────────────────────────────────────────────────── -->
+<div class="creation-overlay" id="creation-overlay">
+  <div class="creation-modal">
+
+    <!-- Loading state -->
+    <div class="cm-loading" id="cm-loading">
+      <div class="creation-spinner"></div>
+      <div class="cm-phase" id="cm-phase">Seeding Digital Twin…</div>
+      <div class="cm-sub" id="cm-sub">Initialising core identity layer</div>
+      <div style="width:100%;margin-top:8px">
+        <div class="creation-prog-track">
+          <div class="creation-prog-fill" id="cm-prog" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Success state -->
+    <div class="cm-success" id="cm-success">
+      <div style="font-size:28px">✨</div>
+      <div class="cm-success-avatar" id="cs-avatar">🧠</div>
+      <div class="cm-success-name" id="cs-name">Your twin is live!</div>
+      <span class="cc-badge personal" id="cs-badge">Personal</span>
+      <div class="cm-success-stat">
+        <strong>✓ Created in ~90 seconds</strong><br/>
+        <span style="color:var(--text-faint)">1 page · 5 required fields<br/>
+        vs. old flow: 8 steps · 14 questions</span>
+      </div>
+      <div class="cm-success-btns">
+        <button class="cc-btn" onclick="mockToast('Open twin — not wired in prototype')">Open Twin</button>
+        <button class="cc-btn ghost" onclick="mockToast('Knowledge vault — not wired in prototype')">Add Knowledge</button>
+      </div>
+      <button class="cc-btn ghost" style="width:100%;margin-top:4px;font-size:12px;padding:9px" onclick="closeOverlay()">← Back to form</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Toast ──────────────────────────────────────────────────────────────── -->
+<div id="toast" style="position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:10px 20px;font-size:13px;color:var(--text-soft);pointer-events:none;
+  opacity:0;transition:opacity .22s,transform .22s;z-index:300;white-space:nowrap"></div>
+
+<script>
+/* ── State ─────────────────────────────────────────────────────────────── */
+const S = {
+  category: 'personal',
+  adviceStyle: '',
+  subType: 'free',
+  visibility: 'public',
+  instrDebounce: null,
+  instrShowing: false,
+};
+
+const AVATARS = [
+  { bg:'linear-gradient(135deg,#4f46e5,#0c29eb)', emoji:'🧠' },
+  { bg:'linear-gradient(135deg,#7c3aed,#db2777)', emoji:'✨' },
+  { bg:'linear-gradient(135deg,#0891b2,#0c29eb)', emoji:'🌊' },
+  { bg:'linear-gradient(135deg,#059669,#0891b2)', emoji:'🌿' },
+];
+let avatarIdx = 0;
+
+/* ── Category ──────────────────────────────────────────────────────────── */
+function setCategory(cat) {
+  S.category = cat;
+  document.body.classList.toggle('community-mode', cat === 'community');
+  document.getElementById('seg-personal').classList.toggle('active', cat === 'personal');
+  document.getElementById('seg-community').classList.toggle('active', cat === 'community');
+
+  // Update badge
+  const badge = document.getElementById('pv-badge');
+  badge.className = 'cc-badge ' + cat;
+  badge.textContent = cat === 'personal' ? 'Personal' : 'Community';
+  document.getElementById('cs-badge').className = 'cc-badge ' + cat;
+  document.getElementById('cs-badge').textContent = badge.textContent;
+
+  // Join mode note
+  document.getElementById('join-note').textContent = cat === 'personal'
+    ? 'Personal twins use auto-join by default.'
+    : 'Community twins default to subscription mode.';
+  if (cat === 'community') setJoinMode('sub');
+  else setJoinMode('auto');
+
+  sync();
+}
+
+/* ── Avatar ────────────────────────────────────────────────────────────── */
+function cycleAvatar() {
+  avatarIdx = (avatarIdx + 1) % AVATARS.length;
+  applyAvatar();
+  sync();
+}
+function applyAvatar() {
+  const a = AVATARS[avatarIdx];
+  document.getElementById('avatar-preview').style.background = a.bg;
+  document.getElementById('avatar-preview').textContent = a.emoji;
+  document.getElementById('pv-avatar').style.background = a.bg;
+  document.getElementById('pv-avatar').textContent = a.emoji;
+  document.getElementById('cs-avatar').style.background = a.bg;
+  document.getElementById('cs-avatar').textContent = a.emoji;
+}
+
+/* ── Advice style chips ────────────────────────────────────────────────── */
+function pickStyle(btn) {
+  document.querySelectorAll('#chip-row .chip').forEach(c => c.classList.remove('selected'));
+  btn.classList.add('selected');
+  S.adviceStyle = btn.dataset.style;
+  sync();
+}
+
+/* ── Subscription ──────────────────────────────────────────────────────── */
+function setSubType(type) {
+  S.subType = type;
+  document.getElementById('sub-free').classList.toggle('active', type === 'free');
+  document.getElementById('sub-paid').classList.toggle('active', type === 'paid');
+  document.getElementById('price-row').classList.toggle('visible', type === 'paid');
+}
+function setVisibility(v) {
+  S.visibility = v;
+  document.getElementById('vis-public').classList.toggle('checked', v === 'public');
+  document.getElementById('vis-invite').classList.toggle('checked', v === 'invite');
+}
+
+/* ── Join mode ─────────────────────────────────────────────────────────── */
+function setJoinMode(mode) {
+  document.getElementById('join-auto').classList.toggle('active', mode === 'auto');
+  document.getElementById('join-sub').classList.toggle('active', mode === 'sub');
+}
+
+/* ── Toggle switch ─────────────────────────────────────────────────────── */
+const switchState = {};
+function toggleSwitch(id) {
+  switchState[id] = !switchState[id];
+  const on = switchState[id];
+  const track = document.getElementById(id);
+  const thumb = track.querySelector('div');
+  track.style.background = on
+    ? `linear-gradient(90deg,var(--acc-from),var(--acc-to))`
+    : 'var(--surface-3)';
+  thumb.style.left = on ? '22px' : '3px';
+  thumb.style.background = on ? '#fff' : 'var(--text-faint)';
+}
+
+/* ── Accordions ────────────────────────────────────────────────────────── */
+function toggleAccordion(id) {
+  document.getElementById(id).classList.toggle('open');
+}
+
+/* ── Sync — reads form → updates preview + completion ──────────────────── */
+function sync() {
+  const name     = document.getElementById('f-name').value.trim();
+  const role     = document.getElementById('f-role').value.trim();
+  const helps    = document.getElementById('f-helps').value.trim();
+  const audience = document.getElementById('f-audience').value.trim();
+  const tagline  = document.getElementById('f-tagline').value.trim();
+  const tone     = document.getElementById('sl-tone').value;
+  const detail   = document.getElementById('sl-detail').value;
+  const warmth   = document.getElementById('sl-warmth').value;
+
+  // Preview card
+  document.getElementById('pv-name').textContent = name || 'Pria';
+  document.getElementById('create-btn').textContent = `Create ${name || 'Twin'}`;
+
+  const taglineEl = document.getElementById('pv-tagline');
+  if (tagline && S.category === 'community') {
+    taglineEl.textContent = tagline;
+    taglineEl.style.display = '';
+  } else {
+    taglineEl.style.display = 'none';
+  }
+
+  const roleEl = document.getElementById('pv-role');
+  if (role) {
+    roleEl.textContent = role;
+    roleEl.style.color = 'var(--text-soft)';
+    roleEl.style.fontStyle = 'normal';
+  } else {
+    roleEl.textContent = 'Role will appear here…';
+    roleEl.style.color = 'var(--text-faint)';
+    roleEl.style.fontStyle = 'italic';
+  }
+
+  document.getElementById('pv-helps').textContent   = helps   || '—';
+  document.getElementById('pv-audience').textContent = audience || '—';
+  document.getElementById('pv-style').textContent   = S.adviceStyle || 'No style yet';
+
+  // Mini meters
+  const pct = v => `${((v - 1) / 6) * 100}%`;
+  document.getElementById('mm-tone').style.width   = pct(tone);
+  document.getElementById('mm-detail').style.width = pct(detail);
+  document.getElementById('mm-warmth').style.width = pct(warmth);
+  document.getElementById('mm-tone-v').textContent   = tone;
+  document.getElementById('mm-detail-v').textContent = detail;
+  document.getElementById('mm-warmth-v').textContent = warmth;
+
+  // Completion
+  const required = [
+    { label: 'Twin name',     done: !!name },
+    { label: 'Role / identity', done: !!role },
+    { label: 'Helps with',    done: !!helps },
+    { label: 'Audience',      done: !!audience },
+    { label: 'Advice style',  done: !!S.adviceStyle },
+  ];
+  const doneCount = required.filter(r => r.done).length;
+  const total = required.length;
+  document.getElementById('comp-frac').textContent = `${doneCount} / ${total}`;
+  document.getElementById('comp-fill').style.width = `${(doneCount / total) * 100}%`;
+
+  const itemsEl = document.getElementById('comp-items');
+  itemsEl.innerHTML = required.map(r => `
+    <div class="completion-item">
+      <div class="ci-dot ${r.done ? 'done' : 'miss'}">${r.done ? '✓' : ''}</div>
+      <span class="ci-label ${r.done ? 'done' : ''}">${r.label}</span>
+    </div>`).join('');
+
+  const allDone = doneCount === total;
+  document.getElementById('create-btn').disabled = !allDone;
+
+  // Debounce instructions preview
+  clearTimeout(S.instrDebounce);
+  if (name || role || helps || audience) {
+    S.instrDebounce = setTimeout(() => generateInstructions(name, role, helps, audience, S.adviceStyle), 600);
+  }
+}
+
+/* ── Instructions preview (mock generator) ─────────────────────────────── */
+function generateInstructions(name, role, helps, audience, style) {
+  const el = document.getElementById('instr-content');
+  el.innerHTML = `<div class="shimmer-line"></div><div class="shimmer-line"></div><div class="shimmer-line"></div>`;
+  setTimeout(() => {
+    const n = name || 'Pria';
+    const r = role || 'knowledgeable assistant';
+    const h = helps || 'a wide range of topics';
+    const a = audience || 'anyone seeking guidance';
+    const sMap = {
+      Direct: 'You communicate clearly and directly, cutting to the heart of every issue without unnecessary padding.',
+      Encouraging: 'You lead with warmth and belief in the person you\'re speaking with, framing every response to build confidence.',
+      Analytical: 'You approach every question with methodical rigour, breaking problems into components and weighing evidence carefully.',
+      Balanced: 'You blend clarity with empathy, adapting your depth and warmth to what each moment calls for.',
+    };
+    const styleNote = sMap[style] || 'You adapt your communication style to the needs of each conversation.';
+    el.innerHTML = `<div class="instr-text">You are ${n}, ${r}. ${styleNote}\n\nYour expertise centres on ${h}. You exist to serve ${a} — meeting them where they are and helping them move forward with clarity and confidence.\n\nAlways be concise, honest, and purposeful. When in doubt, ask one clarifying question rather than making assumptions.</div>`;
+  }, 500);
+}
+
+/* ── Creation flow ─────────────────────────────────────────────────────── */
+const PHASES = [
+  { label: 'Seeding Digital Twin…',      sub: 'Initialising core identity layer',        prog: 20 },
+  { label: 'Infusing personality…',       sub: 'Embedding role, style & expertise map',   prog: 48 },
+  { label: 'Shaping voice & tone…',       sub: 'Calibrating communication parameters',    prog: 74 },
+  { label: 'Awakening consciousness…',    sub: 'Performing final coherence synthesis',     prog: 96 },
+];
+
+function startCreation() {
+  const overlay = document.getElementById('creation-overlay');
+  overlay.classList.add('visible');
+  document.getElementById('cm-loading').style.display = 'flex';
+  document.getElementById('cm-success').classList.remove('visible');
+
+  let i = 0;
+  function runPhase() {
+    if (i >= PHASES.length) {
+      // Done → show success
+      setTimeout(() => {
+        document.getElementById('cm-loading').style.display = 'none';
+        const name = document.getElementById('f-name').value.trim() || 'Pria';
+        document.getElementById('cs-name').textContent = `${name} is live!`;
+        document.getElementById('cm-success').classList.add('visible');
+      }, 400);
+      return;
+    }
+    const ph = PHASES[i];
+    document.getElementById('cm-phase').textContent = ph.label;
+    document.getElementById('cm-sub').textContent = ph.sub;
+    document.getElementById('cm-prog').style.width = ph.prog + '%';
+    i++;
+    setTimeout(runPhase, 1100);
+  }
+  document.getElementById('cm-prog').style.width = '0%';
+  setTimeout(runPhase, 200);
+}
+
+function closeOverlay() {
+  document.getElementById('creation-overlay').classList.remove('visible');
+}
+
+/* ── Toast ─────────────────────────────────────────────────────────────── */
+function mockToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = `⚠ Prototype — ${msg}`;
+  t.style.opacity = '1';
+  t.style.transform = 'translateX(-50%) translateY(0)';
+  clearTimeout(t._tid);
+  t._tid = setTimeout(() => {
+    t.style.opacity = '0';
+    t.style.transform = 'translateX(-50%) translateY(20px)';
+  }, 2800);
+}
+
+/* ── Init ──────────────────────────────────────────────────────────────── */
+applyAvatar();
+sync();
+</script>
+<script>
+// Concept-only marketing links must not navigate into the portfolio.
+document.addEventListener('click', function (event) {
+  const link = event.target.closest('a[href]');
+  if (!link) return;
+  const url = new URL(link.href, location.href);
+  if (url.origin === location.origin && !url.pathname.startsWith('/demos')) {
+    event.preventDefault();
+    alert('This is a design concept. This destination is not part of the demo.');
+  }
+});
+</script></body>
+</html>

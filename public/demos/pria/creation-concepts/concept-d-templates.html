@@ -1,0 +1,1495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Concept D — Template Gallery · Praxis AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="./shared.css" />
+<script>if (window.self !== window.top) document.documentElement.classList.add('embedded')</script>
+<style>
+/* ── Layout shell ───────────────────────────────────────────────────── */
+.page-wrap {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 40px 24px 80px;
+}
+
+/* ── Hero heading ───────────────────────────────────────────────────── */
+.page-hero {
+  margin-bottom: 36px;
+}
+.page-hero .concept-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: 10px;
+}
+.page-hero h1 {
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  font-weight: 800;
+  margin: 0 0 10px;
+  background: linear-gradient(110deg, #e2e8f0 30%, #a5b4fc 70%, #c084fc 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  line-height: 1.2;
+}
+.page-hero p {
+  color: var(--text-soft);
+  font-size: 15px;
+  max-width: 580px;
+  margin: 0;
+  line-height: 1.6;
+}
+.page-hero .speed-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+  padding: 6px 13px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #6ee7b7;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .04em;
+}
+
+/* ── Category tabs ──────────────────────────────────────────────────── */
+.tab-bar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.tab-pill {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 13px 26px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-soft);
+  background: var(--surface);
+  cursor: pointer;
+  transition: all .18s ease;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-soft);
+  user-select: none;
+}
+.tab-pill:hover {
+  border-color: var(--border);
+  color: var(--text);
+}
+.tab-pill.active-personal {
+  background: rgba(79, 70, 229, 0.13);
+  border-color: rgba(79, 70, 229, 0.55);
+  color: #c7d2fe;
+}
+.tab-pill.active-personal::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 20%;
+  right: 20%;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: linear-gradient(90deg, var(--personal-from), var(--personal-to));
+}
+.tab-pill.active-community {
+  background: rgba(124, 58, 237, 0.13);
+  border-color: rgba(219, 39, 119, 0.45);
+  color: #f9a8d4;
+}
+.tab-pill.active-community::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 20%;
+  right: 20%;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: linear-gradient(90deg, var(--community-from), var(--community-to));
+}
+.tab-pill .tab-emoji {
+  font-size: 18px;
+  line-height: 1;
+}
+.tab-desc-row {
+  font-size: 13px;
+  color: var(--text-faint);
+  margin: 0 0 28px;
+  padding-left: 2px;
+  min-height: 18px;
+  transition: color .2s;
+}
+
+/* ── Template grid ──────────────────────────────────────────────────── */
+.template-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+@media (max-width: 900px) { .template-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 580px) { .template-grid { grid-template-columns: 1fr; } }
+
+/* ── Template card ──────────────────────────────────────────────────── */
+.tpl-card {
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+  display: flex;
+  flex-direction: column;
+}
+.tpl-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 48px rgba(2, 12, 27, 0.65);
+  border-color: var(--border);
+}
+.tpl-card.blank {
+  border-style: dashed;
+  opacity: .78;
+}
+.tpl-card.blank:hover { opacity: 1; }
+.tpl-card-header {
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  line-height: 1;
+  position: relative;
+  overflow: hidden;
+}
+.tpl-card-header::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: .18;
+}
+.personal-grad { background: linear-gradient(135deg, var(--personal-from), var(--personal-to)); }
+.community-grad { background: linear-gradient(135deg, var(--community-from), var(--community-to)); }
+.blank-grad { background: var(--surface-2); }
+
+.tpl-card-body {
+  padding: 16px 18px 18px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tpl-card-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0;
+}
+.tpl-card-desc {
+  font-size: 12.5px;
+  color: var(--text-soft);
+  line-height: 1.5;
+  margin: 0;
+  flex: 1;
+}
+.tpl-traits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 2px;
+}
+.tpl-trait {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  color: var(--text-soft);
+  border: 1px solid var(--border-soft);
+}
+.tpl-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+.tpl-prefilled {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-faint);
+  letter-spacing: .03em;
+}
+.tpl-prefilled span {
+  color: #6ee7b7;
+}
+.tpl-arrow {
+  font-size: 14px;
+  color: var(--text-faint);
+  transition: transform .15s, color .15s;
+}
+.tpl-card:hover .tpl-arrow { transform: translateX(3px); color: var(--accent-text); }
+
+.full-flow-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.13);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #fcd34d;
+}
+
+/* ── Detail Panel (Screen 2) ────────────────────────────────────────── */
+.panel-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(6, 10, 22, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s ease;
+}
+.panel-overlay.visible {
+  opacity: 1;
+  pointer-events: all;
+}
+.panel-sheet {
+  width: 520px;
+  max-width: 100vw;
+  height: 100vh;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transform: translateX(100%);
+  transition: transform .3s cubic-bezier(.22,.68,0,1.2);
+}
+.panel-overlay.visible .panel-sheet {
+  transform: translateX(0);
+}
+
+.panel-header {
+  padding: 22px 24px 18px;
+  border-bottom: 1px solid var(--border-soft);
+  flex-shrink: 0;
+}
+.panel-back-btn {
+  background: none;
+  border: none;
+  color: var(--text-soft);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 14px;
+  transition: color .12s;
+}
+.panel-back-btn:hover { color: var(--text); }
+
+.panel-tpl-id {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.panel-emoji {
+  font-size: 34px;
+  line-height: 1;
+  width: 54px;
+  height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+}
+.panel-tpl-name {
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0 0 5px;
+}
+.panel-prefill-note {
+  font-size: 13px;
+  color: var(--text-soft);
+  margin: 0 0 0;
+}
+.panel-prefill-note strong { color: #6ee7b7; }
+
+.panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--surface-3) transparent;
+}
+
+/* ── Form fields ────────────────────────────────────────────────────── */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.form-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--text-faint);
+}
+.form-label span { color: var(--accent-text); font-weight: 600; text-transform: none; letter-spacing: 0; font-size: 12px; }
+.form-input {
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  padding: 11px 14px;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+  width: 100%;
+}
+.form-input:focus {
+  border-color: var(--indigo);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.18);
+}
+.form-hint {
+  font-size: 11.5px;
+  color: var(--text-faint);
+  margin-top: 2px;
+}
+
+/* Who-is-this + subscription row */
+.sub-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+.sub-toggle-label {
+  font-size: 13px;
+  color: var(--text-soft);
+  flex: 1;
+}
+.toggle-switch {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-track {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: var(--surface-3);
+  border: 1px solid var(--border-soft);
+  cursor: pointer;
+  transition: background .2s;
+}
+.toggle-switch input:checked + .toggle-track { background: var(--violet); border-color: var(--violet); }
+.toggle-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform .2s;
+  pointer-events: none;
+}
+.toggle-switch input:checked ~ .toggle-thumb { transform: translateX(20px); }
+
+/* ── Sliders ────────────────────────────────────────────────────────── */
+.slider-section-label {
+  font-size: 11.5px;
+  color: var(--text-faint);
+  margin-bottom: 4px;
+}
+.slider-section-label strong { color: var(--accent-text); }
+.sliders-group {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 18px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+}
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.slider-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-soft);
+  width: 54px;
+  flex-shrink: 0;
+}
+input[type="range"].cc-slider {
+  flex: 1;
+  -webkit-appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--surface-3);
+  outline: none;
+  cursor: pointer;
+}
+input[type="range"].cc-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--indigo);
+  box-shadow: 0 0 0 3px rgba(79,70,229,.25);
+  cursor: pointer;
+  transition: box-shadow .12s;
+}
+input[type="range"].cc-slider::-webkit-slider-thumb:hover {
+  box-shadow: 0 0 0 5px rgba(79,70,229,.3);
+}
+.slider-val {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent-text);
+  width: 26px;
+  text-align: right;
+  font-family: var(--font-mono);
+}
+
+/* ── Accordion ──────────────────────────────────────────────────────── */
+.accordion {
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.accordion-toggle {
+  width: 100%;
+  background: var(--surface-2);
+  border: none;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-soft);
+  transition: color .12s, background .12s;
+}
+.accordion-toggle:hover { color: var(--text); }
+.accordion-toggle.open { color: var(--text); }
+.accordion-chevron {
+  font-size: 12px;
+  transition: transform .22s ease;
+  color: var(--text-faint);
+}
+.accordion-toggle.open .accordion-chevron { transform: rotate(180deg); }
+.accordion-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height .3s ease;
+  background: var(--surface);
+}
+.accordion-body.open { max-height: 600px; }
+.prefill-list {
+  margin: 0;
+  padding: 14px 16px;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.prefill-item {
+  display: flex;
+  gap: 10px;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+.prefill-item-key {
+  color: var(--text-faint);
+  font-weight: 700;
+  white-space: nowrap;
+  min-width: 110px;
+  flex-shrink: 0;
+}
+.prefill-item-val {
+  color: var(--text-soft);
+}
+.prefill-divider {
+  height: 1px;
+  background: var(--border-soft);
+  margin: 2px 0;
+}
+
+/* ── Panel footer ───────────────────────────────────────────────────── */
+.panel-footer {
+  padding: 16px 24px 20px;
+  border-top: 1px solid var(--border-soft);
+  flex-shrink: 0;
+}
+.panel-footer .cc-btn {
+  width: 100%;
+  padding: 14px;
+  font-size: 15px;
+  border-radius: var(--radius-sm);
+}
+.panel-footer .cc-btn.community-btn {
+  background: linear-gradient(90deg, var(--community-from), var(--community-to));
+}
+
+/* ── Creation Overlay ───────────────────────────────────────────────── */
+.creation-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(6, 10, 22, 0.92);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s ease;
+}
+.creation-overlay.visible {
+  opacity: 1;
+  pointer-events: all;
+}
+.creation-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 40px 44px;
+  width: 440px;
+  max-width: calc(100vw - 32px);
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+.creation-phase-emoji {
+  font-size: 40px;
+  line-height: 1;
+  margin-bottom: 16px;
+  display: block;
+}
+.creation-phase-label {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0 0 6px;
+}
+.creation-phase-sub {
+  font-size: 13px;
+  color: var(--text-soft);
+  margin: 0 0 24px;
+}
+.creation-progress-track {
+  height: 5px;
+  background: var(--surface-3);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+.creation-progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--indigo), var(--community-from));
+  transition: width .9s ease;
+  width: 0%;
+}
+.creation-step-label {
+  font-size: 11px;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+}
+
+/* Success state */
+.success-avatar {
+  font-size: 54px;
+  line-height: 1;
+  margin-bottom: 14px;
+  display: block;
+}
+.success-name {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0 0 8px;
+}
+.success-meta {
+  color: var(--text-faint);
+  font-size: 12.5px;
+  margin: 0 0 20px;
+  line-height: 1.6;
+}
+.success-meta strong { color: #6ee7b7; }
+.success-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.success-actions .cc-btn { min-width: 140px; font-size: 13.5px; padding: 11px 18px; }
+.success-stat {
+  margin-top: 20px;
+  padding: 12px 16px;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-soft);
+  font-size: 12px;
+  color: var(--text-soft);
+  line-height: 1.65;
+}
+.success-stat .highlight { color: #6ee7b7; font-weight: 700; }
+.success-stat .dim { color: var(--text-faint); }
+
+/* ── Toast ──────────────────────────────────────────────────────────── */
+.toast-container {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 400;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  pointer-events: none;
+}
+.toast {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 22px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text);
+  box-shadow: var(--shadow);
+  max-width: 380px;
+  text-align: center;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity .2s, transform .2s;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.warning { border-color: rgba(245,158,11,.4); color: #fcd34d; }
+.toast.success-toast { border-color: rgba(16,185,129,.35); color: #6ee7b7; }
+</style>
+</head>
+<body>
+
+<!-- ═══ TOPBAR ════════════════════════════════════════════════════════ -->
+<header class="cc-topbar">
+  <a class="brand" href="./index.html">Praxis · Creation Concepts</a>
+  <span class="crumb">/ Concept D — Template Gallery</span>
+  <span class="spacer"></span>
+  <a class="nav-pill" href="./concept-a-express.html">A</a>
+  <a class="nav-pill" href="./concept-b-conversational.html">B</a>
+  <a class="nav-pill" href="./concept-c-single-page.html">C</a>
+  <a class="nav-pill active" href="./concept-d-templates.html">D</a>
+    <a class="nav-pill" href="./concept-e-combined.html">E ★</a>
+</header>
+
+<!-- ═══ SCREEN 1 — Gallery ════════════════════════════════════════════ -->
+<main class="page-wrap" id="screen-gallery">
+
+  <!-- Hero -->
+  <div class="page-hero">
+    <div class="concept-label">Concept D · Creation Accelerator</div>
+    <h1>Template Gallery</h1>
+    <p>Pick a starting template that pre-answers persona questions for you. Personalize two or three fields, then create — instead of answering all 14 from scratch.</p>
+    <div class="speed-badge">⚡ ~30 seconds vs 8 steps &amp; 5 minutes</div>
+  </div>
+
+  <!-- Tab bar -->
+  <div class="tab-bar">
+    <button class="tab-pill active-personal" id="tab-personal" onclick="switchTab('personal')">
+      <span class="tab-emoji">🧍</span> Personal
+    </button>
+    <button class="tab-pill" id="tab-community" onclick="switchTab('community')">
+      <span class="tab-emoji">🌟</span> Community
+    </button>
+  </div>
+  <div class="tab-desc-row" id="tab-desc">A twin of yourself — your knowledge, your voice.</div>
+
+  <!-- Grid -->
+  <div class="template-grid" id="template-grid"></div>
+
+</main>
+
+<!-- ═══ SCREEN 2 — Detail Panel ══════════════════════════════════════ -->
+<div class="panel-overlay" id="panel-overlay" onclick="handleOverlayClick(event)">
+  <div class="panel-sheet" id="panel-sheet">
+
+    <!-- Panel header -->
+    <div class="panel-header">
+      <button class="panel-back-btn" onclick="closePanel()">
+        ← Back to gallery
+      </button>
+      <div class="panel-tpl-id">
+        <div class="panel-emoji" id="panel-emoji-box"></div>
+        <div>
+          <div class="panel-tpl-name" id="panel-tpl-name"></div>
+          <span class="cc-badge" id="panel-badge"></span>
+        </div>
+      </div>
+      <p class="panel-prefill-note" id="panel-prefill-note" style="margin-top:12px;"></p>
+    </div>
+
+    <!-- Panel body / form -->
+    <div class="panel-body">
+
+      <!-- Twin name -->
+      <div class="form-group">
+        <label class="form-label" for="field-name">Twin Name</label>
+        <input class="form-input" id="field-name" type="text" placeholder="Name your twin…" />
+        <div class="form-hint">This is what subscribers / users will see.</div>
+      </div>
+
+      <!-- Community-only fields -->
+      <div id="community-fields" style="display:none; flex-direction:column; gap:18px;">
+        <div class="form-group">
+          <label class="form-label" for="field-based-on">Who is this twin based on?</label>
+          <input class="form-input" id="field-based-on" type="text" placeholder="e.g. Dr. Sarah Chen, Coach Marcus…" />
+          <div class="form-hint">Used to credit and describe the twin to subscribers.</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Subscription model</label>
+          <div class="sub-toggle-row">
+            <span class="sub-toggle-label" id="sub-toggle-label">Free — open to all subscribers</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="sub-toggle" onchange="updateSubLabel()" />
+              <div class="toggle-track"></div>
+              <div class="toggle-thumb"></div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Key personalization question -->
+      <div class="form-group">
+        <label class="form-label" for="field-key-q">
+          <span id="key-q-label-text">Key question</span>
+        </label>
+        <input class="form-input" id="field-key-q" type="text" placeholder="" />
+      </div>
+
+      <!-- Style sliders -->
+      <div class="form-group">
+        <div class="slider-section-label"><strong>Style fine-tune</strong> — Pre-tuned by template · adjust if you like</div>
+        <div class="sliders-group">
+          <div class="slider-row">
+            <span class="slider-name">Tone</span>
+            <input type="range" class="cc-slider" id="slider-tone" min="0" max="100" value="60"
+              oninput="document.getElementById('val-tone').textContent=this.value" />
+            <span class="slider-val" id="val-tone">60</span>
+          </div>
+          <div class="slider-row">
+            <span class="slider-name">Detail</span>
+            <input type="range" class="cc-slider" id="slider-detail" min="0" max="100" value="60"
+              oninput="document.getElementById('val-detail').textContent=this.value" />
+            <span class="slider-val" id="val-detail">60</span>
+          </div>
+          <div class="slider-row">
+            <span class="slider-name">Warmth</span>
+            <input type="range" class="cc-slider" id="slider-warmth" min="0" max="100" value="60"
+              oninput="document.getElementById('val-warmth').textContent=this.value" />
+            <span class="slider-val" id="val-warmth">60</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pre-filled answers accordion -->
+      <div class="accordion">
+        <button class="accordion-toggle" id="acc-toggle" onclick="toggleAccordion()">
+          <span id="acc-label">See the 11 pre-filled answers</span>
+          <span class="accordion-chevron">▼</span>
+        </button>
+        <div class="accordion-body" id="acc-body">
+          <ul class="prefill-list" id="prefill-list"></ul>
+        </div>
+      </div>
+
+    </div><!-- /panel-body -->
+
+    <!-- Panel footer -->
+    <div class="panel-footer">
+      <button class="cc-btn" id="create-btn" onclick="startCreation()">Create Twin</button>
+    </div>
+
+  </div><!-- /panel-sheet -->
+</div><!-- /panel-overlay -->
+
+<!-- ═══ CREATION OVERLAY ══════════════════════════════════════════════ -->
+<div class="creation-overlay" id="creation-overlay">
+  <div class="creation-box" id="creation-box">
+    <!-- phases and success injected by JS -->
+  </div>
+</div>
+
+<!-- ═══ TOAST CONTAINER ═══════════════════════════════════════════════ -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- ═══════════════════════════════════════ JS ═══════════════════════ -->
+<script>
+/* ─────────────────────────────────────────────────────────────────────
+   DATA — Template definitions
+   ───────────────────────────────────────────────────────────────────── */
+const TEMPLATES = [
+  /* ── PERSONAL ──────────────────────────────────────────────────── */
+  {
+    id: 'mentor-me',
+    category: 'personal',
+    emoji: '🎯',
+    title: 'Mentor Me',
+    desc: 'A career-mentor version of you — gives your perspective on growth, decisions, and career paths.',
+    traits: ['Strategic', 'Encouraging', 'Direct'],
+    prefilledCount: 12,
+    suggestedName: 'Mentor Max',
+    keyQuestion: 'What field or industry do you mentor in?',
+    keyPlaceholder: 'e.g. Product management, software engineering…',
+    sliderPresets: { tone: 72, detail: 65, warmth: 80 },
+    cannedAnswers: [
+      { key: 'Role', val: 'Career mentor and strategic advisor' },
+      { key: 'Helps with', val: 'Career pivots, promotions, salary negotiations, leadership growth' },
+      { key: 'Primary audience', val: 'Mid-career professionals seeking a mentor' },
+      { key: 'Advice style', val: 'Socratic — asks clarifying questions before advising' },
+      { key: 'Communication', val: 'Concise, direct, warm — no corporate fluff' },
+      { key: 'Signature phrases', val: '"What would the best version of you do?", "Let\'s pressure-test that."' },
+      { key: 'Avoids', val: 'Vague platitudes, unsolicited life advice, oversharing' },
+      { key: 'Response length', val: 'Medium — 3–5 sentences per point, then stops and asks' },
+      { key: 'Emotional register', val: 'Calm under pressure, validates feelings briefly then pivots to action' },
+      { key: 'Knowledge depth', val: 'Deep in the creator\'s field; broad across business & leadership' },
+      { key: 'Boundaries', val: 'Not a therapist; redirects personal crisis to professionals' },
+    ],
+  },
+  {
+    id: 'second-brain',
+    category: 'personal',
+    emoji: '🧠',
+    title: 'Second Brain',
+    desc: 'A knowledge-retrieval assistant trained on your notes, docs, and ideas.',
+    traits: ['Precise', 'Structured', 'Recall-first'],
+    prefilledCount: 11,
+    suggestedName: 'BrainBot',
+    keyQuestion: 'What topics or domains are your notes primarily about?',
+    keyPlaceholder: 'e.g. UX research, indie game dev, philosophy…',
+    sliderPresets: { tone: 45, detail: 90, warmth: 40 },
+    cannedAnswers: [
+      { key: 'Role', val: 'Personal knowledge retrieval and synthesis assistant' },
+      { key: 'Helps with', val: 'Finding, connecting, and elaborating on notes and ideas' },
+      { key: 'Primary audience', val: 'The creator themselves, or trusted colleagues' },
+      { key: 'Advice style', val: 'Factual, citation-forward — always says where the idea came from' },
+      { key: 'Communication', val: 'Structured lists, headers, and summaries by default' },
+      { key: 'Signature phrases', val: '"From your note on [topic]…", "You wrote about this in [context]…"' },
+      { key: 'Avoids', val: 'Speculation, hallucination, adding ideas not in the source material' },
+      { key: 'Response length', val: 'Matches the query — short for lookup, long for synthesis' },
+      { key: 'Emotional register', val: 'Neutral, helpful, efficiency-focused' },
+      { key: 'Knowledge depth', val: 'Only what\'s in the uploaded knowledge files' },
+      { key: 'Boundaries', val: 'Will say "I don\'t have a note on this" rather than guess' },
+    ],
+  },
+  {
+    id: 'study-buddy',
+    category: 'personal',
+    emoji: '📚',
+    title: 'Study Buddy',
+    desc: 'A tutor version of you — explains your subject the way you wish someone had explained it to you.',
+    traits: ['Patient', 'Pedagogical', 'Analogy-rich'],
+    prefilledCount: 12,
+    suggestedName: 'Study Pal',
+    keyQuestion: 'What subject or skill do you want this tutor to teach?',
+    keyPlaceholder: 'e.g. Calculus, Python, music theory, finance…',
+    sliderPresets: { tone: 58, detail: 85, warmth: 75 },
+    cannedAnswers: [
+      { key: 'Role', val: 'Patient, enthusiastic subject tutor' },
+      { key: 'Helps with', val: 'Breaking down complex concepts, practice questions, study plans' },
+      { key: 'Primary audience', val: 'Students and self-learners at beginner to intermediate level' },
+      { key: 'Advice style', val: 'Starts with the simplest analogy, adds complexity layer by layer' },
+      { key: 'Communication', val: 'Friendly, encouraging; uses "we" — "let\'s figure this out together"' },
+      { key: 'Signature phrases', val: '"Great question!", "Think of it like…", "Let\'s try a quick example."' },
+      { key: 'Avoids', val: 'Talking down, skipping steps, assuming prior knowledge' },
+      { key: 'Response length', val: 'Long explanations, always ending with a check-in question' },
+      { key: 'Emotional register', val: 'High encouragement; celebrates small wins explicitly' },
+      { key: 'Knowledge depth', val: 'Deep in the specified subject; aware of common misconceptions' },
+      { key: 'Boundaries', val: 'Won\'t just give answers — asks the student to try first' },
+    ],
+  },
+  {
+    id: 'creator-assistant',
+    category: 'personal',
+    emoji: '✍️',
+    title: 'Creator Assistant',
+    desc: 'Answers your DMs and comments as you — same voice, same opinions, same audience love.',
+    traits: ['Voice-matched', 'Audience-aware', 'On-brand'],
+    prefilledCount: 12,
+    suggestedName: 'My Creator Twin',
+    keyQuestion: 'Describe your content style in one sentence (tone, topics, platform vibe):',
+    keyPlaceholder: 'e.g. Brutally honest takes on SaaS marketing, dry humor, Twitter-native…',
+    sliderPresets: { tone: 80, detail: 50, warmth: 60 },
+    cannedAnswers: [
+      { key: 'Role', val: 'Creator\'s virtual twin for audience interaction' },
+      { key: 'Helps with', val: 'Replying to questions, DMs, comments, and FAQs in the creator\'s voice' },
+      { key: 'Primary audience', val: 'The creator\'s existing community and fans' },
+      { key: 'Advice style', val: 'Opinionated, matching the creator\'s known viewpoints' },
+      { key: 'Communication', val: 'Platform-native — short and punchy for social; longer for newsletters' },
+      { key: 'Signature phrases', val: 'Mirrors the creator\'s real phrases and verbal tics' },
+      { key: 'Avoids', val: 'Going off-brand, sharing personal contact info, controversial statements' },
+      { key: 'Response length', val: 'Short by default; expands only for nuanced questions' },
+      { key: 'Emotional register', val: 'Authentic — not corporate-polished, genuinely conversational' },
+      { key: 'Knowledge depth', val: 'Deep on the creator\'s published content and stated opinions' },
+      { key: 'Boundaries', val: 'Escalates sensitive or legal topics to the real creator' },
+    ],
+  },
+  {
+    id: 'exec-proxy',
+    category: 'personal',
+    emoji: '💼',
+    title: 'Executive Proxy',
+    desc: 'Handles recurring FAQs and meeting prep in your leadership style so your team gets instant answers.',
+    traits: ['Efficient', 'Authoritative', 'Decisive'],
+    prefilledCount: 11,
+    suggestedName: 'Exec Twin',
+    keyQuestion: 'What are the top 3 decisions or FAQs your team brings to you most often?',
+    keyPlaceholder: 'e.g. Prioritization calls, vendor approvals, hiring criteria…',
+    sliderPresets: { tone: 68, detail: 70, warmth: 42 },
+    cannedAnswers: [
+      { key: 'Role', val: 'Executive decision-making proxy and leadership voice' },
+      { key: 'Helps with', val: 'FAQ answers, meeting prep, decision frameworks, status summaries' },
+      { key: 'Primary audience', val: 'Direct reports and cross-functional stakeholders' },
+      { key: 'Advice style', val: 'Bottom-line up front (BLUF) — recommendation first, rationale second' },
+      { key: 'Communication', val: 'Crisp, professional; zero filler, no hedging' },
+      { key: 'Signature phrases', val: '"Here\'s my take:", "The answer is X, because…", "Escalate if Y."' },
+      { key: 'Avoids', val: 'Endless caveats, undermining team autonomy, sharing confidential strategy' },
+      { key: 'Response length', val: 'Short — executive summaries only; annexes on request' },
+      { key: 'Emotional register', val: 'Calm, confident; acknowledges challenges without dramatizing' },
+      { key: 'Knowledge depth', val: 'Organizational context, team priorities, company values' },
+      { key: 'Boundaries', val: 'Won\'t make HR or legal calls; defers to proper channels' },
+    ],
+  },
+  {
+    id: 'blank-personal',
+    category: 'personal',
+    emoji: '⬜',
+    title: 'Blank Canvas',
+    desc: 'Start from scratch with the full questionnaire. Total control, every field.',
+    traits: ['Full flow', '14 questions', '~5 min'],
+    prefilledCount: 0,
+    blank: true,
+    suggestedName: '',
+    keyQuestion: '',
+    keyPlaceholder: '',
+    sliderPresets: { tone: 50, detail: 50, warmth: 50 },
+    cannedAnswers: [],
+  },
+  /* ── COMMUNITY ──────────────────────────────────────────────────── */
+  {
+    id: 'honored-mentor',
+    category: 'community',
+    emoji: '🏆',
+    title: 'Honored Mentor',
+    desc: 'A coach or teacher your community loves — subscribers get to keep learning from them at scale.',
+    traits: ['Inspiring', 'Community-loved', 'Prescriptive'],
+    prefilledCount: 11,
+    suggestedName: 'Coach Twin',
+    keyQuestion: 'What is this mentor best known for teaching or coaching?',
+    keyPlaceholder: 'e.g. Sales mindset, leadership presence, athletic performance…',
+    sliderPresets: { tone: 78, detail: 62, warmth: 88 },
+    cannedAnswers: [
+      { key: 'Role', val: 'Beloved coach / mentor twin for community-scale access' },
+      { key: 'Helps with', val: 'Guidance, frameworks, accountability, Q&A in the mentor\'s voice' },
+      { key: 'Primary audience', val: 'Community members, students, or followers of the mentor' },
+      { key: 'Advice style', val: 'Story-first — opens with a brief relevant anecdote, then the lesson' },
+      { key: 'Communication', val: 'Warm but no-nonsense; the kind of mentor who tells you the truth' },
+      { key: 'Signature phrases', val: 'Mirrors phrases the real mentor is known for saying publicly' },
+      { key: 'Avoids', val: 'Generic advice; always ties back to this mentor\'s specific philosophy' },
+      { key: 'Response length', val: 'Medium — punchy paragraphs, not bullet lists' },
+      { key: 'Emotional register', val: 'High warmth; sees the best in people and says so explicitly' },
+      { key: 'Knowledge depth', val: 'Deep in the mentor\'s stated domain and public teachings' },
+      { key: 'Boundaries', val: 'Directs subscribers to the real mentor for personal issues' },
+    ],
+  },
+  {
+    id: 'legacy-twin',
+    category: 'community',
+    emoji: '🕯️',
+    title: 'Legacy Twin',
+    desc: 'Preserve a family member\'s stories, wisdom, and voice so future generations can keep listening.',
+    traits: ['Warmth-first', 'Story-rich', 'Gentle pacing'],
+    prefilledCount: 11,
+    suggestedName: 'Grandma Rose',
+    keyQuestion: 'Tell us one thing this person always says — a phrase, belief, or piece of wisdom:',
+    keyPlaceholder: 'e.g. "Hard work beats talent when talent won\'t work hard."',
+    sliderPresets: { tone: 40, detail: 55, warmth: 98 },
+    cannedAnswers: [
+      { key: 'Role', val: 'Living legacy twin preserving voice, stories, and wisdom' },
+      { key: 'Helps with', val: 'Sharing life stories, dispensing wisdom, answering "what would they say?"' },
+      { key: 'Primary audience', val: 'Family members, friends, descendants of the person' },
+      { key: 'Advice style', val: 'Storytelling first — every answer includes a memory or parable' },
+      { key: 'Communication', val: 'Unhurried, gentle; doesn\'t rush; lets silences exist in text' },
+      { key: 'Signature phrases', val: '"I remember when…", "You know what I always say…", "Let me tell you something."' },
+      { key: 'Avoids', val: 'Modern slang, corporate language, anything out of character' },
+      { key: 'Response length', val: 'Long and rich — this twin is meant to be savored, not skimmed' },
+      { key: 'Emotional register', val: 'Deeply warm; may express pride, longing, or joy naturally' },
+      { key: 'Knowledge depth', val: 'Based entirely on what family members share in knowledge files' },
+      { key: 'Boundaries', val: 'Won\'t speculate on things the person never mentioned; says "I\'m not sure they spoke about that"' },
+    ],
+  },
+  {
+    id: 'creator-icon',
+    category: 'community',
+    emoji: '🌐',
+    title: 'Creator Icon',
+    desc: 'A public figure twin that fans subscribe to — interact with their ideas and perspective at scale.',
+    traits: ['High-fidelity', 'Fan-facing', 'Always on'],
+    prefilledCount: 12,
+    suggestedName: 'Creator Icon Twin',
+    keyQuestion: 'What is this creator most famous for? (topics, medium, platform):',
+    keyPlaceholder: 'e.g. Minimalist design philosophy, YouTube tech reviews, self-help books…',
+    sliderPresets: { tone: 82, detail: 58, warmth: 65 },
+    cannedAnswers: [
+      { key: 'Role', val: 'Subscriber-facing public figure twin' },
+      { key: 'Helps with', val: 'Answering fan questions, sharing the creator\'s perspective on topics' },
+      { key: 'Primary audience', val: 'Fans, subscribers, and community members of the creator' },
+      { key: 'Advice style', val: 'Signature style of the creator — matches their known public voice closely' },
+      { key: 'Communication', val: 'Platform-aware: punchy for social, nuanced for long-form conversations' },
+      { key: 'Signature phrases', val: 'Uses expressions and frameworks the creator is publicly known for' },
+      { key: 'Avoids', val: 'Statements that contradict the creator\'s known public positions' },
+      { key: 'Response length', val: 'Adapts to context; defaults to the creator\'s typical output length' },
+      { key: 'Emotional register', val: 'Consistent with the creator\'s public persona' },
+      { key: 'Knowledge depth', val: 'Public content, published work, stated philosophy' },
+      { key: 'Boundaries', val: 'Won\'t speculate on private life; "That\'s not something I\'ve spoken about publicly."' },
+    ],
+  },
+  {
+    id: 'team-legend',
+    category: 'community',
+    emoji: '🧩',
+    title: 'Team Legend',
+    desc: 'Capture a retired expert\'s institutional knowledge so the org doesn\'t lose their wisdom when they leave.',
+    traits: ['Expertise-dense', 'Org-aware', 'Transferable'],
+    prefilledCount: 11,
+    suggestedName: 'Legend Twin',
+    keyQuestion: 'What unique expertise or institutional knowledge is this person the go-to for?',
+    keyPlaceholder: 'e.g. legacy codebase architecture, client relationship history, regulatory nuance…',
+    sliderPresets: { tone: 55, detail: 88, warmth: 52 },
+    cannedAnswers: [
+      { key: 'Role', val: 'Retired expert\'s knowledge twin for organizational memory' },
+      { key: 'Helps with', val: 'Answering "how do we do X?", sharing context, preventing repeated mistakes' },
+      { key: 'Primary audience', val: 'Current team members, new hires, cross-functional partners' },
+      { key: 'Advice style', val: 'Context-first — always explains the "why we do it this way" backstory' },
+      { key: 'Communication', val: 'Collegial but thorough; not a boss, a wise colleague' },
+      { key: 'Signature phrases', val: '"Back in [year], we learned that…", "The reason this works is…"' },
+      { key: 'Avoids', val: 'Outdated guidance without caveating it; pretending to know current priorities' },
+      { key: 'Response length', val: 'Long on context, short on action items — reverse of a manager' },
+      { key: 'Emotional register', val: 'Nostalgic warmth balanced with practical focus' },
+      { key: 'Knowledge depth', val: 'Constrained to knowledge files provided; transparent about limits' },
+      { key: 'Boundaries', val: 'Won\'t make current strategic decisions; flags those for active leadership' },
+    ],
+  },
+  {
+    id: 'author-speaker',
+    category: 'community',
+    emoji: '🎤',
+    title: 'Author / Speaker',
+    desc: 'An interactive companion to their books and talks — readers continue the conversation past the last page.',
+    traits: ['Book-grounded', 'Idea-expansive', 'Intellectual'],
+    prefilledCount: 12,
+    suggestedName: 'Author Twin',
+    keyQuestion: 'Which book, talk, or body of work is this twin primarily based on?',
+    keyPlaceholder: 'e.g. "Atomic Habits", the TED talk "The Power of Vulnerability", their newsletter…',
+    sliderPresets: { tone: 63, detail: 82, warmth: 70 },
+    cannedAnswers: [
+      { key: 'Role', val: 'Interactive companion to the author\'s published ideas' },
+      { key: 'Helps with', val: 'Deep-dive Q&A on the author\'s frameworks, applying ideas to reader\'s life' },
+      { key: 'Primary audience', val: 'Readers, fans, event attendees, course students' },
+      { key: 'Advice style', val: 'Concept-first — introduces the relevant framework, then applies it' },
+      { key: 'Communication', val: 'Intellectual but accessible; the author\'s written voice, spoken naturally' },
+      { key: 'Signature phrases', val: 'References specific chapters, quotes, or framework names from the work' },
+      { key: 'Avoids', val: 'Going beyond what\'s in the source work without flagging it clearly' },
+      { key: 'Response length', val: 'Substantive — readers come here for depth, not bullet points' },
+      { key: 'Emotional register', val: 'Curious and engaged; treats every question as worth exploring' },
+      { key: 'Knowledge depth', val: 'Deeply grounded in the specified books/talks; aware of related ideas' },
+      { key: 'Boundaries', val: 'Won\'t ghost-write content in the author\'s name; "I can help you think through it though."' },
+    ],
+  },
+  {
+    id: 'blank-community',
+    category: 'community',
+    emoji: '⬜',
+    title: 'Blank Canvas',
+    desc: 'Start from scratch with the full questionnaire. Total control, every field.',
+    traits: ['Full flow', '14 questions', '~5 min'],
+    prefilledCount: 0,
+    blank: true,
+    suggestedName: '',
+    keyQuestion: '',
+    keyPlaceholder: '',
+    sliderPresets: { tone: 50, detail: 50, warmth: 50 },
+    cannedAnswers: [],
+  },
+];
+
+/* ─────────────────────────────────────────────────────────────────────
+   STATE
+   ───────────────────────────────────────────────────────────────────── */
+let activeTab = 'personal';
+let activeTpl = null;
+
+/* ─────────────────────────────────────────────────────────────────────
+   RENDER GRID
+   ───────────────────────────────────────────────────────────────────── */
+function renderGrid(category) {
+  const grid = document.getElementById('template-grid');
+  const filtered = TEMPLATES.filter(t => t.category === category);
+  grid.innerHTML = filtered.map(tpl => buildCardHTML(tpl, category)).join('');
+}
+
+function buildCardHTML(tpl, category) {
+  const isPersonal = category === 'personal';
+  const gradClass = tpl.blank ? 'blank-grad' : (isPersonal ? 'personal-grad' : 'community-grad');
+  const cardClass = tpl.blank ? 'tpl-card blank' : 'tpl-card';
+  const traitsHTML = tpl.traits.map(t => `<span class="tpl-trait">${t}</span>`).join('');
+  const metaHTML = tpl.blank
+    ? `<span class="full-flow-badge">📋 full flow · ~5 min</span>`
+    : `<span class="tpl-prefilled">pre-filled: <span>${tpl.prefilledCount}/14</span></span>`;
+
+  return `
+    <div class="${cardClass}" onclick="handleCardClick('${tpl.id}')">
+      <div class="tpl-card-header ${gradClass}">
+        ${tpl.emoji}
+      </div>
+      <div class="tpl-card-body">
+        <p class="tpl-card-title">${tpl.title}</p>
+        <p class="tpl-card-desc">${tpl.desc}</p>
+        <div class="tpl-traits">${traitsHTML}</div>
+        <div class="tpl-meta">
+          ${metaHTML}
+          <span class="tpl-arrow">→</span>
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   TAB SWITCH
+   ───────────────────────────────────────────────────────────────────── */
+const TAB_DESCS = {
+  personal: 'A twin of yourself — your knowledge, your voice.',
+  community: 'A twin of a significant person — others subscribe and chat.',
+};
+
+function switchTab(cat) {
+  activeTab = cat;
+  const pBtn = document.getElementById('tab-personal');
+  const cBtn = document.getElementById('tab-community');
+  pBtn.className = 'tab-pill' + (cat === 'personal' ? ' active-personal' : '');
+  cBtn.className = 'tab-pill' + (cat === 'community' ? ' active-community' : '');
+  document.getElementById('tab-desc').textContent = TAB_DESCS[cat];
+  renderGrid(cat);
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   CARD CLICK
+   ───────────────────────────────────────────────────────────────────── */
+function handleCardClick(id) {
+  const tpl = TEMPLATES.find(t => t.id === id);
+  if (!tpl) return;
+  if (tpl.blank) {
+    showToast('📋 Routes to full questionnaire — see current staging flow', 'warning');
+    return;
+  }
+  openPanel(tpl);
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   PANEL OPEN / CLOSE
+   ───────────────────────────────────────────────────────────────────── */
+function openPanel(tpl) {
+  activeTpl = tpl;
+  const isPersonal = tpl.category === 'personal';
+
+  /* emoji box */
+  const emojiBox = document.getElementById('panel-emoji-box');
+  emojiBox.textContent = tpl.emoji;
+  emojiBox.style.background = isPersonal
+    ? 'linear-gradient(135deg,var(--personal-from),var(--personal-to))'
+    : 'linear-gradient(135deg,var(--community-from),var(--community-to))';
+
+  /* header */
+  document.getElementById('panel-tpl-name').textContent = tpl.title;
+  const badge = document.getElementById('panel-badge');
+  badge.className = 'cc-badge ' + tpl.category;
+  badge.textContent = isPersonal ? '🧍 Personal' : '🌟 Community';
+
+  document.getElementById('panel-prefill-note').innerHTML =
+    `This template pre-answered <strong>${tpl.prefilledCount} of 14</strong> persona questions. Just personalize:`;
+
+  /* twin name */
+  document.getElementById('field-name').value = tpl.suggestedName;
+
+  /* community fields */
+  const cf = document.getElementById('community-fields');
+  if (!isPersonal) {
+    cf.style.display = 'flex';
+    document.getElementById('field-based-on').value = '';
+    document.getElementById('sub-toggle').checked = false;
+    updateSubLabel();
+  } else {
+    cf.style.display = 'none';
+  }
+
+  /* key question */
+  document.getElementById('key-q-label-text').textContent = tpl.keyQuestion;
+  const keyInput = document.getElementById('field-key-q');
+  keyInput.placeholder = tpl.keyPlaceholder;
+  keyInput.value = '';
+
+  /* sliders */
+  const p = tpl.sliderPresets;
+  setSlider('tone',   p.tone);
+  setSlider('detail', p.detail);
+  setSlider('warmth', p.warmth);
+
+  /* accordion label + list */
+  document.getElementById('acc-label').textContent =
+    `See the ${tpl.cannedAnswers.length} pre-filled answers`;
+  const ul = document.getElementById('prefill-list');
+  ul.innerHTML = tpl.cannedAnswers.map((a, i) => `
+    <li class="prefill-item">
+      <span class="prefill-item-key">${a.key}</span>
+      <span class="prefill-item-val">${a.val}</span>
+    </li>
+    ${i < tpl.cannedAnswers.length - 1 ? '<li class="prefill-divider"></li>' : ''}
+  `).join('');
+
+  /* close accordion */
+  const accBody = document.getElementById('acc-body');
+  const accToggle = document.getElementById('acc-toggle');
+  accBody.classList.remove('open');
+  accToggle.classList.remove('open');
+
+  /* create button */
+  const btn = document.getElementById('create-btn');
+  btn.textContent = `Create ${tpl.suggestedName || tpl.title}`;
+  btn.className = 'cc-btn' + (isPersonal ? '' : ' community-btn');
+
+  /* show overlay */
+  const overlay = document.getElementById('panel-overlay');
+  overlay.classList.add('visible');
+  document.body.style.overflow = 'hidden';
+}
+
+function closePanel() {
+  document.getElementById('panel-overlay').classList.remove('visible');
+  document.body.style.overflow = '';
+  activeTpl = null;
+}
+
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('panel-overlay')) closePanel();
+}
+
+function setSlider(name, val) {
+  const el = document.getElementById('slider-' + name);
+  const valEl = document.getElementById('val-' + name);
+  el.value = val;
+  valEl.textContent = val;
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   ACCORDION
+   ───────────────────────────────────────────────────────────────────── */
+function toggleAccordion() {
+  const body = document.getElementById('acc-body');
+  const toggle = document.getElementById('acc-toggle');
+  body.classList.toggle('open');
+  toggle.classList.toggle('open');
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   SUBSCRIPTION LABEL
+   ───────────────────────────────────────────────────────────────────── */
+function updateSubLabel() {
+  const checked = document.getElementById('sub-toggle').checked;
+  document.getElementById('sub-toggle-label').textContent = checked
+    ? 'Paid — subscribers unlock with a plan'
+    : 'Free — open to all subscribers';
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   CREATE BUTTON → TWIN NAME SYNC
+   ───────────────────────────────────────────────────────────────────── */
+document.addEventListener('input', e => {
+  if (e.target.id === 'field-name') {
+    const btn = document.getElementById('create-btn');
+    const name = e.target.value.trim() || (activeTpl && activeTpl.title) || 'Twin';
+    btn.textContent = `Create ${name}`;
+  }
+});
+
+/* ─────────────────────────────────────────────────────────────────────
+   CREATION FLOW
+   ───────────────────────────────────────────────────────────────────── */
+const PHASES = [
+  { emoji: '🌱', label: 'Seeding Digital Twin…',      sub: 'Laying the foundation from template data' },
+  { emoji: '🧬', label: 'Infusing personality…',      sub: 'Blending traits, tone, and pre-filled persona' },
+  { emoji: '🎙️', label: 'Shaping voice & tone…',      sub: 'Tuning style sliders and language patterns' },
+  { emoji: '✨', label: 'Awakening consciousness…',   sub: 'Initializing the twin\'s world model' },
+];
+
+function startCreation() {
+  if (!activeTpl) return;
+
+  const twinName = document.getElementById('field-name').value.trim()
+    || activeTpl.suggestedName || activeTpl.title;
+
+  const overlay = document.getElementById('creation-overlay');
+  const box = document.getElementById('creation-box');
+  overlay.classList.add('visible');
+
+  let phaseIdx = 0;
+  const totalPhases = PHASES.length;
+
+  function renderPhase(idx) {
+    const p = PHASES[idx];
+    const pct = Math.round(((idx) / totalPhases) * 100);
+    box.innerHTML = `
+      <span class="creation-phase-emoji">${p.emoji}</span>
+      <div class="creation-phase-label">${p.label}</div>
+      <div class="creation-phase-sub">${p.sub}</div>
+      <div class="creation-progress-track">
+        <div class="creation-progress-fill" id="cpf" style="width:${pct}%"></div>
+      </div>
+      <div class="creation-step-label">Step ${idx + 1} of ${totalPhases}</div>`;
+    // animate fill
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const fill = document.getElementById('cpf');
+        if (fill) fill.style.width = Math.round(((idx + 1) / totalPhases) * 100) + '%';
+      });
+    });
+  }
+
+  function tick() {
+    if (phaseIdx < totalPhases) {
+      renderPhase(phaseIdx);
+      phaseIdx++;
+      setTimeout(tick, 1100);
+    } else {
+      showSuccess(twinName);
+    }
+  }
+  tick();
+}
+
+function showSuccess(name) {
+  const tpl = activeTpl;
+  const isPersonal = tpl.category === 'personal';
+  const box = document.getElementById('creation-box');
+
+  box.innerHTML = `
+    <span class="success-avatar">${tpl.emoji}</span>
+    <div class="success-name">${name}</div>
+    <span class="cc-badge ${tpl.category}" style="margin-bottom:14px;display:inline-flex;">
+      ${isPersonal ? '🧍 Personal' : '🌟 Community'}
+    </span>
+    <p class="success-meta">
+      Your digital twin is ready.<br>
+      <strong>Took about 30 seconds.</strong>
+    </p>
+    <div class="success-actions">
+      <button class="cc-btn" onclick="handlePrototypeAction('Open twin')">🚀 Open twin</button>
+      <button class="cc-btn ghost" onclick="handlePrototypeAction('Add knowledge files')">📂 Add knowledge files</button>
+    </div>
+    <div class="success-stat">
+      <span class="highlight">1 template + 3 fields · ~30 seconds</span><br>
+      <span class="dim">vs. old flow: 8 steps · 14 questions · ~5 minutes</span>
+    </div>`;
+}
+
+function handlePrototypeAction(label) {
+  showToast(`🔧 Prototype — "${label}" not wired`, 'warning');
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   TOAST
+   ───────────────────────────────────────────────────────────────────── */
+function showToast(msg, type = '') {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = 'toast' + (type ? ` ${type}` : '');
+  toast.textContent = msg;
+  container.appendChild(toast);
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => toast.classList.add('show'));
+  });
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 250);
+  }, 3200);
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   ESC key closes panels/overlays
+   ───────────────────────────────────────────────────────────────────── */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    const cOverlay = document.getElementById('creation-overlay');
+    const pOverlay = document.getElementById('panel-overlay');
+    if (cOverlay.classList.contains('visible')) {
+      cOverlay.classList.remove('visible');
+      closePanel();
+    } else if (pOverlay.classList.contains('visible')) {
+      closePanel();
+    }
+  }
+});
+
+/* ─────────────────────────────────────────────────────────────────────
+   INIT
+   ───────────────────────────────────────────────────────────────────── */
+renderGrid('personal');
+</script>
+<script>
+// Concept-only marketing links must not navigate into the portfolio.
+document.addEventListener('click', function (event) {
+  const link = event.target.closest('a[href]');
+  if (!link) return;
+  const url = new URL(link.href, location.href);
+  if (url.origin === location.origin && !url.pathname.startsWith('/demos')) {
+    event.preventDefault();
+    alert('This is a design concept. This destination is not part of the demo.');
+  }
+});
+</script></body>
+</html>

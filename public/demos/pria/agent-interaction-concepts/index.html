@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Praxis · Agent Interaction Concepts</title>
+<link rel="stylesheet" href="./shared.css">
+<style>
+  .wrap { max-width: 1020px; margin: 0 auto; padding: 40px 24px 80px; }
+  .hero { text-align: center; margin-bottom: 12px; }
+  .hero h1 {
+    font-size: 32px; font-weight: 800; margin: 0 0 10px;
+    background: linear-gradient(90deg, #93c5fd, #c4b5fd, #67e8f9);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .hero p { color: var(--text-soft); font-size: 14.5px; max-width: 680px; margin: 0 auto; line-height: 1.6; }
+  .qs { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin: 26px 0 40px; }
+  .q { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius);
+       padding: 12px 18px; text-align: center; min-width: 130px; }
+  .q .k { font-size: 15px; font-weight: 800; color: var(--accent-text); }
+  .q .l { font-size: 11px; color: var(--text-faint); text-transform: uppercase; letter-spacing: .06em; margin-top: 3px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+  .card {
+    display: block; text-decoration: none; color: inherit;
+    background: var(--surface); border: 1px solid var(--border-soft);
+    border-radius: var(--radius); overflow: hidden; position: relative;
+    transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+  }
+  .card:hover { transform: translateY(-3px); border-color: var(--border); box-shadow: var(--shadow); }
+  .card .letter {
+    position: absolute; top: 14px; right: 16px;
+    font-size: 26px; font-weight: 800; color: rgba(148, 163, 184, .25);
+  }
+  .card .body { padding: 20px; }
+  .card h3 { margin: 0 0 6px; font-size: 16.5px; }
+  .card p { margin: 0 0 12px; color: var(--text-soft); font-size: 13px; line-height: 1.55; }
+  .card .scores { display: flex; gap: 8px; flex-wrap: wrap; }
+  .s { font-size: 10.5px; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--border-soft); color: var(--text-faint); }
+  .s b { color: var(--accent-text); }
+  .card .strip { height: 4px; background: linear-gradient(90deg, var(--indigo), var(--cyan)); }
+  .card.b .strip { background: linear-gradient(90deg, var(--cyan), var(--success)); }
+  .card.c .strip { background: linear-gradient(90deg, var(--violet), var(--indigo)); }
+  .card.d .strip { background: linear-gradient(90deg, var(--cyan), var(--violet)); }
+  .card.e .strip { background: linear-gradient(90deg, var(--warning), var(--violet)); }
+  .card.f .strip { background: linear-gradient(90deg, var(--indigo), var(--cyan), var(--violet)); }
+  .rec { margin-top: 34px; padding: 18px 22px; border: 1px solid rgba(79,70,229,.4); border-radius: var(--radius);
+         background: rgba(79, 70, 229, .08); font-size: 13px; color: var(--text-soft); line-height: 1.6; }
+  .rec b { color: var(--accent-text); }
+</style>
+</head>
+<body>
+<header class="cc-topbar">
+  <a class="brand" href="./index.html">Praxis · Agent Interaction Concepts</a>
+  <span class="crumb">Zapier-style direct manipulation on the Living Map · pick a direction</span>
+  <span class="spacer"></span>
+  <a class="nav-pill" href="./concept-a-config-flip.html">A</a>
+  <a class="nav-pill" href="./concept-b-edge-palette.html">B</a>
+  <a class="nav-pill" href="./concept-c-run-controls.html">C</a>
+  <a class="nav-pill" href="./concept-d-data-mapping.html">D</a>
+  <a class="nav-pill" href="./concept-e-template-blocks.html">E</a>
+  <a class="nav-pill" href="./concept-f-combined.html">F</a>
+</header>
+
+<div class="wrap">
+  <div class="hero">
+    <h1>What should touching an agent card do?</h1>
+    <p>Five interactive concepts on the same Living Map DAG canvas, same run data.
+       Each makes the agent cards directly manipulable in a different way —
+       Zapier/n8n-style. Click into each and judge how it <em>feels to act on the run</em>,
+       not just watch it.</p>
+  </div>
+
+  <div class="qs">
+    <div class="q"><div class="k">Configure</div><div class="l">change an agent</div></div>
+    <div class="q"><div class="k">Compose</div><div class="l">grow the flow</div></div>
+    <div class="q"><div class="k">Control</div><div class="l">run / pause / retry</div></div>
+    <div class="q"><div class="k">Connect</div><div class="l">wire the data</div></div>
+  </div>
+
+  <div class="grid">
+    <a class="card a" href="./concept-a-config-flip.html">
+      <div class="strip"></div>
+      <div class="body">
+        <span class="letter">A</span>
+        <h3>Card Config Flip</h3>
+        <p>Every card flips into its own settings sheet — model, instructions, tools,
+           context, retries — edited in place on the canvas. The Zapier "click a step
+           to configure it" move.</p>
+        <div class="scores"><span class="s">Effort <b>M</b></span><span class="s">Zapier feel <b>●●●</b></span><span class="s">Graph mutation <b>none</b></span></div>
+      </div>
+    </a>
+    <a class="card b" href="./concept-b-edge-palette.html">
+      <div class="strip"></div>
+      <div class="body">
+        <span class="letter">B</span>
+        <h3>Edge Inserters + Palette</h3>
+        <p>Hover an edge → a “+” appears on the wire. Pick an archetype (or describe one)
+           and a new agent materializes into the flow. n8n's on-connection add,
+           plus drag-to-depend ports.</p>
+        <div class="scores"><span class="s">Effort <b>H</b></span><span class="s">Zapier feel <b>●●●●</b></span><span class="s">Graph mutation <b>full</b></span></div>
+      </div>
+    </a>
+    <a class="card c" href="./concept-c-run-controls.html">
+      <div class="strip"></div>
+      <div class="body">
+        <span class="letter">C</span>
+        <h3>Per-Card Run Controls</h3>
+        <p>Run · Pause · Retry-with-edits · Skip · Pin on every card, plus a whole-graph
+           dry-run mode. Zapier's "Test this step", generalized to live agents.</p>
+        <div class="scores"><span class="s">Effort <b>M</b></span><span class="s">Zapier feel <b>●●●</b></span><span class="s">Graph mutation <b>status only</b></span></div>
+      </div>
+    </a>
+    <a class="card d" href="./concept-d-data-mapping.html">
+      <div class="strip"></div>
+      <div class="body">
+        <span class="letter">D</span>
+        <h3>Data-Mapping Handles</h3>
+        <p>Agents expose output chips — drag <code>preview_url</code> onto another card to bind
+           it as <code>{{deploy.preview_url}}</code>. Zapier's field mapper made spatial; the
+           <em>why</em> of every dependency becomes visible and editable.</p>
+        <div class="scores"><span class="s">Effort <b>H</b></span><span class="s">Zapier feel <b>●●●●●</b></span><span class="s">Graph mutation <b>edges</b></span></div>
+      </div>
+    </a>
+    <a class="card e" href="./concept-e-template-blocks.html">
+      <div class="strip"></div>
+      <div class="body">
+        <span class="letter">E</span>
+        <h3>Template Blocks</h3>
+        <p>Marquee-select agents → save as a reusable block. A library panel of saved
+           sub-flows you drag back onto any canvas. Zap templates ∕ Gumloop skills —
+           and shareable to a course.</p>
+        <div class="scores"><span class="s">Effort <b>H+</b></span><span class="s">Zapier feel <b>●●●</b></span><span class="s">Graph mutation <b>bulk</b></span></div>
+      </div>
+    </a>
+    <a class="card f" href="./concept-f-combined.html">
+      <div class="strip"></div>
+      <div class="body">
+        <span class="letter">F</span>
+        <h3>Command Deck (A + B + D combined)</h3>
+        <p>Selecting a card slides in a compact dock — steer, model &amp; limits, tool toggles —
+           and each tool row has a drag-handle you can fling onto any other card to wire it as a
+           tool source. Plus edge <b>+</b> menus for insert/mute/boost, and fixed data-edge routing
+           for same-column bindings.</p>
+        <div class="scores"><span class="s">Effort <b>H+</b></span><span class="s">Zapier feel <b>●●●●●</b></span><span class="s">Graph mutation <b>edges + tools</b></span></div>
+      </div>
+    </a>
+  </div>
+
+  <div class="rec">
+    <b>Suggested composition:</b> B + A is the minimum set that reads as "Zapier for agents" —
+    edge inserters to grow the flow, config flip to tune each node. C layers on cheaply;
+    D and E build on B's mutation machinery. But judge by feel first — each demo is fully
+    interactive on identical run data.
+  </div>
+</div>
+<script>
+// Concept-only marketing links must not navigate into the portfolio.
+document.addEventListener('click', function (event) {
+  const link = event.target.closest('a[href]');
+  if (!link) return;
+  const url = new URL(link.href, location.href);
+  if (url.origin === location.origin && !url.pathname.startsWith('/demos')) {
+    event.preventDefault();
+    alert('This is a design concept. This destination is not part of the demo.');
+  }
+});
+</script></body>
+</html>

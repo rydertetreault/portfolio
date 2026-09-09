@@ -1,0 +1,1688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Concept B · Edge Palette — Praxis</title>
+<link rel="stylesheet" href="./shared.css" />
+<script>if (window.self !== window.top) document.documentElement.classList.add('embedded')</script>
+<style>
+/* ── Page layout ─────────────────────────────────────────── */
+body {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── Canvas area ─────────────────────────────────────────── */
+#canvas-wrap {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+  cursor: grab;
+  /* dot grid */
+  background-image: radial-gradient(circle, rgba(148,163,184,0.18) 1px, transparent 1px);
+  background-size: 28px 28px;
+  background-color: var(--bg);
+}
+#canvas-wrap.dragging { cursor: grabbing; }
+
+#world {
+  position: absolute;
+  top: 0; left: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+/* ── SVG edges ───────────────────────────────────────────── */
+#edges-svg {
+  position: absolute;
+  top: 0; left: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+
+/* ── Node cards shared ───────────────────────────────────── */
+.node-card {
+  position: absolute;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-soft);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  transition: opacity .25s ease, box-shadow .2s ease;
+}
+.node-card.dimmed {
+  opacity: 0.22 !important;
+  pointer-events: none;
+}
+.node-card.selected {
+  box-shadow: 0 0 0 2px var(--indigo), var(--shadow);
+}
+
+/* ── Plan cards ──────────────────────────────────────────── */
+.plan-card {
+  width: 250px;
+  padding: 14px 16px 16px;
+}
+.plan-card .plan-kicker {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 10px;
+}
+.plan-card .plan-label {
+  font-size: 9.5px; font-weight: 800; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--text-faint);
+}
+.plan-card .plan-name {
+  font-size: 13.5px; font-weight: 700; color: var(--text);
+  margin: 0 0 10px;
+  line-height: 1.35;
+}
+.plan-card .plan-progress-wrap {
+  margin-bottom: 8px;
+}
+.plan-card .plan-progress-bar-bg {
+  height: 4px; border-radius: 999px;
+  background: rgba(148,163,184,.12);
+  overflow: hidden;
+}
+.plan-card .plan-progress-bar-fill {
+  height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--indigo), #818cf8);
+  transition: width .5s ease;
+}
+.plan-card .plan-progress-label {
+  font-size: 10px; color: var(--text-faint); margin-top: 4px;
+}
+.plan-card .plan-origin {
+  font-size: 10.5px; color: var(--text-faint);
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-soft);
+}
+
+/* ── Task cards ──────────────────────────────────────────── */
+.task-card {
+  width: 205px;
+  padding: 12px 14px;
+}
+.task-card .task-header {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 6px;
+}
+.task-card .task-name {
+  font-size: 12.5px; font-weight: 700; color: var(--text);
+  flex: 1; line-height: 1.3;
+}
+.task-card .task-meta {
+  font-size: 10.5px; color: var(--text-faint);
+}
+
+/* ── Agent cards ─────────────────────────────────────────── */
+.agent-card {
+  width: 285px;
+  padding: 0;
+  overflow: hidden;
+}
+.agent-card-header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 13px 14px 11px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.agent-avatar {
+  position: relative;
+  width: 36px; height: 36px; min-width: 36px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #1e2a4a 0%, #111827 100%);
+  border: 1px solid var(--border-soft);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px;
+  flex-shrink: 0;
+}
+.agent-avatar .pulse-ring {
+  display: none;
+  position: absolute;
+  inset: -4px;
+  border-radius: 12px;
+  border: 2px solid rgba(79,70,229,.55);
+  animation: ring-pulse 2s ease infinite;
+}
+.agent-card.running .agent-avatar .pulse-ring { display: block; }
+@keyframes ring-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.3; transform: scale(1.08); }
+}
+.agent-info { flex: 1; min-width: 0; }
+.agent-name {
+  font-size: 12.5px; font-weight: 700; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.agent-role {
+  font-size: 10.5px; color: var(--text-faint); margin-top: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.agent-card-body { padding: 11px 14px 13px; }
+
+.agent-stats {
+  display: flex; gap: 0;
+  margin-bottom: 10px;
+  background: rgba(15,23,42,.6);
+  border-radius: 8px;
+  border: 1px solid var(--border-soft);
+  overflow: hidden;
+}
+.stat-cell {
+  flex: 1; text-align: center;
+  padding: 7px 4px;
+}
+.stat-cell + .stat-cell {
+  border-left: 1px solid var(--border-soft);
+}
+.stat-val {
+  font-size: 12px; font-weight: 700; color: var(--text);
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+}
+.stat-label {
+  font-size: 9px; color: var(--text-faint);
+  text-transform: uppercase; letter-spacing: .07em;
+  margin-top: 2px;
+}
+
+.thinking-ticker {
+  font-size: 10.5px;
+  color: var(--text-soft);
+  line-height: 1.45;
+  min-height: 30px;
+  border-left: 2px solid rgba(79,70,229,.45);
+  padding-left: 8px;
+  display: flex; align-items: center;
+}
+.thinking-ticker.queued { color: var(--text-faint); border-left-color: var(--border-soft); }
+.thinking-ticker.done { border-left-color: rgba(16,185,129,.4); }
+.thinking-ticker span { animation: tick-fade .35s ease; }
+@keyframes tick-fade {
+  from { opacity: 0; transform: translateY(3px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Inspector panel ─────────────────────────────────────── */
+#inspector {
+  position: absolute;
+  top: 0; right: 0;
+  width: 330px;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.97);
+  backdrop-filter: blur(14px);
+  border-left: 1px solid var(--border-soft);
+  display: flex; flex-direction: column;
+  transform: translateX(100%);
+  transition: transform .28s cubic-bezier(.4,0,.2,1);
+  z-index: 30;
+  box-shadow: -12px 0 40px rgba(2,12,27,.5);
+}
+#inspector.open { transform: translateX(0); }
+
+.insp-topbar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--border-soft);
+  flex-shrink: 0;
+}
+.insp-close {
+  margin-left: auto;
+  background: none; border: none;
+  color: var(--text-faint); font-size: 18px;
+  cursor: pointer; line-height: 1;
+  padding: 2px 6px; border-radius: 6px;
+  transition: color .15s, background .15s;
+}
+.insp-close:hover { color: var(--text); background: var(--surface-2); }
+
+.insp-body {
+  flex: 1; min-height: 0;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 18px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148,163,184,.2) transparent;
+}
+.insp-body::-webkit-scrollbar { width: 5px; }
+.insp-body::-webkit-scrollbar-thumb { background: rgba(148,163,184,.2); border-radius: 99px; }
+
+.insp-section-label {
+  font-size: 9.5px; font-weight: 800; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--text-faint);
+  margin-bottom: 7px;
+}
+
+.insp-breadcrumb {
+  font-size: 11px; color: var(--text-faint);
+  display: flex; align-items: center; gap: 5px;
+  flex-wrap: wrap;
+}
+.insp-breadcrumb .sep { color: var(--border); }
+.insp-breadcrumb b { color: var(--text-soft); }
+
+.insp-stats {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+.insp-stat {
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  padding: 10px 8px;
+  text-align: center;
+}
+.insp-stat .sv { font-size: 14px; font-weight: 700; font-family: var(--font-mono); color: var(--text); }
+.insp-stat .sl { font-size: 9px; text-transform: uppercase; letter-spacing: .07em; color: var(--text-faint); margin-top: 3px; }
+
+.steps-list {
+  display: flex; flex-direction: column; gap: 6px;
+}
+.step-row {
+  display: flex; align-items: center; gap: 9px;
+  font-size: 12px; color: var(--text-soft);
+}
+.step-icon {
+  width: 18px; height: 18px; min-width: 18px;
+  border-radius: 999px;
+  border: 1.5px solid var(--border-soft);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px;
+}
+.step-icon.done-step { background: rgba(16,185,129,.15); border-color: rgba(16,185,129,.5); color: #6ee7b7; }
+.step-icon.running-step { border-color: var(--indigo); animation: ws-pulse 1.6s ease infinite; }
+.step-icon.queued-step { opacity: 0.4; }
+
+.thinking-feed {
+  display: flex; flex-direction: column; gap: 6px;
+}
+.thought-row {
+  font-size: 11.5px; color: var(--text-soft); line-height: 1.5;
+  padding: 7px 10px;
+  background: rgba(79,70,229,.06);
+  border-left: 2px solid rgba(79,70,229,.3);
+  border-radius: 0 6px 6px 0;
+}
+
+.tools-list {
+  display: flex; flex-direction: column; gap: 5px;
+}
+.tool-row {
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  padding: 7px 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+}
+.tool-badge {
+  font-size: 9px; font-weight: 800; letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--accent-text);
+  background: rgba(79,70,229,.12);
+  border-radius: 5px;
+  padding: 3px 5px;
+  text-align: center;
+  font-family: var(--font-mono);
+}
+.tool-target { color: var(--text); font-family: var(--font-mono); font-size: 10.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tool-result { color: var(--text-faint); font-family: var(--font-mono); font-size: 10px; white-space: nowrap; }
+
+.context-list {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.ctx-chip {
+  font-size: 10.5px; color: var(--text-soft);
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: 6px;
+  padding: 4px 9px;
+  font-family: var(--font-mono);
+}
+
+.insp-footer {
+  padding: 14px 16px;
+  border-top: 1px solid var(--border-soft);
+  flex-shrink: 0;
+}
+.steer-btn {
+  width: 100%;
+  padding: 11px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: var(--indigo);
+  color: #fff;
+  font-size: 13px; font-weight: 700;
+  cursor: pointer;
+  letter-spacing: .02em;
+  transition: background .15s, transform .1s;
+}
+.steer-btn:hover { background: #4338ca; }
+.steer-btn:active { transform: scale(.98); }
+
+/* ── HUD overlays ────────────────────────────────────────── */
+#zoom-hud {
+  position: absolute;
+  bottom: 18px; left: 18px;
+  display: flex; align-items: center; gap: 2px;
+  background: rgba(15,23,42,.85);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  overflow: hidden;
+  z-index: 20;
+  backdrop-filter: blur(8px);
+}
+.zoom-btn {
+  background: none; border: none;
+  color: var(--text-soft); font-size: 16px;
+  cursor: pointer;
+  padding: 6px 12px; line-height: 1;
+  transition: color .12s, background .12s;
+}
+.zoom-btn:hover { color: var(--text); background: rgba(148,163,184,.08); }
+#zoom-label {
+  font-size: 11px; font-weight: 700; font-family: var(--font-mono);
+  color: var(--text-soft); min-width: 42px; text-align: center;
+  padding: 0 2px;
+}
+
+#canvas-hint {
+  position: absolute;
+  bottom: 18px; right: 18px;
+  font-size: 10.5px; color: var(--text-faint);
+  z-index: 20;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ── Edge SVG paths ──────────────────────────────────────── */
+.edge-path {
+  fill: none;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+.edge-path.running {
+  stroke: var(--indigo);
+  stroke-dasharray: 7 5;
+  animation: dash-flow 1.2s linear infinite;
+}
+.edge-path.done {
+  stroke: rgba(16,185,129,.55);
+  stroke-dasharray: none;
+}
+.edge-path.queued {
+  stroke: rgba(148,163,184,.2);
+  stroke-dasharray: 4 6;
+}
+@keyframes dash-flow {
+  from { stroke-dashoffset: 48; }
+  to   { stroke-dashoffset: 0; }
+}
+.edge-path.dimmed { opacity: 0.08; }
+.edge-path.lit { opacity: 1; }
+
+/* ── Selection dimming on canvas ─────────────────────────── */
+#world.has-selection .node-card:not(.selected):not(.path-lit) {
+  opacity: 0.18;
+}
+#world.has-selection .edge-path:not(.lit) {
+  opacity: 0.05;
+}
+/* ── Edge palette (concept-b) ────────────────────────────── */
+#edge-palette {
+  position: fixed;
+  z-index: 200;
+  background: #0f172a;
+  border: 1px solid rgba(148,163,184,.18);
+  border-radius: 8px;
+  box-shadow: 0 8px 28px rgba(2,12,27,.55);
+  padding: 4px;
+  display: none;
+  min-width: 180px;
+  transform-origin: top left;
+  animation: palette-pop .12s ease-out forwards;
+}
+#edge-palette.visible { display: block; }
+@keyframes palette-pop {
+  from { opacity: 0; transform: translateY(-2px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.palette-header {
+  font-size: 10px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--text-faint);
+  padding: 6px 10px 4px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 220px;
+}
+.palette-edge-label {
+  font-family: var(--font-mono); font-size: 10px;
+  color: var(--text-soft); font-weight: 500;
+  text-transform: none; letter-spacing: 0;
+}
+.palette-divider {
+  height: 1px; background: rgba(148,163,184,.12);
+  margin: 3px 6px;
+}
+
+.palette-action {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px; color: var(--text-soft);
+  transition: background .1s, color .1s;
+  border: none; background: none; width: 100%; text-align: left;
+}
+.palette-action:hover { background: rgba(148,163,184,.09); color: var(--text); }
+.palette-action:active { background: rgba(148,163,184,.14); }
+.palette-action .pa-label { font-size: 12px; font-weight: 500; color: inherit; }
+.palette-action .pa-key {
+  font-family: var(--font-mono); font-size: 10px; color: var(--text-faint);
+  opacity: 0; transition: opacity .1s;
+}
+.palette-action:hover .pa-key { opacity: 1; }
+
+.palette-action.applied .pa-label::after {
+  content: ' ·';
+  color: var(--indigo, #818cf8);
+  font-weight: 800;
+}
+
+/* ── Edge modifier visual states ────────────────────────── */
+.edge-path.muted {
+  stroke: rgba(148,163,184,.15) !important;
+  stroke-dasharray: 3 9 !important;
+  animation: none !important;
+}
+.edge-path.boosted {
+  stroke: var(--indigo) !important;
+  stroke-width: 3 !important;
+  filter: drop-shadow(0 0 4px rgba(79,70,229,.6));
+}
+.edge-path.gated {
+  stroke: rgba(245,158,11,.7) !important;
+  stroke-dasharray: 10 4 !important;
+}
+.edge-path.hovered {
+  stroke-width: 3.5 !important;
+  filter: drop-shadow(0 0 6px rgba(129,140,248,.5));
+  cursor: context-menu;
+}
+
+/* ── Edge "+" inserter (Zapier-style, always visible) ────── */
+.edge-plus {
+  position: absolute;
+  width: 28px; height: 28px;
+  margin: -14px 0 0 -14px; /* center on the midpoint */
+  border-radius: 50%;
+  border: 1px solid var(--border-soft);
+  background: rgba(15,23,42,.95);
+  color: var(--text-soft, #cbd5e1);
+  font-size: 17px; line-height: 25px; font-weight: 700;
+  text-align: center;
+  cursor: pointer;
+  z-index: 5;
+  box-shadow: 0 2px 8px rgba(0,0,0,.45);
+  /* counter-scale: --invz is 1/zoom, set by applyCamera, so the button
+     stays a constant 28px on SCREEN regardless of camera zoom */
+  transform: scale(var(--invz, 1));
+  transition: background .12s ease, color .12s ease, border-color .12s ease;
+  user-select: none;
+}
+.edge-plus:hover, .edge-plus.hot {
+  transform: scale(calc(var(--invz, 1) * 1.3));
+  background: var(--indigo, #4f46e5);
+  border-color: transparent;
+  color: #fff;
+}
+.edge-plus.active {
+  background: var(--indigo, #4f46e5);
+  border-color: transparent;
+  color: #fff;
+}
+/* invisible fat hitbox over each edge — makes "hover the edge" mean
+   "within ~9px of the line" instead of "on a 1.5px curve" */
+.edge-hitbox {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 18;
+  pointer-events: stroke;
+  cursor: pointer;
+}
+
+/* ── Edge badge pill (absolute positioned) ───────────────── */
+.edge-badge {
+  position: absolute;
+  font-size: 9px; font-weight: 800; letter-spacing: .06em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 999px;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+  z-index: 10;
+}
+.edge-badge.muted   { background: rgba(30,41,59,.9); color: var(--text-faint); border: 1px solid var(--border-soft); }
+.edge-badge.boosted { background: rgba(79,70,229,.22); color: #a5b4fc; border: 1px solid rgba(79,70,229,.4); }
+.edge-badge.gated   { background: rgba(245,158,11,.18); color: #fcd34d; border: 1px solid rgba(245,158,11,.4); }
+
+/* ── Toast notification ──────────────────────────────────── */
+#edge-toast {
+  position: fixed;
+  bottom: 22px; left: 50%; transform: translateX(-50%) translateY(8px);
+  background: rgba(15,23,42,.96);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-size: 12.5px; color: var(--text-soft);
+  z-index: 300;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s ease, transform .2s ease;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(2,12,27,.6);
+  white-space: nowrap;
+}
+#edge-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+</style>
+</head>
+<body>
+
+<!-- ── Top bar ────────────────────────────────────────────── -->
+<header class="cc-topbar">
+  <a class="brand" href="./index.html">Praxis · Workspace Concepts</a>
+  <span class="crumb">Concept B · Edge Palette</span>
+  <span class="spacer"></span>
+  <a class="nav-pill"        href="./concept-a-config-flip.html">A</a>
+  <a class="nav-pill active" href="./concept-b-edge-palette.html">B</a>
+  <a class="nav-pill"        href="./concept-c-run-controls.html">C</a>
+  <a class="nav-pill"        href="./concept-d-data-mapping.html">D</a>
+  <a class="nav-pill"        href="./concept-e-template-blocks.html">E</a>
+</header>
+
+<!-- ── Explainer strip ────────────────────────────────────── -->
+<div class="ws-explain">
+  <h1>B · Edge Palette</h1>
+  <p>Click the <b>+</b> on any DAG edge (or click the edge itself) to summon a context palette — reroute the connection, change its priority, mute it, or inject a gate condition — all without leaving the canvas.</p>
+  <div class="scores">
+    <span>Try: <b>click a + on an edge</b></span>
+    <span>·</span>
+    <span><b>pick Mute / Boost / Add Gate</b></span>
+    <span>·</span>
+    <span><b>click an agent</b> to inspect</span>
+  </div>
+</div>
+
+<!-- ── Main canvas ────────────────────────────────────────── -->
+<div id="canvas-wrap">
+  <div id="world">
+    <svg id="edges-svg"></svg>
+    <!-- nodes injected by JS -->
+  </div>
+
+  <!-- Inspector panel (inside canvas-wrap so it layers correctly) -->
+  <div id="inspector">
+    <div class="insp-topbar">
+      <div class="agent-avatar" id="insp-avatar">🤖</div>
+      <div class="insp-info">
+        <div id="insp-name" style="font-size:13.5px;font-weight:700;color:var(--text)"></div>
+        <div id="insp-role" style="font-size:10.5px;color:var(--text-faint);margin-top:2px"></div>
+      </div>
+      <span id="insp-chip"></span>
+      <button class="insp-close" id="insp-close">×</button>
+    </div>
+    <div class="insp-body">
+      <!-- breadcrumb -->
+      <div>
+        <div class="insp-section-label">Path</div>
+        <div class="insp-breadcrumb" id="insp-breadcrumb"></div>
+      </div>
+      <!-- stats -->
+      <div>
+        <div class="insp-section-label">Stats</div>
+        <div class="insp-stats">
+          <div class="insp-stat"><div class="sv" id="insp-elapsed">—</div><div class="sl">Elapsed</div></div>
+          <div class="insp-stat"><div class="sv" id="insp-tokens">—</div><div class="sl">Tokens (k)</div></div>
+          <div class="insp-stat"><div class="sv" id="insp-tools">—</div><div class="sl">Tool calls</div></div>
+        </div>
+      </div>
+      <!-- steps -->
+      <div>
+        <div class="insp-section-label">Steps</div>
+        <div class="steps-list" id="insp-steps"></div>
+      </div>
+      <!-- thinking feed -->
+      <div>
+        <div class="insp-section-label">Thinking</div>
+        <div class="thinking-feed" id="insp-thinking"></div>
+      </div>
+      <!-- tool calls -->
+      <div id="insp-tools-section">
+        <div class="insp-section-label">Tool Calls</div>
+        <div class="tools-list" id="insp-tools-list"></div>
+      </div>
+      <!-- context -->
+      <div id="insp-ctx-section">
+        <div class="insp-section-label">Context Files</div>
+        <div class="context-list" id="insp-ctx"></div>
+      </div>
+    </div>
+    <div class="insp-footer">
+      <button class="steer-btn">💬 Steer in chat</button>
+    </div>
+  </div>
+
+  <!-- Zoom HUD -->
+  <div id="zoom-hud">
+    <button class="zoom-btn" id="zoom-out">−</button>
+    <span id="zoom-label">100%</span>
+    <button class="zoom-btn" id="zoom-in">+</button>
+  </div>
+
+  <div id="canvas-hint">Drag to pan · scroll to zoom · click + on an edge · click an agent to inspect</div>
+</div>
+
+<!-- ── Edge palette popup ────────────────────────────────── -->
+<div id="edge-palette">
+  <div class="palette-header">
+    <span class="palette-edge-label" id="palette-edge-label"></span>
+  </div>
+  <button class="palette-action" data-action="boost"><span class="pa-label">Boost priority</span><span class="pa-key">B</span></button>
+  <button class="palette-action" data-action="mute"><span class="pa-label">Mute</span><span class="pa-key">M</span></button>
+  <button class="palette-action" data-action="gate"><span class="pa-label">Add gate</span><span class="pa-key">G</span></button>
+  <button class="palette-action" data-action="reroute"><span class="pa-label">Reroute</span><span class="pa-key">R</span></button>
+  <div class="palette-divider"></div>
+  <button class="palette-action" data-action="reset"><span class="pa-label">Reset edge</span><span class="pa-key">⌫</span></button>
+</div>
+
+<!-- ── Toast ─────────────────────────────────────────────── -->
+<div id="edge-toast"></div>
+
+<script src="./data.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════
+   DAG Canvas — concept-a-dag.js (inline)
+═══════════════════════════════════════════════════════════ */
+
+const PLAN_W    = 250;
+const TASK_W    = 205;
+const AGENT_W   = 285;
+const COL_GAP   = 95;
+const ROW_GAP   = 26;
+const CARD_H_AGENT = 130; // approximate, recalc after render
+const CARD_H_TASK  = 64;
+const CARD_H_PLAN  = 120;
+
+const COL_PLAN  = 0;
+const COL_TASK  = PLAN_W + COL_GAP;
+const COL_AGENT = PLAN_W + COL_GAP + TASK_W + COL_GAP;
+
+// ── Agent avatar / CPU glyph ──────────────────────────────
+function agentGlyph(agent) {
+  const r = (agent.role || '').toLowerCase();
+  if (r.includes('infra') || r.includes('vercel') || r.includes('deploy')) return '⚙️';
+  if (r.includes('test') || r.includes('qa') || r.includes('playwright')) return '🧪';
+  if (r.includes('draft') || r.includes('copy') || r.includes('landing')) return '✍️';
+  if (r.includes('embed') || r.includes('index')) return '🔗';
+  if (r.includes('audit') || r.includes('scan') || r.includes('fresh')) return '🔍';
+  if (r.includes('analy') || r.includes('rubric') || r.includes('summ')) return '📊';
+  return '🤖';
+}
+
+// ── Layout computation ─────────────────────────────────────
+function computeLayout(plans) {
+  const layout = { plans: [], tasks: [], agents: [], worldH: 0, worldW: 0 };
+
+  // first pass: lay out agents per task, tasks per plan, plans overall
+  let worldY = 40;
+
+  plans.forEach(plan => {
+    const planEntry = { plan, tasks: [], y: 0 };
+    let planTop = worldY;
+    let planBottom = worldY;
+
+    plan.tasks.forEach(task => {
+      const taskEntry = { task, agents: [], y: 0 };
+      let taskTop = worldY;
+
+      task.agents.forEach(agent => {
+        layout.agents.push({ agent, task, plan, x: COL_AGENT, y: worldY });
+        taskEntry.agents.push({ agent, y: worldY });
+        worldY += CARD_H_AGENT + ROW_GAP;
+      });
+
+      const taskMid = taskTop + ((worldY - ROW_GAP - taskTop) / 2) - CARD_H_TASK / 2;
+      taskEntry.y = taskMid;
+      layout.tasks.push({ task, plan, x: COL_TASK, y: taskMid, agentsTop: taskTop });
+      planEntry.tasks.push(taskEntry);
+      planBottom = worldY;
+      worldY += 20; // extra gap between tasks
+    });
+
+    const planMid = planTop + ((planBottom - 20 - planTop) / 2) - CARD_H_PLAN / 2;
+    planEntry.y = planMid;
+    layout.plans.push({ plan, x: COL_PLAN, y: planMid });
+    worldY += 20; // extra gap between plans
+  });
+
+  layout.worldH = worldY + 40;
+  layout.worldW = COL_AGENT + AGENT_W + 40;
+  return layout;
+}
+
+// ── Status chip HTML ──────────────────────────────────────
+function chipHtml(status) {
+  return `<span class="ws-status ${status}">${status}</span>`;
+}
+
+// ── Plan card HTML ────────────────────────────────────────
+function planCardHtml(plan) {
+  const total = plan.tasks.length;
+  const done  = plan.tasks.filter(t => t.status === 'done').length;
+  const pct   = total > 0 ? Math.round((done / total) * 100) : 0;
+  return `
+    <div class="plan-kicker">
+      <span class="plan-label">Plan</span>
+      ${chipHtml(plan.status)}
+    </div>
+    <div class="plan-name">${plan.name}</div>
+    <div class="plan-progress-wrap">
+      <div class="plan-progress-bar-bg">
+        <div class="plan-progress-bar-fill" style="width:${pct}%"></div>
+      </div>
+      <div class="plan-progress-label">${done} / ${total} tasks complete</div>
+    </div>
+    <div class="plan-origin">${plan.origin || 'Scheduled'}</div>`;
+}
+
+// ── Task card HTML ────────────────────────────────────────
+function taskCardHtml(task) {
+  const n = task.agents.length;
+  const plural = n === 1 ? 'agent' : 'agents';
+  return `
+    <div class="task-header">
+      <div class="ws-dot ${task.status}"></div>
+      <div class="task-name">${task.name}</div>
+    </div>
+    <div class="task-meta">${n} ${plural} · ${task.status}</div>`;
+}
+
+// ── Agent card HTML ───────────────────────────────────────
+function agentCardHtml(agent) {
+  const glyph = agentGlyph(agent);
+  const elapsed = agent.stats?.elapsed ?? '—';
+  const tokens  = agent.stats?.tokens  != null ? agent.stats.tokens.toFixed(1) : '0.0';
+  const tc      = agent.stats?.toolCalls ?? 0;
+
+  const thinkLines = agent.thinking || [];
+  let thinkHtml = '';
+  if (agent.status === 'running') {
+    thinkHtml = `<span>${escHtml(thinkLines[0] || '')}</span>`;
+  } else if (agent.status === 'done') {
+    thinkHtml = `<span>${escHtml(thinkLines[thinkLines.length - 1] || '')}</span>`;
+  } else {
+    thinkHtml = `<span>${escHtml(thinkLines[0] || '')}</span>`;
+  }
+
+  return `
+    <div class="agent-card-header">
+      <div class="agent-avatar">
+        ${glyph}
+        <div class="pulse-ring"></div>
+      </div>
+      <div class="agent-info">
+        <div class="agent-name">${escHtml(agent.name)}</div>
+        <div class="agent-role">${escHtml(agent.role)} · ${escHtml(agent.model)}</div>
+      </div>
+      ${chipHtml(agent.status)}
+    </div>
+    <div class="agent-card-body">
+      <div class="agent-stats">
+        <div class="stat-cell">
+          <div class="stat-val" data-stat-elapsed="${agent.id}">${elapsed}</div>
+          <div class="stat-label">Elapsed</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-val" data-stat-tokens="${agent.id}">${tokens}k</div>
+          <div class="stat-label">Tokens</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-val" data-stat-tc="${agent.id}">${tc}</div>
+          <div class="stat-label">Tool calls</div>
+        </div>
+      </div>
+      <div class="thinking-ticker ${agent.status}" data-thinking="${agent.id}">${thinkHtml}</div>
+    </div>`;
+}
+
+// ── Escape helper ─────────────────────────────────────────
+function escHtml(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Build world DOM ───────────────────────────────────────
+const world    = document.getElementById('world');
+const edgesSvg = document.getElementById('edges-svg');
+
+const plans = window.WS_PLANS || [];
+const layout = computeLayout(plans);
+
+// map from id to DOM element
+const nodeEls = {}; // agentId / taskId / planId → element
+const nodePos = {}; // same → {x,y,w,h}
+
+// Build cards
+layout.plans.forEach(({ plan, x, y }) => {
+  const el = document.createElement('div');
+  el.className = 'node-card plan-card';
+  el.id = `node-${plan.id}`;
+  el.style.left = x + 'px';
+  el.style.top  = y + 'px';
+  el.innerHTML = planCardHtml(plan);
+  world.appendChild(el);
+  nodeEls[plan.id] = el;
+  nodePos[plan.id] = { x, y, w: PLAN_W, h: CARD_H_PLAN };
+});
+
+layout.tasks.forEach(({ task, plan, x, y }) => {
+  const el = document.createElement('div');
+  el.className = 'node-card task-card';
+  el.id = `node-${task.id}`;
+  el.style.left = x + 'px';
+  el.style.top  = y + 'px';
+  el.innerHTML = taskCardHtml(task);
+  world.appendChild(el);
+  nodeEls[task.id] = el;
+  nodePos[task.id] = { x, y, w: TASK_W, h: CARD_H_TASK };
+});
+
+layout.agents.forEach(({ agent, task, plan, x, y }) => {
+  const el = document.createElement('div');
+  el.className = `node-card agent-card ${agent.status}`;
+  el.id = `node-${agent.id}`;
+  el.style.left = x + 'px';
+  el.style.top  = y + 'px';
+  el.innerHTML = agentCardHtml(agent);
+  el.dataset.agentId = agent.id;
+  world.appendChild(el);
+  nodeEls[agent.id] = el;
+  nodePos[agent.id] = { x, y, w: AGENT_W, h: CARD_H_AGENT };
+
+  el.addEventListener('click', e => {
+    e.stopPropagation();
+    selectAgent(agent.id);
+  });
+});
+
+// ── After DOM render, measure actual heights ──────────────
+requestAnimationFrame(() => {
+  // update nodePos with real heights
+  Object.keys(nodeEls).forEach(id => {
+    const el = nodeEls[id];
+    nodePos[id].h = el.offsetHeight;
+  });
+
+  // re-center task nodes vertically on their agents
+  layout.tasks.forEach(({ task, agentsTop }) => {
+    const agentIds = task.agents.map(a => a.id);
+    if (!agentIds.length) return;
+    const firstPos = nodePos[agentIds[0]];
+    const lastPos  = nodePos[agentIds[agentIds.length - 1]];
+    if (!firstPos || !lastPos) return;
+    const span = (lastPos.y + lastPos.h) - firstPos.y;
+    const newY = firstPos.y + (span / 2) - (nodeEls[task.id].offsetHeight / 2);
+    nodeEls[task.id].style.top = newY + 'px';
+    nodePos[task.id].y = newY;
+    nodePos[task.id].h = nodeEls[task.id].offsetHeight;
+  });
+
+  // re-center plan nodes vertically on their tasks
+  layout.plans.forEach(({ plan }) => {
+    const taskIds = plan.tasks.map(t => t.id);
+    if (!taskIds.length) return;
+    const firstPos = nodePos[taskIds[0]];
+    const lastPos  = nodePos[taskIds[taskIds.length - 1]];
+    if (!firstPos || !lastPos) return;
+    const span = (lastPos.y + lastPos.h) - firstPos.y;
+    const newY = firstPos.y + (span / 2) - (nodeEls[plan.id].offsetHeight / 2);
+    nodeEls[plan.id].style.top = newY + 'px';
+    nodePos[plan.id].y = newY;
+    nodePos[plan.id].h = nodeEls[plan.id].offsetHeight;
+  });
+
+  // Now draw edges
+  drawEdges();
+  fitToContent();
+});
+
+// ── Edge drawing ──────────────────────────────────────────
+const edgeData = []; // { id, el, status, fromId, toId }
+
+function drawEdges() {
+  edgesSvg.innerHTML = '';
+
+  plans.forEach(plan => {
+    plan.tasks.forEach(task => {
+      // plan → task
+      const eId = `edge-${plan.id}-${task.id}`;
+      const el = drawCubicEdge(
+        plan.id, task.id,
+        edgeStatus(plan.status, task.status),
+        eId
+      );
+      edgeData.push({ id: eId, el, status: edgeStatus(plan.status, task.status), planId: plan.id, taskId: task.id, agentId: null });
+
+      task.agents.forEach(agent => {
+        // task → agent
+        const eId2 = `edge-${task.id}-${agent.id}`;
+        const el2 = drawCubicEdge(
+          task.id, agent.id,
+          edgeStatus(task.status, agent.status),
+          eId2
+        );
+        edgeData.push({ id: eId2, el: el2, status: edgeStatus(task.status, agent.status), planId: plan.id, taskId: task.id, agentId: agent.id });
+      });
+    });
+  });
+}
+
+function edgeStatus(fromStatus, toStatus) {
+  if (fromStatus === 'running' || toStatus === 'running') return 'running';
+  if (fromStatus === 'done' && toStatus === 'done') return 'done';
+  return 'queued';
+}
+
+function midRight(id) {
+  const p = nodePos[id];
+  if (!p) return { x: 0, y: 0 };
+  return { x: p.x + p.w, y: p.y + p.h / 2 };
+}
+function midLeft(id) {
+  const p = nodePos[id];
+  if (!p) return { x: 0, y: 0 };
+  return { x: p.x, y: p.y + p.h / 2 };
+}
+
+function drawCubicEdge(fromId, toId, status, id) {
+  const from = midRight(fromId);
+  const to   = midLeft(toId);
+  const cp   = Math.abs(to.x - from.x) * 0.45;
+
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('id', id);
+  path.setAttribute('class', `edge-path ${status}`);
+  path.setAttribute('d',
+    `M ${from.x} ${from.y} C ${from.x + cp} ${from.y}, ${to.x - cp} ${to.y}, ${to.x} ${to.y}`
+  );
+  edgesSvg.appendChild(path);
+  return path;
+}
+
+// ── Camera / pan / zoom ───────────────────────────────────
+const canvasWrap = document.getElementById('canvas-wrap');
+let cam = { x: 0, y: 0, zoom: 1 };
+
+function applyCamera() {
+  world.style.transform = `translate(${cam.x}px,${cam.y}px) scale(${cam.zoom})`;
+  // counter-scale for edge "+" buttons: constant screen size at any zoom
+  world.style.setProperty('--invz', (1 / cam.zoom).toFixed(4));
+  document.getElementById('zoom-label').textContent = Math.round(cam.zoom * 100) + '%';
+}
+
+function fitToContent() {
+  // measure world bounding box
+  const wW = layout.worldW;
+  const wH = layout.worldH;
+  const vW = canvasWrap.clientWidth - (inspectorOpen ? 330 : 0);
+  const vH = canvasWrap.clientHeight;
+
+  const scaleX = vW / (wW + 80);
+  const scaleY = vH / (wH + 80);
+  let zoom = Math.min(scaleX, scaleY, 1); // cap at 1
+  zoom = Math.max(0.3, zoom);
+
+  cam.zoom = zoom;
+  cam.x = (vW - wW * zoom) / 2;
+  cam.y = (vH - wH * zoom) / 2;
+  applyCamera();
+}
+
+// ── Drag / pan ────────────────────────────────────────────
+let isDragging = false;
+let dragStart  = { x: 0, y: 0, camX: 0, camY: 0 };
+
+canvasWrap.addEventListener('pointerdown', e => {
+  // only drag on empty canvas or world bg — NOT on cards, edges, or "+"
+  // buttons (pointer capture would retarget their click to the wrap and
+  // eat it)
+  if (e.target.closest('.node-card') || e.target.closest('#inspector')) return;
+  if (e.target.closest('.edge-plus')) return;
+  const cl = e.target.classList;
+  if (cl && (cl.contains('edge-hitbox') || cl.contains('edge-path'))) return;
+  isDragging = true;
+  dragStart = { x: e.clientX, y: e.clientY, camX: cam.x, camY: cam.y };
+  canvasWrap.classList.add('dragging');
+  canvasWrap.setPointerCapture(e.pointerId);
+});
+
+canvasWrap.addEventListener('pointermove', e => {
+  if (!isDragging) return;
+  cam.x = dragStart.camX + (e.clientX - dragStart.x);
+  cam.y = dragStart.camY + (e.clientY - dragStart.y);
+  applyCamera();
+});
+
+canvasWrap.addEventListener('pointerup', e => {
+  isDragging = false;
+  canvasWrap.classList.remove('dragging');
+});
+
+// click on empty canvas → deselect
+canvasWrap.addEventListener('click', e => {
+  if (e.target === canvasWrap || e.target === world || e.target === edgesSvg) {
+    deselect();
+  }
+});
+
+// ── Wheel zoom ────────────────────────────────────────────
+canvasWrap.addEventListener('wheel', e => {
+  e.preventDefault();
+  const factor = e.deltaY < 0 ? 1.1 : 0.909;
+  const rect   = canvasWrap.getBoundingClientRect();
+  const mx     = e.clientX - rect.left;
+  const my     = e.clientY - rect.top;
+
+  const newZoom = Math.min(1.75, Math.max(0.3, cam.zoom * factor));
+  const scale   = newZoom / cam.zoom;
+  cam.x = mx - scale * (mx - cam.x);
+  cam.y = my - scale * (my - cam.y);
+  cam.zoom = newZoom;
+  applyCamera();
+}, { passive: false });
+
+// ── Zoom HUD buttons ──────────────────────────────────────
+document.getElementById('zoom-in').addEventListener('click', () => {
+  const center = { x: canvasWrap.clientWidth / 2, y: canvasWrap.clientHeight / 2 };
+  const newZoom = Math.min(1.75, cam.zoom * 1.18);
+  const scale   = newZoom / cam.zoom;
+  cam.x = center.x - scale * (center.x - cam.x);
+  cam.y = center.y - scale * (center.y - cam.y);
+  cam.zoom = newZoom;
+  applyCamera();
+});
+document.getElementById('zoom-out').addEventListener('click', () => {
+  const center = { x: canvasWrap.clientWidth / 2, y: canvasWrap.clientHeight / 2 };
+  const newZoom = Math.max(0.3, cam.zoom / 1.18);
+  const scale   = newZoom / cam.zoom;
+  cam.x = center.x - scale * (center.x - cam.x);
+  cam.y = center.y - scale * (center.y - cam.y);
+  cam.zoom = newZoom;
+  applyCamera();
+});
+
+// ── Inspector ─────────────────────────────────────────────
+const inspector    = document.getElementById('inspector');
+let inspectorOpen  = false;
+let selectedAgent  = null;
+
+function selectAgent(agentId) {
+  // find agent record
+  const flat = window.WS_ALL_AGENTS.find(a => a.id === agentId);
+  if (!flat) return;
+
+  selectedAgent = agentId;
+  inspectorOpen = true;
+  inspector.classList.add('open');
+
+  // highlight ring on card
+  Object.keys(nodeEls).forEach(id => {
+    nodeEls[id].classList.remove('selected', 'path-lit');
+  });
+  edgeData.forEach(e => {
+    e.el.classList.remove('lit', 'dimmed');
+  });
+  world.classList.add('has-selection');
+
+  // mark path: plan → task → agent
+  const planId  = flat.plan.id;
+  const taskId  = flat.task.id;
+  nodeEls[agentId]?.classList.add('selected', 'path-lit');
+  nodeEls[taskId]?.classList.add('path-lit');
+  nodeEls[planId]?.classList.add('path-lit');
+
+  // lit edges
+  edgeData.forEach(e => {
+    const onPath = (e.planId === planId && e.taskId === taskId && (e.agentId === agentId || e.agentId === null));
+    if (onPath) e.el.classList.add('lit');
+    else         e.el.classList.add('dimmed');
+  });
+
+  // populate inspector
+  populateInspector(flat);
+}
+
+function deselect() {
+  selectedAgent = null;
+  inspectorOpen = false;
+  inspector.classList.remove('open');
+  world.classList.remove('has-selection');
+  Object.keys(nodeEls).forEach(id => {
+    nodeEls[id].classList.remove('selected', 'path-lit', 'dimmed');
+  });
+  edgeData.forEach(e => e.el.classList.remove('lit', 'dimmed'));
+}
+
+document.getElementById('insp-close').addEventListener('click', deselect);
+
+function populateInspector(flat) {
+  const a = flat; // agent record (with .plan, .task)
+
+  // header
+  document.getElementById('insp-avatar').textContent = agentGlyph(a);
+  document.getElementById('insp-name').textContent   = a.name;
+  document.getElementById('insp-role').textContent   = `${a.role} · ${a.model}`;
+  document.getElementById('insp-chip').innerHTML     = chipHtml(a.status);
+
+  // breadcrumb
+  document.getElementById('insp-breadcrumb').innerHTML =
+    `<b>${escHtml(a.plan.name)}</b>
+     <span class="sep">›</span>
+     <b>${escHtml(a.task.name)}</b>
+     <span class="sep">›</span>
+     ${escHtml(a.name)}`;
+
+  // stats (mirror live tickers)
+  updateInspStats(a);
+
+  // steps
+  const stepsEl = document.getElementById('insp-steps');
+  stepsEl.innerHTML = '';
+  const steps = a.steps || [];
+  const doneCount = a.status === 'done' ? steps.length :
+                    a.status === 'running' ? Math.max(0, steps.length - 2) : 0;
+  steps.forEach((s, i) => {
+    const isDone    = i < doneCount;
+    const isCurrent = a.status === 'running' && i === doneCount;
+    const cls = isDone ? 'done-step' : isCurrent ? 'running-step' : 'queued-step';
+    const icon = isDone ? '✓' : isCurrent ? '·' : '';
+    stepsEl.innerHTML += `
+      <div class="step-row">
+        <div class="step-icon ${cls}">${icon}</div>
+        <span style="${isDone ? 'color:var(--text-soft)' : isCurrent ? 'color:var(--text)' : 'color:var(--text-faint)'}">${escHtml(s)}</span>
+      </div>`;
+  });
+
+  // thinking feed
+  const thinkEl = document.getElementById('insp-thinking');
+  thinkEl.innerHTML = '';
+  (a.thinking || []).forEach(t => {
+    thinkEl.innerHTML += `<div class="thought-row">${escHtml(t)}</div>`;
+  });
+
+  // tool calls
+  const toolsEl = document.getElementById('insp-tools-list');
+  toolsEl.innerHTML = '';
+  const tSection = document.getElementById('insp-tools-section');
+  if ((a.tools || []).length === 0) {
+    tSection.style.display = 'none';
+  } else {
+    tSection.style.display = '';
+    a.tools.forEach(tc => {
+      toolsEl.innerHTML += `
+        <div class="tool-row">
+          <span class="tool-badge">${escHtml(tc.tool)}</span>
+          <span class="tool-target">${escHtml(tc.target)}</span>
+          <span class="tool-result">${escHtml(tc.result)}</span>
+        </div>`;
+    });
+  }
+
+  // context
+  const ctxEl = document.getElementById('insp-ctx');
+  const cSection = document.getElementById('insp-ctx-section');
+  ctxEl.innerHTML = '';
+  if ((a.context || []).length === 0) {
+    cSection.style.display = 'none';
+  } else {
+    cSection.style.display = '';
+    a.context.forEach(f => {
+      ctxEl.innerHTML += `<span class="ctx-chip">${escHtml(f)}</span>`;
+    });
+  }
+}
+
+function updateInspStats(a) {
+  const el = document.getElementById('inspector');
+  if (!el.classList.contains('open')) return;
+  if (selectedAgent !== a.id) return;
+
+  const liveState = liveStats[a.id];
+  document.getElementById('insp-elapsed').textContent = liveState ? fmtElapsed(liveState.elapsed) : (a.stats?.elapsed ?? '—');
+  document.getElementById('insp-tokens').textContent  = liveState ? liveState.tokens.toFixed(1) + 'k' : (a.stats?.tokens != null ? a.stats.tokens.toFixed(1) + 'k' : '—');
+  document.getElementById('insp-tools').textContent   = a.stats?.toolCalls ?? 0;
+}
+
+// ── Live tickers ──────────────────────────────────────────
+const RUNNING_AGENTS = window.WS_ALL_AGENTS.filter(a => a.status === 'running');
+
+// live state per running agent
+const liveStats = {};
+RUNNING_AGENTS.forEach(a => {
+  // parse initial elapsed "Xm Ys" → seconds
+  let secs = parseElapsedToSecs(a.stats?.elapsed);
+  liveStats[a.id] = {
+    elapsed: secs,
+    tokens:  a.stats?.tokens ?? 0,
+  };
+});
+
+function parseElapsedToSecs(s) {
+  if (!s || s === '—') return 0;
+  const m = String(s).match(/(?:(\d+)m\s*)?(\d+)s/);
+  if (!m) return 0;
+  return (parseInt(m[1] || '0') * 60) + parseInt(m[2] || '0');
+}
+
+function fmtElapsed(secs) {
+  const m = Math.floor(secs / 60);
+  const s = Math.floor(secs % 60);
+  return m > 0 ? `${m}m ${String(s).padStart(2,'0')}s` : `${s}s`;
+}
+
+// ticker interval
+let tickInterval = null;
+function startTickers() {
+  if (tickInterval) clearInterval(tickInterval);
+  tickInterval = setInterval(() => {
+    RUNNING_AGENTS.forEach(a => {
+      const s = liveStats[a.id];
+      if (!s) return;
+      s.elapsed += 1;
+      s.tokens  += 47 / 1000; // ~47 tokens/s expressed in k
+
+      // update elapsed stat cell on agent card
+      const elEl = document.querySelector(`[data-stat-elapsed="${a.id}"]`);
+      if (elEl) elEl.textContent = fmtElapsed(s.elapsed);
+      const tkEl = document.querySelector(`[data-stat-tokens="${a.id}"]`);
+      if (tkEl) tkEl.textContent = s.tokens.toFixed(1) + 'k';
+
+      // inspector
+      if (selectedAgent === a.id) updateInspStats(a);
+    });
+  }, 1000);
+}
+startTickers();
+
+// ── Thinking ticker cycling ───────────────────────────────
+const thinkState = {};
+RUNNING_AGENTS.forEach(a => {
+  thinkState[a.id] = { idx: 0, lines: a.thinking || [] };
+});
+
+function cycleThinking() {
+  RUNNING_AGENTS.forEach(a => {
+    const ts  = thinkState[a.id];
+    if (!ts || ts.lines.length < 2) return;
+    ts.idx = (ts.idx + 1) % ts.lines.length;
+    const el = document.querySelector(`[data-thinking="${a.id}"]`);
+    if (el) {
+      el.innerHTML = `<span>${escHtml(ts.lines[ts.idx])}</span>`;
+    }
+  });
+}
+setInterval(cycleThinking, 2600);
+
+// ── Keyboard ──────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { deselect(); closePalette(); }
+});
+
+/* ── Initial camera (will be corrected in rAF) ──────────── */
+applyCamera();
+
+/* ═══════════════════════════════════════════════════════════
+   CONCEPT B — Edge Palette
+   Right-click any SVG edge → context palette with 5 actions.
+   State is tracked per edgeId in edgeMods map.
+   Badges are absolutely-positioned divs over the SVG.
+═══════════════════════════════════════════════════════════ */
+
+// ── Per-edge modifier state ───────────────────────────────
+// edgeId → Set of active mods ('muted' | 'boosted' | 'gated')
+const edgeMods   = new Map();
+// edgeId → badge DOM element
+const edgeBadges = new Map();
+
+// ── Palette state ─────────────────────────────────────────
+const palette     = document.getElementById('edge-palette');
+const palLabel    = document.getElementById('palette-edge-label');
+let   activeEdgeId = null;
+
+// ── Toast helper ──────────────────────────────────────────
+const toastEl = document.getElementById('edge-toast');
+let   toastTimer = null;
+function showToast(msg) {
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2400);
+}
+
+// ── Label for an edge (from → to node names) ──────────────
+function edgeLabel(edgeEntry) {
+  const fromId = edgeEntry.planId  || edgeEntry.taskId;
+  const toId   = edgeEntry.agentId || edgeEntry.taskId;
+  // resolve names from WS_PLANS
+  function nameOf(id) {
+    for (const p of (window.WS_PLANS || [])) {
+      if (p.id === id) return p.name.split(' ').slice(0,2).join(' ');
+      for (const t of (p.tasks || [])) {
+        if (t.id === id) return t.name.split(' ').slice(0,2).join(' ');
+        for (const a of (t.agents || [])) {
+          if (a.id === id) return a.name.split(' ')[0];
+        }
+      }
+    }
+    return id;
+  }
+  // edge entry has planId, taskId, agentId
+  if (edgeEntry.agentId) {
+    return nameOf(edgeEntry.taskId) + ' → ' + nameOf(edgeEntry.agentId);
+  }
+  return nameOf(edgeEntry.planId) + ' → ' + nameOf(edgeEntry.taskId);
+}
+
+// ── Badge position (midpoint of SVG path in page coords) ─
+function badgeMidpointForEdge(pathEl) {
+  try {
+    const len = pathEl.getTotalLength();
+    const pt  = pathEl.getPointAtLength(len / 2);
+    const svg = edgesSvg.getBoundingClientRect();
+    const worldRect = world.getBoundingClientRect();
+    // pt is in SVG local coords (same as world), need to apply camera scale
+    return {
+      x: worldRect.left + pt.x * cam.zoom + cam.x * 0 + (parseFloat(world.style.left) || 0),
+      y: worldRect.top  + pt.y * cam.zoom + cam.y * 0 + (parseFloat(world.style.top)  || 0),
+    };
+  } catch(e) { return { x: 0, y: 0 }; }
+}
+
+function updateBadgePosition(edgeId) {
+  const badge = edgeBadges.get(edgeId);
+  if (!badge) return;
+  const entry = edgeData.find(e => e.id === edgeId);
+  if (!entry || !entry.el) return;
+  try {
+    const len = entry.el.getTotalLength();
+    const pt  = entry.el.getPointAtLength(len / 2);
+    const worldRect = world.getBoundingClientRect();
+    // pt is in SVG-space (world space); apply camera
+    badge.style.left = (worldRect.left + pt.x * cam.zoom) + 'px';
+    badge.style.top  = (worldRect.top  + pt.y * cam.zoom) + 'px';
+  } catch(_) {}
+}
+
+function updateAllBadges() {
+  edgeBadges.forEach((_, id) => updateBadgePosition(id));
+}
+
+// ── Create/update badge for an edge ──────────────────────
+function syncBadge(edgeId) {
+  const mods = edgeMods.get(edgeId);
+  let badge  = edgeBadges.get(edgeId);
+
+  if (!mods || mods.size === 0) {
+    if (badge) { badge.remove(); edgeBadges.delete(edgeId); }
+    return;
+  }
+
+  if (!badge) {
+    badge = document.createElement('div');
+    badge.className = 'edge-badge';
+    document.body.appendChild(badge);
+    edgeBadges.set(edgeId, badge);
+  }
+
+  // priority: muted > gated > boosted
+  if (mods.has('muted'))  { badge.textContent = 'muted';   badge.className = 'edge-badge muted'; }
+  else if (mods.has('gated'))  { badge.textContent = 'gated';   badge.className = 'edge-badge gated'; }
+  else if (mods.has('boosted')){ badge.textContent = 'boosted'; badge.className = 'edge-badge boosted'; }
+
+  updateBadgePosition(edgeId);
+}
+
+// ── Apply mods to path element ────────────────────────────
+function applyModsToPath(edgeId) {
+  const entry = edgeData.find(e => e.id === edgeId);
+  if (!entry || !entry.el) return;
+  const mods = edgeMods.get(edgeId) || new Set();
+  const el   = entry.el;
+  el.classList.remove('muted','boosted','gated');
+  mods.forEach(m => el.classList.add(m));
+}
+
+// ── Open palette ──────────────────────────────────────────
+function openPalette(edgeId, x, y) {
+  activeEdgeId = edgeId;
+  const entry  = edgeData.find(e => e.id === edgeId);
+  palLabel.textContent = entry ? edgeLabel(entry) : edgeId;
+
+  // mark applied state on buttons
+  const mods = edgeMods.get(edgeId) || new Set();
+  palette.querySelectorAll('.palette-action').forEach(btn => {
+    const action = btn.dataset.action;
+    btn.classList.toggle('applied',
+      action === 'mute'   ? mods.has('muted')   :
+      action === 'boost'  ? mods.has('boosted')  :
+      action === 'gate'   ? mods.has('gated')    : false
+    );
+  });
+
+  // position — keep within viewport
+  palette.style.display = 'block';
+  palette.classList.add('visible');
+  const pw = palette.offsetWidth;
+  const ph = palette.offsetHeight;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  palette.style.left = Math.min(x + 6, vw - pw - 12) + 'px';
+  palette.style.top  = Math.min(y + 6, vh - ph - 12) + 'px';
+}
+
+function closePalette() {
+  palette.classList.remove('visible');
+  palette.style.display = 'none';
+  activeEdgeId = null;
+  document.querySelectorAll('.edge-plus.active').forEach(b => b.classList.remove('active'));
+}
+
+// ── Palette action dispatch ───────────────────────────────
+palette.addEventListener('click', e => {
+  const btn = e.target.closest('.palette-action');
+  if (!btn || !activeEdgeId) return;
+  const action = btn.dataset.action;
+  const mods   = edgeMods.get(activeEdgeId) || new Set();
+
+  if (action === 'reset') {
+    edgeMods.set(activeEdgeId, new Set());
+    applyModsToPath(activeEdgeId);
+    syncBadge(activeEdgeId);
+    showToast('Edge reset to default');
+    closePalette();
+    return;
+  }
+
+  const modKey = action === 'mute' ? 'muted' : action === 'boost' ? 'boosted' : action === 'gate' ? 'gated' : null;
+
+  if (action === 'reroute') {
+    // Simulated: flash the edge and push a ticker update
+    const entry = edgeData.find(e => e.id === activeEdgeId);
+    if (entry && entry.el) {
+      entry.el.style.transition = 'stroke .3s';
+      entry.el.style.stroke = '#10b981';
+      setTimeout(() => { entry.el.style.stroke = ''; entry.el.style.transition = ''; }, 700);
+    }
+    showToast('Reroute queued — target swap simulated');
+    // synthetic feed tick
+    const runAgent = window.WS_ALL_AGENTS.find(a => a.status === 'running');
+    if (runAgent) {
+      const el = document.querySelector(`[data-thinking="${runAgent.id}"]`);
+      if (el) { el.innerHTML = '<span>↗ Rerouting edge per user request…</span>'; }
+    }
+    closePalette();
+    return;
+  }
+
+  if (!modKey) return;
+
+  // Toggle the mod; mutually exclusive: muted + boosted can't coexist
+  if (mods.has(modKey)) {
+    mods.delete(modKey);
+    showToast(`Edge ${modKey} removed`);
+  } else {
+    if (modKey === 'muted')  mods.delete('boosted');
+    if (modKey === 'boosted') mods.delete('muted');
+    mods.add(modKey);
+    const labels = { muted:'Edge muted', boosted:'Priority boosted', gated:'Gate condition added' };
+    showToast(labels[modKey]);
+  }
+
+  edgeMods.set(activeEdgeId, mods);
+  applyModsToPath(activeEdgeId);
+  syncBadge(activeEdgeId);
+  // re-mark applied
+  palette.querySelectorAll('.palette-action').forEach(b => {
+    const a = b.dataset.action;
+    b.classList.toggle('applied',
+      a === 'mute' ? mods.has('muted') : a === 'boost' ? mods.has('boosted') : a === 'gate' ? mods.has('gated') : false
+    );
+  });
+});
+
+// ── Wire edge paths: hover + click, plus a Zapier-style "+" inserter ──
+// Called after drawEdges (inside rAF, and re-wired if edges ever redraw)
+function wireEdgeInteractions() {
+  edgeData.forEach(entry => {
+    if (!entry.el || entry.el._wiredB) return;
+    entry.el._wiredB = true;
+    const el = entry.el;
+
+    // ── Always-visible "+" button at the edge midpoint. Lives inside
+    // #world (world coordinates), so pan/zoom tracking is free — the CSS
+    // transform on #world carries it along with the path.
+    try {
+      const len = el.getTotalLength();
+      const mid = el.getPointAtLength(len / 2);
+      const plus = document.createElement('button');
+      plus.type = 'button';
+      plus.className = 'edge-plus';
+      plus.textContent = '+';
+      plus.title = 'Edge actions — insert agent, mute, boost, gate';
+      plus.style.left = mid.x + 'px';
+      plus.style.top  = mid.y + 'px';
+      plus.addEventListener('pointerdown', e => e.stopPropagation()); // don't start canvas pan
+      plus.addEventListener('mouseenter', () => { if (!el.classList.contains('muted')) el.classList.add('hovered'); });
+      plus.addEventListener('mouseleave', () => el.classList.remove('hovered'));
+      plus.addEventListener('click', e => {
+        e.stopPropagation();
+        const r = plus.getBoundingClientRect();
+        document.querySelectorAll('.edge-plus.active').forEach(b => b.classList.remove('active'));
+        plus.classList.add('active');
+        openPalette(entry.id, r.right + 6, r.top);
+      });
+      world.appendChild(plus);
+      entry.plusEl = plus;
+    } catch (e) { /* zero-length path — skip inserter */ }
+
+    // ── Fat invisible hitbox clone of the path: hovering anywhere within
+    // ~9px of the line counts as hovering "the edge". It lights the real
+    // path + the "+" button, and clicking it opens the palette too.
+    const hit = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    hit.setAttribute('class', 'edge-hitbox');
+    hit.setAttribute('d', el.getAttribute('d'));
+    edgesSvg.appendChild(hit);
+    entry.hitEl = hit;
+
+    // make edges pointer-interactive
+    el.style.pointerEvents = 'stroke';
+    el.style.cursor = 'context-menu';
+
+    const setHover = (on) => {
+      if (on && !el.classList.contains('muted')) el.classList.add('hovered');
+      if (!on) el.classList.remove('hovered');
+      if (entry.plusEl) entry.plusEl.classList.toggle('hot', on);
+    };
+    const openFromEvent = (e) => {
+      e.stopPropagation();
+      const anchor = entry.plusEl ? entry.plusEl.getBoundingClientRect() : { right: e.clientX, top: e.clientY };
+      document.querySelectorAll('.edge-plus.active').forEach(b => b.classList.remove('active'));
+      if (entry.plusEl) entry.plusEl.classList.add('active');
+      openPalette(entry.id, anchor.right + 6, anchor.top);
+    };
+
+    for (const target of [el, hit]) {
+      target.addEventListener('mouseenter', () => setHover(true));
+      target.addEventListener('mouseleave', () => setHover(false));
+      target.addEventListener('contextmenu', e => { e.preventDefault(); openFromEvent(e); });
+      target.addEventListener('click', e => { if (e.button === 0) openFromEvent(e); });
+    }
+  });
+}
+
+// ── Close palette on outside click ───────────────────────
+document.addEventListener('pointerdown', e => {
+  if (!palette.contains(e.target)) closePalette();
+}, true);
+
+// ── Keep badges in sync when camera moves ────────────────
+// Patch applyCamera to also update badges
+const _origApplyCamera = applyCamera;
+// applyCamera is already defined; we shadow it here
+window._bApplyCamera = function() {
+  _origApplyCamera();
+  updateAllBadges();
+};
+// Override the zoom HUD + drag calls by wrapping applyCamera globally
+// Since applyCamera is a const in the same script we can't reassign it,
+// so we hook into the canvasWrap's pointermove + wheel via a passive listener
+canvasWrap.addEventListener('pointermove', updateAllBadges, { passive: true });
+canvasWrap.addEventListener('wheel', updateAllBadges, { passive: true });
+document.getElementById('zoom-in').addEventListener('click',  updateAllBadges);
+document.getElementById('zoom-out').addEventListener('click', updateAllBadges);
+
+// ── Hook into the post-render rAF to wire edges ──────────
+// The base drawEdges fires inside requestAnimationFrame; we watch for
+// edgeData to be populated by polling once.
+(function waitForEdges() {
+  if (edgeData.length > 0) {
+    wireEdgeInteractions();
+    updateAllBadges();
+  } else {
+    requestAnimationFrame(waitForEdges);
+  }
+})();
+</script>
+<script>
+// Concept-only marketing links must not navigate into the portfolio.
+document.addEventListener('click', function (event) {
+  const link = event.target.closest('a[href]');
+  if (!link) return;
+  const url = new URL(link.href, location.href);
+  if (url.origin === location.origin && !url.pathname.startsWith('/demos')) {
+    event.preventDefault();
+    alert('This is a design concept. This destination is not part of the demo.');
+  }
+});
+</script></body>
+</html>

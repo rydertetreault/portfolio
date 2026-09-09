@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en" data-theme="dark" data-nav="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Praxis Editions · Summer '26 — The Human-First Edition</title>
+  <meta name="description" content="Praxis Editions Summer '26 — four connected products for turning human and organizational expertise into secure, governed AI experts." />
+  <link rel="icon" href="/demos/assets/brand/icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script type="module" crossorigin src="/demos/assets/v2shopify-BKlKnXgA.js"></script>
+  <link rel="modulepreload" crossorigin href="/demos/assets/modulepreload-polyfill-B5Qt9EMX.js">
+  <link rel="modulepreload" crossorigin href="/demos/assets/content-BmG41JIl.js">
+  <link rel="modulepreload" crossorigin href="/demos/assets/motion-T28mx4Nt.js">
+  <link rel="stylesheet" crossorigin href="/demos/assets/v2shopify-D_FEFVu1.css">
+  <link rel="stylesheet" crossorigin href="/demos/assets/base-BAgu-4YE.css">
+</head>
+<body class="editions" data-state="loading">
+
+  <!-- ─── SVG defs: rough paper edge filter, gradients ───────── -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <filter id="rough-edge" x="-5%" y="-50%" width="110%" height="200%">
+        <feTurbulence type="fractalNoise" baseFrequency=".012 .05" numOctaves="3" seed="7" result="n"/>
+        <feDisplacementMap in="SourceGraphic" in2="n" scale="18" xChannelSelector="R" yChannelSelector="G"/>
+      </filter>
+      <linearGradient id="spark-grad" x1="0" x2="1"><stop offset="0" stop-color="#006aff"/><stop offset="1" stop-color="#5900ff"/></linearGradient>
+      <pattern id="dash-h" patternUnits="userSpaceOnUse" width="4" height="1"><rect width="1" height="1" fill="#7fb4ff"/></pattern>
+      <pattern id="dash-v" patternUnits="userSpaceOnUse" width="1" height="4"><rect width="1" height="1" fill="#7fb4ff"/></pattern>
+    </defs>
+  </svg>
+
+  <!-- ─── Layer 0 · blueprint scene (canvas) — Shopify: sticky three.js scene per chapter ─── -->
+  <canvas id="scene" class="scene" aria-hidden="true"></canvas>
+
+  <!-- ─── Layer 1 · construction lines — Shopify: fixed "davinci-lines" svg, viewBox = the sidebar frame ─── -->
+  <svg id="lines" class="lines" viewBox="550 208 340 464" fill="none" aria-hidden="true" data-shown="" data-active="" data-animating="">
+    <!-- group 0 · cover: vesica around the frame -->
+    <circle cx="720" cy="15" r="425" pathLength="1" data-group="0 8"/>
+    <circle cx="720" cy="865" r="425" pathLength="1" data-group="0 8"/>
+    <!-- group 1 · twins: two overlapping circles -->
+    <circle cx="560" cy="440" r="340" pathLength="1" data-group="1"/>
+    <circle cx="880" cy="440" r="340" pathLength="1" data-group="1"/>
+    <!-- group 2 · chat: right + bottom arcs -->
+    <circle cx="550" cy="886" r="550" pathLength="1" data-group="2 4"/>
+    <circle cx="1440" cy="544" r="550" pathLength="1" data-group="2 4"/>
+    <!-- group 3 · convo: concentric waves -->
+    <circle cx="720" cy="440" r="300" pathLength="1" data-group="3"/>
+    <circle cx="720" cy="440" r="380" pathLength="1" data-group="3" data-dashed="3"/>
+    <circle cx="720" cy="440" r="470" pathLength="1" data-group="3"/>
+    <!-- group 4 · vault: the diamond + inner square -->
+    <path d="M720 40 L1120 440 L720 840 L320 440 Z" pathLength="1" data-group="4"/>
+    <path d="M550 208 H890 V672 H550 Z" pathLength="1" data-group="4 9" data-dashed="4"/>
+    <!-- group 5 · agentspace: corner orbits -->
+    <circle cx="2.5" cy="-365" r="805" pathLength="1" data-group="5"/>
+    <circle cx="1437.5" cy="-365" r="805" pathLength="1" data-group="5"/>
+    <circle cx="2.5" cy="1245" r="805" pathLength="1" data-group="5"/>
+    <circle cx="1437.5" cy="1245" r="805" pathLength="1" data-group="5"/>
+    <!-- group 6 · integrations: the four great circles -->
+    <circle cx="1535.8" cy="858.7" r="917" pathLength="1" data-group="6"/>
+    <circle cx="-95.8" cy="858.7" r="917" pathLength="1" data-group="6"/>
+    <circle cx="1535.8" cy="21.3" r="917" pathLength="1" data-group="6"/>
+    <circle cx="-95.8" cy="21.3" r="917" pathLength="1" data-group="6"/>
+    <!-- group 7 · admin: guides and diagonals -->
+    <path d="M-200 208 H1640" pathLength="1" data-group="7" data-dashed="7"/>
+    <path d="M-200 672 H1640" pathLength="1" data-group="7" data-dashed="7"/>
+    <path d="M550 -100 V1000" pathLength="1" data-group="7" data-dashed-v="7"/>
+    <path d="M890 -100 V1000" pathLength="1" data-group="7" data-dashed-v="7"/>
+    <path d="M-100 -60 L1540 940" pathLength="1" data-group="7"/>
+    <path d="M1540 -60 L-100 940" pathLength="1" data-group="7"/>
+    <!-- group 8 · mobile: great vertical circles -->
+    <circle cx="720" cy="-365" r="805" pathLength="1" data-group="8"/>
+    <circle cx="720" cy="1245" r="805" pathLength="1" data-group="8"/>
+    <!-- group 9 · finale: the Vitruvian circle in the square + golden spiral -->
+    <circle cx="720" cy="440" r="232" pathLength="1" data-group="9"/>
+    <path d="M720 440 m-232 0 a232 232 0 0 1 232 -232 a143 143 0 0 1 143 143 a88 88 0 0 1 -88 88 a55 55 0 0 1 -55 -55 a34 34 0 0 1 34 -34" pathLength="1" data-group="9"/>
+  </svg>
+
+  <!-- ─── Layer 2 · loader / intro title — Shopify: 340×464 frame draws, "AI" slides into RENAISSANCE ─── -->
+  <div id="loader" class="loader" aria-hidden="true">
+    <div class="loader-box">
+      <svg class="loader-svg" viewBox="0 0 340 464" preserveAspectRatio="none">
+        <rect class="ld-rect ld-loader" x=".5" y=".5" width="339" height="463" pathLength="1" stroke-linecap="square"/>
+        <rect class="ld-rect ld-complete" x=".5" y=".5" width="339" height="463" pathLength="1" stroke-linecap="square"/>
+      </svg>
+      <div class="loader-title" id="loader-title">
+        <p class="eyebrow ld-eyebrow">Praxis Editions · Summer '26</p>
+        <div class="ai-title">
+          <span class="ln"><span class="w a">A</span><span class="w rest">mplified</span></span>
+          <span class="ln"><span class="w i">I</span><span class="w rest">ntelligence</span><span class="w tm">™</span></span>
+        </div>
+        <p class="ld-edition">The Human-First Edition</p>
+      </div>
+    </div>
+    <p class="loader-hint mono" id="loader-hint">Assembling the edition…</p>
+  </div>
+
+  <!-- ─── Layer 3 · sidebar — Shopify: fixed left 1/5 aside w/ frame border, title, chapter list, © ─── -->
+  <aside class="side" id="side" aria-label="Edition navigation">
+    <nav class="side-box" id="side-box">
+      <svg class="side-border-svg" viewBox="0 0 340 464" preserveAspectRatio="none" aria-hidden="true"><rect class="side-border" x=".5" y=".5" width="339" height="463" pathLength="1" stroke-linecap="square"/></svg>
+      <h2 class="side-title" id="side-title">
+        <a href="#top" class="side-title-link" data-scroll aria-label="Amplified Intelligence — The Human-First Edition. Back to top">
+          <span class="ai-title small" aria-hidden="true">
+            <span class="ln"><span class="w a">A</span><span class="w rest">mplified</span></span>
+            <span class="ln"><span class="w i">I</span><span class="w rest">ntelligence</span><span class="w tm">™</span></span>
+          </span>
+          <span class="side-ed">The Human-First Edition</span>
+        </a>
+      </h2>
+      <p class="side-sub" id="side-sub">Four products. One Human-First AI platform. <span id="side-count">4</span> connected pillars.</p>
+      <ol class="side-list" id="side-list"></ol>
+    </nav>
+    <div class="side-foot" id="side-foot">
+      <p>© Praxis AI · 2026</p>
+      <p class="mono"><a href="https://www.praxis-ai.com" target="_blank" rel="noopener">praxis-ai.com</a> · <a href="#">Terms</a> · <a href="#">Privacy</a></p>
+      <p class="mono side-patent">USPTO 19/647,154 · patent pending</p>
+    </div>
+  </aside>
+
+  <!-- ─── Top bar — Shopify: nav items drop in; theme flips with the section under it ─── -->
+  <header class="topbar" id="topbar">
+    <div class="topbar-inner">
+      <a class="wordmark nav-in" href="/demos/v2/shopify/" aria-label="Praxis Editions — home">
+        <img src="/demos/assets/brand/wordmark-2025-dark.webp" alt="Praxis AI" width="96" height="20" class="wm-dark" />
+        <span class="wordmark-ed">Editions</span>
+        <span class="wordmark-season mono">Summer '26</span>
+      </a>
+      <div class="switcher nav-in" id="switcher">
+        <a class="switcher-btn" href="#ch-twins" data-scroll aria-label="Jump to product overview">
+          4 products
+          <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </a>
+      </div>
+      <button class="search-btn nav-in" id="search-open" type="button" aria-label="Search updates (Command K)">
+        <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="m10.5 10.5 3 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <span class="search-txt">Search</span>
+        <kbd>⌘K</kbd>
+      </button>
+      <div class="topbar-right">
+        <a class="site-link nav-in" href="https://www.praxis-ai.com" target="_blank" rel="noopener">praxis-ai.com</a>
+        <a class="btn btn-solid nav-in" href="#cta" data-scroll>Talk to Our Team</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ⌘K palette -->
+  <div class="palette" id="palette" hidden>
+    <div class="palette-backdrop" data-close></div>
+    <div class="palette-box" role="dialog" aria-modal="true" aria-label="Search updates">
+      <label class="palette-input">
+        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="m10.5 10.5 3 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <input id="palette-input" type="search" placeholder="Search updates — try “citation”, “LTI”, “credits”" autocomplete="off" />
+        <kbd>esc</kbd>
+      </label>
+      <ul class="palette-list" id="palette-list" role="listbox"></ul>
+      <p class="palette-foot mono">↑↓ to move · ↵ to jump · esc to close</p>
+    </div>
+  </div>
+
+  <!-- ─── Content column (right 4/5) ─────────────────────────── -->
+  <div class="content" id="main-content">
+    <span id="top"></span>
+
+    <!-- Cover — Shopify: 150svh hero scene; the sidebar assembles on first scroll -->
+    <section class="cover" id="cover" aria-label="Cover">
+      <div class="cover-inner">
+        <div class="cover-bottom">
+          <button class="btn btn-play" id="play-video" type="button">
+            <span class="play-ic" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M3 1.5v9l7-4.5z" fill="currentColor"/></svg></span>
+            Explore · platform demo
+          </button>
+          <div class="cover-scrollhint mono" aria-hidden="true">Scroll to read</div>
+          <a class="btn btn-ghost" href="#ch-twins" data-scroll>Chapter 01 ↓</a>
+        </div>
+        <p class="cover-caption mono">Turn real expertise and private knowledge into secure AI experts — deploy them for learning, support, training and work.</p>
+      </div>
+    </section>
+
+    <!-- Chapters (generated: dark title block → paper body) -->
+    <main class="chapters" id="chapters"></main>
+
+    <!-- Finale — Shopify: last chapter flips the whole page light; canvas fades; the lines complete -->
+    <section class="finale" id="finale" aria-label="Closing">
+      <div class="paper finale-paper">
+        <!-- By the numbers -->
+        <section class="numbers" id="numbers" aria-label="One connected platform">
+          <div class="sec-head">
+            <div>
+              <p class="eyebrow">Four products · one architecture</p>
+              <h3>Not another chatbot.</h3>
+              <p class="sec-lede">Praxis gives organizations the infrastructure to create governed AI representations of real experts, ground them in private knowledge, and deploy them for learning and work across different AI models.</p>
+            </div>
+          </div>
+          <ul class="numbers-grid" id="numbers-grid"></ul>
+        </section>
+
+        <!-- CTA -->
+        <section class="cta" id="cta">
+          <div class="cta-card">
+            <div class="cta-glow" aria-hidden="true"></div>
+            <p class="eyebrow">Summer '26 · The Human-First Edition</p>
+            <h3>Human-First in an AI-First world.</h3>
+            <p class="cta-lede">Turn your experts and private knowledge into governed AI experiences — powered by model-agnostic infrastructure, deployable for learning and work.</p>
+            <div class="cta-actions">
+              <a class="btn btn-grad btn-lg" href="/contact">Talk to Our Team</a>
+              <a class="btn btn-ghost btn-lg" href="#ch-twins" data-scroll>Explore the Four Products</a>
+            </div>
+          </div>
+        </section>
+
+        <footer class="footer">
+          <div class="footer-grid">
+            <div>
+              <img src="/demos/assets/brand/p-circle.png" alt="" width="36" height="36" class="footer-mark" />
+              <p class="footer-tag">Human-First in an AI-First world.</p>
+              <p class="footer-patent mono">USPTO Patent Pending · App. No. 19/647,154</p>
+            </div>
+            <ul class="footer-col" id="footer-addr"></ul>
+            <ul class="footer-col">
+              <li><a href="/middleware">AI Middleware</a></li>
+              <li><a href="/digital-twin">Digital Twin</a></li>
+              <li><a href="/lxp">LXP</a></li>
+              <li><a href="/praxisshield">PraxisShield™</a></li>
+              <li><a href="/innovation-hub">Innovation Hub</a></li>
+              <li><a href="/customer-stories">Customer Stories</a></li>
+            </ul>
+            <ul class="footer-col" id="footer-social"></ul>
+          </div>
+          <div class="footer-end">
+            <p class="footer-note mono">v2 · brand-compliant concept replica of Shopify Editions Winter '26 — The Renaissance Edition (<a href="https://www.shopify.com/editions/winter2026?utm_source=chatgpt.com" target="_blank" rel="noopener">shopify.com/editions/winter2026</a>) · Praxis AI © 2026</p>
+            <a class="btn btn-ghost" href="#top" data-scroll>Back to the cover ↑</a>
+          </div>
+        </footer>
+      </div>
+    </section>
+  </div>
+
+  <!-- Lightbox -->
+  <div class="lightbox" id="lightbox" hidden>
+    <div class="lightbox-backdrop" data-close></div>
+    <div class="lightbox-box" role="dialog" aria-modal="true" aria-label="Praxis AI platform demonstration">
+      <div class="lightbox-bar">
+        <span class="mono"><span class="live-dot" aria-hidden="true"></span> Praxis AI · product experience</span>
+        <button type="button" class="lightbox-close" data-close aria-label="Close">✕</button>
+      </div>
+      <div class="lightbox-embed" id="lightbox-embed"><img src="/demos/assets/pria/chat-dark.webp" alt="Praxis AI product experience preview" loading="lazy" decoding="async" /></div>
+    </div>
+  </div>
+
+<script>
+// Concept-only marketing links must not navigate into the portfolio.
+document.addEventListener('click', function (event) {
+  const link = event.target.closest('a[href]');
+  if (!link) return;
+  const url = new URL(link.href, location.href);
+  if (url.origin === location.origin && !url.pathname.startsWith('/demos')) {
+    event.preventDefault();
+    alert('This is a design concept. This destination is not part of the demo.');
+  }
+});
+</script></body>
+</html>

@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Praxis AI Middleware — open infrastructure for human-first digital twins · warp replica</title>
+  <meta name="description" content="Praxis AI Middleware + PraxisShield™. Open infrastructure for Human-First Digital Twins™ — a warp.dev-style concept replica." />
+  <link rel="icon" href="/demos/assets/brand/icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Manrope:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script type="module" crossorigin src="/demos/assets/warp-B5XSmy8H.js"></script>
+  <link rel="modulepreload" crossorigin href="/demos/assets/modulepreload-polyfill-B5Qt9EMX.js">
+  <link rel="modulepreload" crossorigin href="/demos/assets/content-BmG41JIl.js">
+  <link rel="modulepreload" crossorigin href="/demos/assets/motion-T28mx4Nt.js">
+  <link rel="stylesheet" crossorigin href="/demos/assets/warp-D688N0Pw.css">
+  <link rel="stylesheet" crossorigin href="/demos/assets/base-BAgu-4YE.css">
+</head>
+<body class="warp">
+
+  <!-- Warp: sticky blurred top nav with hover mega-menus (rendered from content.nav in main.js) -->
+  <header class="nav" id="nav">
+    <div class="nav-inner">
+      <a class="nav-logo" href="/demos/warp/" aria-label="Praxis AI">
+        <img src="/demos/assets/brand/logo.svg" alt="Praxis AI" width="112" height="24" />
+        <span class="mono nav-logo-tag">/ middleware</span>
+      </a>
+      <nav class="nav-menu" id="navMenu" aria-label="Primary"></nav>
+      <div class="nav-actions">
+        <a class="btn btn-ghost" href="#cta">book a demo</a>
+        <a class="btn btn-solid" href="#cta">get started</a>
+      </div>
+      <button class="nav-burger" id="navBurger" aria-label="Toggle menu" aria-expanded="false"><span></span><span></span></button>
+    </div>
+  </header>
+
+  <!-- Warp: keyboard-shortcut section nav (sticky, active state via ScrollTrigger) -->
+  <div class="keynav" id="keynav" aria-label="Section shortcuts">
+    <div class="keynav-inner">
+      <span class="keynav-hint mono">press a key to jump</span>
+      <ul class="keynav-list">
+        <li><a href="#twins" data-target="twins"><kbd>T</kbd> twins</a></li>
+        <li><a href="#middleware" data-target="middleware"><kbd>M</kbd> middleware</a></li>
+        <li><a href="#governance" data-target="governance"><kbd>G</kbd> governance</a></li>
+        <li><a href="#layers" data-target="layers"><kbd>L</kbd> layers</a></li>
+        <li><a href="#proof" data-target="proof"><kbd>P</kbd> proof</a></li>
+        <li><a href="#everywhere" data-target="everywhere"><kbd>E</kbd> everywhere</a></li>
+        <li><a href="#faq" data-target="faq"><kbd>F</kbd> faq</a></li>
+      </ul>
+      <span class="keynav-status mono" id="keynavStatus">§ 00 / hero</span>
+    </div>
+  </div>
+
+  <main>
+
+    <!-- Warp: hero — copy left, live config file as the hero visual right -->
+    <section class="hero" id="hero">
+      <div class="hero-bg" aria-hidden="true"></div>
+      <div class="container hero-grid">
+        <div class="hero-copy">
+          <p class="hero-eyebrow mono" data-reveal="fade"><span class="prompt">&gt;_</span> human-first digital twins</p>
+          <h1 class="hero-title" data-reveal="up" data-delay=".05">Open infrastructure for <em>Human-First Digital Twins™</em></h1>
+          <p class="hero-sub" data-reveal="up" data-delay=".12" id="heroSub"></p>
+          <div class="hero-ctas" data-reveal="up" data-delay=".2">
+            <a class="btn btn-solid btn-lg" href="#cta">get started <span class="mono">→</span></a>
+            <a class="btn btn-ghost btn-lg" href="#middleware">read the docs</a>
+          </div>
+          <p class="hero-note mono" data-reveal="fade" data-delay=".3">
+            <span class="dot"></span> get up to 5 free twin deployments · no credit card · praxisshield™ included
+          </p>
+        </div>
+
+        <figure class="fig hero-fig" data-reveal="right" data-delay=".15">
+          <figcaption class="fig-cap mono">
+            <span>[ fig. 1 — the twin ]</span>
+            <span class="fig-meta"><span class="live"><i></i>live</span> applied to all <b data-count="130">0</b> twins</span>
+          </figcaption>
+          <div class="code-win">
+            <div class="code-bar mono"><span class="tl"></span><span class="tl"></span><span class="tl"></span><span class="code-file">twin.yaml</span><span class="code-right">utf-8 · yaml</span></div>
+            <pre class="code yaml" id="heroYaml"></pre>
+          </div>
+        </figure>
+      </div>
+    </section>
+
+    <!-- Warp: trusted-by strip + logo marquee -->
+    <section class="trusted">
+      <div class="container trusted-inner">
+        <span class="trusted-label mono">trusted by 180+ orgs at</span>
+        <div class="marquee" aria-label="Partner logos">
+          <div class="marquee-track" id="logoTrack"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Warp: twins section — terminal-style cards (T) -->
+    <section class="sec" id="twins" data-key="t">
+      <div class="container">
+        <header class="sec-head">
+          <p class="sec-eyebrow mono" data-reveal="fade">§ 01 · twins <span class="sec-path">/ praxis twin ls</span></p>
+          <h2 class="sec-title" data-reveal="up">130+ twins in production</h2>
+          <p class="sec-sub" data-reveal="up" data-delay=".08">Every twin is anchored to a real human, purpose-bound, and vault-protected. Hover a card to run its first prompt.</p>
+        </header>
+        <div class="twin-grid" id="twinGrid" data-stagger=".05"></div>
+      </div>
+    </section>
+
+    <!-- Warp: numbered feature list 01–06 with pinned, swapping fig panel (M) -->
+    <section class="sec" id="middleware" data-key="m">
+      <div class="container">
+        <header class="sec-head">
+          <p class="sec-eyebrow mono" data-reveal="fade">§ 02 · middleware <span class="sec-path">/ nine pillars, one layer</span></p>
+          <h2 class="sec-title" data-reveal="up">Twins as code. Middleware as the runtime.</h2>
+          <p class="sec-sub" data-reveal="up" data-delay=".08">Praxis AI Middleware orchestrates 30+ LLMs, your content silos, your LMS and your humans — inside your security perimeter.</p>
+        </header>
+        <div class="feat-layout">
+          <div class="feat-rows" id="featRows"></div>
+          <div class="feat-pin" id="featPin">
+            <figure class="fig feat-fig" id="featFig">
+              <figcaption class="fig-cap mono" id="featCap"></figcaption>
+              <div class="feat-fig-body" id="featBody"></div>
+            </figure>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Warp: governance dashboard mock (G) -->
+    <section class="sec sec-alt" id="governance" data-key="g">
+      <div class="container">
+        <header class="sec-head">
+          <p class="sec-eyebrow mono" data-reveal="fade">§ 03 · governance <span class="sec-path">/ praxisshield --watch</span></p>
+          <h2 class="sec-title" data-reveal="up">PraxisShield™ — baked-in measurement and governance</h2>
+          <p class="sec-sub" data-reveal="up" data-delay=".08">An agent watchdog platform: constitutional governance, purpose-binding, IP Vault™ and full audit trails. Nothing goes live without the expert's approval.</p>
+        </header>
+
+        <figure class="fig dash" data-reveal="up">
+          <figcaption class="fig-cap mono">
+            <span>[ fig. 4 · governance loop · sample run ]</span>
+            <span class="fig-meta">run #4821 · <span class="live"><i></i>watching</span></span>
+          </figcaption>
+          <div class="dash-grid">
+            <!-- card 1: evals -->
+            <div class="dash-card">
+              <h4 class="dash-title mono">evals on your own twins</h4>
+              <ul class="eval-list mono" id="evalList"></ul>
+              <p class="dash-foot mono">7 / 8 passed · <span class="ok">grounding 0.97</span> · vault-only 1.00</p>
+            </div>
+            <!-- card 2: benchmarks -->
+            <div class="dash-card">
+              <h4 class="dash-title mono">benchmarks across models</h4>
+              <ul class="bench-list mono" id="benchList"></ul>
+              <p class="dash-foot mono">router picks best model per task · 30+ llms orchestrated</p>
+            </div>
+            <!-- card 3: self-improvement -->
+            <div class="dash-card">
+              <h4 class="dash-title mono">self-improvement loops</h4>
+              <ul class="loop-list mono" id="loopList"></ul>
+              <p class="dash-foot mono">every change → approval queue → expert sign-off</p>
+            </div>
+          </div>
+        </figure>
+      </div>
+    </section>
+
+    <!-- Warp: 3-layer blueprint diagram (L) -->
+    <section class="sec" id="layers" data-key="l">
+      <div class="container">
+        <header class="sec-head">
+          <p class="sec-eyebrow mono" data-reveal="fade">§ 04 · layers <span class="sec-path">/ architecture.md</span></p>
+          <h2 class="sec-title" data-reveal="up">Three layers. One human-first stack.</h2>
+          <p class="sec-sub" data-reveal="up" data-delay=".08">Presentation on top, middleware in the middle, integration underneath. Hover a layer to inspect it.</p>
+        </header>
+        <figure class="fig blueprint" data-reveal="up">
+          <figcaption class="fig-cap mono"><span>[ fig. 5 · stack · cross-section ]</span><span class="fig-meta">scale 1:1 · hairline</span></figcaption>
+          <div class="bp-stack" id="bpStack"></div>
+        </figure>
+      </div>
+    </section>
+
+    <!-- Warp: stats grid (P) -->
+    <section class="sec sec-alt" id="proof" data-key="p">
+      <div class="container">
+        <header class="sec-head">
+          <p class="sec-eyebrow mono" data-reveal="fade">§ 05 · proof <span class="sec-path">/ praxis metrics --all</span></p>
+          <h2 class="sec-title" data-reveal="up">Numbers we ship with</h2>
+        </header>
+        <div class="stats" id="stats" data-stagger=".06"></div>
+        <p class="stats-foot mono" data-reveal="fade" id="patentLine"></p>
+      </div>
+    </section>
+
+    <!-- Warp: "warp everywhere" → twins everywhere (E) -->
+    <section class="sec" id="everywhere" data-key="e">
+      <div class="container">
+        <header class="sec-head">
+          <p class="sec-eyebrow mono" data-reveal="fade">§ 06 · everywhere <span class="sec-path">/ surfaces</span></p>
+          <h2 class="sec-title" data-reveal="up">Twins everywhere</h2>
+          <p class="sec-sub" data-reveal="up" data-delay=".08">One twin, every surface. Same vault, same constitution, same audit trail — wherever your people already are.</p>
+        </header>
+        <div class="surf-row" id="surfRow" data-stagger=".06"></div>
+      </div>
+    </section>
+
+    <!-- Warp: FAQ accordions (F) -->
+    <section class="sec sec-alt" id="faq" data-key="f">
+      <div class="container faq-grid">
+        <header class="sec-head">
+          <p class="sec-eyebrow mono" data-reveal="fade">§ 07 · faq <span class="sec-path">/ readme</span></p>
+          <h2 class="sec-title" data-reveal="up">Questions, answered</h2>
+          <p class="sec-sub" data-reveal="up" data-delay=".08">Still curious? <a href="#cta">talk to our team →</a></p>
+        </header>
+        <div class="faq" id="faqList"></div>
+      </div>
+    </section>
+
+    <!-- Warp: final CTA -->
+    <section class="cta" id="cta">
+      <div class="container cta-inner" data-reveal="up">
+        <p class="mono cta-eyebrow"><span class="prompt">&gt;_</span> praxis twin init</p>
+        <h2 class="cta-title">Ship your first Human-First Digital Twin™ this week.</h2>
+        <p class="cta-sub" id="ctaSub"></p>
+        <div class="hero-ctas">
+          <a class="btn btn-solid btn-lg" href="https://www.praxisdna.ai" target="_blank" rel="noopener">discover your digital twin dna</a>
+          <a class="btn btn-ghost btn-lg" href="#">talk to our team</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Warp: dense multi-column lowercase mono footer -->
+  <footer class="footer" id="footer"></footer>
+
+<script>
+// Concept-only marketing links must not navigate into the portfolio.
+document.addEventListener('click', function (event) {
+  const link = event.target.closest('a[href]');
+  if (!link) return;
+  const url = new URL(link.href, location.href);
+  if (url.origin === location.origin && !url.pathname.startsWith('/demos')) {
+    event.preventDefault();
+    alert('This is a design concept. This destination is not part of the demo.');
+  }
+});
+</script></body>
+</html>
