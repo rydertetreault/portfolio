@@ -1,8 +1,11 @@
-# Public concept demos
+# Public Praxis demo
 
-The complete Praxis demo snapshot is served at `/demos` via Next.js rewrites,
-independent of the portfolio's React layout. All 14 concept pages (v1 and v2),
-the hub, assets, research link, and bundled PRIA prototype are included.
+The Praxis story site is served at `/demos` via Next.js rewrites, independent of
+the portfolio's React layout. It replaces the earlier concept lab.
+
+- `/demos` — story page (the Praxis home page concept)
+- `/demos/company` — company page
+- `/demos/pria` — bundled PRIA prototype (linked from the story page)
 
 ## Refresh the snapshot
 
@@ -20,18 +23,12 @@ Production builds use the committed snapshot and do not require the demo repo.
 
 ## Public behavior
 
-- Embedded product captures work without localhost or authenticated staging access.
+- The live "Chat with Pria" panel needs the local PRIA bridge (staging sign-in),
+  so on the public site it shows as offline.
 - Links that formerly opened the local PRIA bridge open the bundled prototype.
-- The prototype is a design demo, not the authenticated production PRIA app.
-- Unimplemented marketing links show a concept-only notice instead of navigating
-  into nonexistent portfolio pages.
+- Links to pages that are not part of the demo show a concept-only notice
+  instead of navigating into the portfolio.
 - No authentication or privacy protection is configured.
-
-## URLs after deployment
-
-- Hub: https://rydertetreault.dev/demos
-- Original Shopify study: https://rydertetreault.dev/demos/shopify
-- Branded Shopify concept: https://rydertetreault.dev/demos/v2/shopify
 
 Deploy through the portfolio's normal Vercel/Git workflow. A local build alone
 never publishes these URLs.
