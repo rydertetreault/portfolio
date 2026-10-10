@@ -114,6 +114,14 @@ export class AsciiFieldEngine {
   private lastTs = 0;
   private lastDraw = 0;
   private time = 0;
+  /**
+   * Integrated phases (∫ speed dt, ∫ speed·plasmaSpeed dt). Never sample as
+   * `time * speed`: when a route morph eases `speed`, that product jumps by
+   * time·Δspeed, so after a few minutes on the site a page change spins the
+   * field many times faster, decaying as the morph settles.
+   */
+  private morphPhase = 0;
+  private plasmaPhase = 0;
   private driftX = 0;
   private driftY = 0;
   private farDrift = 0;
@@ -526,6 +534,8 @@ export class AsciiFieldEngine {
 
     const p = this.cur;
     this.time += dt * cfg.timeScale;
+    this.morphPhase += dt * cfg.timeScale * p.speed;
+    this.plasmaPhase += dt * cfg.timeScale * p.speed * p.plasmaSpeed;
     const wk = this.w / 1000; // drift is authored in px/s at a 1000px-wide viewport
     this.driftX += dt * p.driftX * wk;
     this.driftY += dt * p.driftY * wk;
@@ -798,7 +808,8 @@ export class AsciiFieldEngine {
 
   /* ───────────── pass: lattice noise (coarse) ───────────── */
 
-  private evaluateLattice(time: number): void {
+  /** `warp` = extra time from scroll (cfg.scrollTimeWarp), applied at the current speed. */
+  private evaluateLattice(warp: number): void {
     const cfg = this.cfg;
     const p = this.cur;
     const noise = this.noise;
@@ -822,8 +833,8 @@ export class AsciiFieldEngine {
     const wk = 1000 / Math.max(1, this.w); // frequencies are authored at a 1000px-wide viewport
     const s = p.scale * wk;
     const warpAmt = p.warp / Math.max(1e-6, s); // in px so warp scales with feature size
-    const tNear = time * p.speed;
-    const tFar = time * p.speed * 0.6;
+    const tNear = this.morphPhase + warp * p.speed;
+    const tFar = tNear * 0.6;
     const fs = p.farScale * wk;
     const farOff = this.farDrift;
 
@@ -836,7 +847,7 @@ export class AsciiFieldEngine {
     // sampled through the same domain warp so the bands bend like terrain contours.
     const pm = p.plasma;
     const pf = s * p.plasmaFreq; // radians per px
-    const pt = time * p.speed * p.plasmaSpeed;
+    const pt = this.plasmaPhase + warp * p.speed * p.plasmaSpeed;
     const pdist = p.plasmaDistortion * 2.2;
     const pcx = this.w / 2 - parX;
     const pcy = this.h / 2 - parY;
@@ -1108,10 +1119,10 @@ export class AsciiFieldEngine {
     if (!atlas) return;
     const cfg = this.cfg;
     const p = this.cur;
-    const time = this.time + this.scrollY * cfg.scrollTimeWarp;
+    const warp = this.scrollY * cfg.scrollTimeWarp;
 
     this.buildQuietMask(p.quiet);
-    this.evaluateLattice(time);
+    this.evaluateLattice(warp);
     this.evaluateCells();
 
     const renderer = this.renderer;
