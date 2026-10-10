@@ -6,7 +6,7 @@ import { experience, projects, cyber, skills } from "./data";
    ───────────────────────────────────────────────────────────── */
 
 export type Tok = {
-  t: "kw" | "type" | "fn" | "str" | "prop" | "prop2" | "punc" | "comment" | "num" | "plain" | "section" | "rule";
+  t: "kw" | "type" | "fn" | "str" | "prop" | "prop2" | "punc" | "comment" | "num" | "plain" | "section" | "rule" | "role" | "company";
   v: string;
   href?: string;
 };
@@ -20,6 +20,8 @@ export type CodeLine = {
   foldOf?: string;
   /** This line closes a foldable region (hidden when folded). */
   foldEnd?: string;
+  /** Indent-guide column drawn in the accent colour: roles held at one company (promotion). */
+  promoGuide?: number;
 };
 
 let foldSeq = 0;
@@ -38,10 +40,23 @@ const comment = (v: string): Tok => ({ t: "comment", v });
 const plain = (v: string): Tok => ({ t: "plain", v });
 const SP: Tok = plain(" ");
 
-type Val = string | number | Val[] | { [k: string]: Val } | { __link: string; text: string };
+type Val = string | number | Val[] | { [k: string]: Val } | { __link: string; text: string } | { __promo: Val[] };
 
 function isLink(v: Val): v is { __link: string; text: string } {
   return typeof v === "object" && v !== null && !Array.isArray(v) && "__link" in v;
+}
+
+/** Roles held at the same company: emitted as an array whose indent guide is lit. */
+function isPromo(v: Val): v is { __promo: Val[] } {
+  return typeof v === "object" && v !== null && !Array.isArray(v) && "__promo" in v;
+}
+
+/** Job titles and company names get their own emphasis so they stand apart from the prose. */
+function keyedTok(k: string, v: Val): Tok | null {
+  if (typeof v !== "string") return null;
+  if (k === "role") return { t: "role", v: `"${v}"` };
+  if (k === "company") return { t: "company", v: `"${v}"` };
+  return null;
 }
 
 /** Max characters per line before something is split across lines. */
@@ -51,6 +66,7 @@ const tokLen = (toks: Tok[]) => toks.reduce((n, t) => n + t.v.length, 0);
 /** Tokens for a value on a single line, or null if it can't (or shouldn't) be inlined. */
 function inlineToks(value: Val, depth: number, budget: number): Tok[] | null {
   let toks: Tok[];
+  if (isPromo(value)) return null;
   if (typeof value === "string") toks = [str(value)];
   else if (typeof value === "number") toks = [{ t: "num", v: String(value) }];
   else if (isLink(value)) toks = [str(value.text, value.__link)];
@@ -67,7 +83,8 @@ function inlineToks(value: Val, depth: number, budget: number): Tok[] | null {
     toks = [punc("{"), SP];
     const entries = Object.entries(value);
     for (const [i, [k, v]] of entries.entries()) {
-      const it = inlineToks(v, depth + 1, budget);
+      const kt = keyedTok(k, v);
+      const it = kt ? [kt] : inlineToks(v, depth + 1, budget);
       if (!it || Array.isArray(v)) return null; // objects with array fields get the multi-line form
       toks.push(prop(k, depth + 1), punc(":"), SP, ...it);
       if (i < entries.length - 1) toks.push(punc(","), SP);
@@ -83,6 +100,13 @@ function inlineToks(value: Val, depth: number, budget: number): Tok[] | null {
  * arrays (highlights) get one item per line.
  */
 function emit(lines: CodeLine[], value: Val, depth: number, prefix: Tok[], suffix: Tok[]): void {
+  if (isPromo(value)) {
+    const start = lines.length;
+    emit(lines, value.__promo, depth, prefix, suffix);
+    // Every line between the brackets: the guide in the array's column turns accent.
+    for (let i = start + 1; i < lines.length - 1; i++) lines[i].promoGuide = depth;
+    return;
+  }
   const budget = WIDTH - depth * 2 - tokLen(prefix) - tokLen(suffix);
   const inl = inlineToks(value, depth, budget);
   if (inl) {
@@ -104,20 +128,25 @@ function emit(lines: CodeLine[], value: Val, depth: number, prefix: Tok[], suffi
     lines.push({ depth, toks: [punc("]"), ...suffix], ...(id ? { foldEnd: id } : {}) });
   } else {
     const entries = Object.entries(value);
-    const scalars = entries.filter(([, v]) => !Array.isArray(v) && (typeof v !== "object" || isLink(v)));
+    const scalars = entries.filter(([, v]) => !Array.isArray(v) && !isPromo(v) && (typeof v !== "object" || isLink(v)));
     const rest = entries.filter(([k]) => !scalars.some(([sk]) => sk === k));
     // Opening line carries the scalar fields if they fit.
     const head: Tok[] = [...prefix, punc("{")];
     const inlineScalars: Tok[] = [];
     for (const [i, [k, v]] of scalars.entries()) {
-      inlineScalars.push(SP, prop(k, depth + 1), punc(":"), SP, ...(inlineToks(v, depth + 1, Infinity) ?? [str(String(v))]), punc(","));
+      const kt = keyedTok(k, v);
+      inlineScalars.push(SP, prop(k, depth + 1), punc(":"), SP, ...(kt ? [kt] : inlineToks(v, depth + 1, Infinity) ?? [str(String(v))]), punc(","));
       if (i === scalars.length - 1) inlineScalars.pop();
     }
     if (scalars.length && tokLen(head) + tokLen(inlineScalars) + 1 <= WIDTH - depth * 2) {
       lines.push({ depth, toks: [...head, ...inlineScalars, punc(",")] });
     } else {
       lines.push({ depth, toks: head });
-      for (const [k, v] of scalars) emit(lines, v, depth + 1, [prop(k, depth + 1), punc(":"), SP], [punc(",")]);
+      for (const [k, v] of scalars) {
+        const kt = keyedTok(k, v);
+        if (kt) lines.push({ depth: depth + 1, toks: [prop(k, depth + 1), punc(":"), SP, kt, punc(",")] });
+        else emit(lines, v, depth + 1, [prop(k, depth + 1), punc(":"), SP], [punc(",")]);
+      }
     }
     for (const [k, v] of rest) emit(lines, v, depth + 1, [prop(k, depth + 1), punc(":"), SP], [punc(",")]);
     lines.push({ depth, toks: [punc("}"), ...suffix] });
@@ -137,7 +166,7 @@ export function buildLines(): CodeLine[] {
 
   const data: { [k: string]: Val } = {
     name: "Ryder Tetreault",
-    title: "Software Developer",
+    title: "Software Engineer · AI · Cyber Defense",
     location: "Augusta, GA",
     contact: {
       phone: { __link: "tel:+17066276492", text: "(706) 627-6492" },
@@ -149,13 +178,22 @@ export function buildLines(): CodeLine[] {
       { degree: "Bachelor of Computer Science and Software Engineering", school: "Auburn University", date: "December 2025" },
       { degree: "Certification in Cyber Defense", school: "Auburn University", date: "May 2026" },
     ],
-    experience: experience.map((e) => ({
-      role: e.role,
-      company: e.company,
-      date: e.date,
-      location: e.location,
-      highlights: e.bullets,
-    })),
+    experience: experience.map((e): Val =>
+      e.roles.length === 1
+        ? {
+            company: e.company,
+            role: e.roles[0].role,
+            date: e.roles[0].date,
+            location: e.location,
+            highlights: e.roles[0].bullets,
+          }
+        : {
+            // Promoted: one company, its roles newest first.
+            company: e.company,
+            location: e.location,
+            roles: { __promo: e.roles.map((r) => ({ role: r.role, date: r.date, highlights: r.bullets })) },
+          },
+    ),
     projects: projects.map((p) => ({
       name: p.name,
       date: p.date,

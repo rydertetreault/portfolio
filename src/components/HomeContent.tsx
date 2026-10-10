@@ -80,30 +80,62 @@ const cyberSkills = [
   "NTFS Analysis",
 ];
 
-const experiences = [
+type Role = { role: string; date: string; description: string };
+
+/** One company; `roles` is newest first. More than one role = promotion. */
+type Experience = {
+  company: string;
+  /** Whole tenure at the company. */
+  date: string;
+  url: string;
+  roles: Role[];
+};
+
+const experiences: Experience[] = [
   {
-    date: "Jun 2026 - Present",
     company: "Praxis AI",
-    role: "Engineering Intern",
-    description:
-      "Contributing to UI/UX front-end, platform integrity, and AI infrastructure initiatives. Conducting security and functionality audits across integrations and data flows, helping develop and red-team PraxisShield™ (AI security framework), and supporting Praxis AI agents as a Forward Deployed Engineer (FDE).",
+    date: "Jun 2026 - Present",
     url: "https://praxis-ai.com",
+    roles: [
+      {
+        role: "UI/UX Engineer",
+        date: "Oct 2026 - Present",
+        description:
+          "Designing and building the user experience of the Praxis AI platform, from user flows and interface design through production front-end, and supporting broader software engineering across the product.",
+      },
+      {
+        role: "Engineering Intern",
+        date: "Jun 2026 - Oct 2026",
+        description:
+          "Conducted security and functionality audits across integrations and data flows, helped develop and red-team PraxisShield™ (AI security framework), and supported Praxis AI agents as a Forward Deployed Engineer (FDE). Promoted to full time.",
+      },
+    ],
   },
   {
-    date: "Feb 2026 - Present",
     company: "Maha Media",
-    role: "Software Developer",
-    description:
-      "Supporting backend web systems, technical operations, and scalable digital platform infrastructure for media and content delivery.",
+    date: "Feb 2026 - Present",
     url: "https://mahamedia.us",
+    roles: [
+      {
+        role: "Software Developer",
+        date: "Feb 2026 - Present",
+        description:
+          "Supporting backend web systems, technical operations, and scalable digital platform infrastructure for media and content delivery.",
+      },
+    ],
   },
   {
-    date: "Jan 2026 - Mar 2026",
     company: "Proxima Aerospace",
-    role: "Software Engineering Intern",
-    description:
-      "Developing Python systems for retrieving and processing satellite and astrodynamics data from REST APIs. Supporting distributed data pipelines for mission-critical operations.",
+    date: "Jan 2026 - Mar 2026",
     url: "https://proximaaerospace.com",
+    roles: [
+      {
+        role: "Software Engineering Intern",
+        date: "Jan 2026 - Mar 2026",
+        description:
+          "Developing Python systems for retrieving and processing satellite and astrodynamics data from REST APIs. Supporting distributed data pipelines for mission-critical operations.",
+      },
+    ],
   },
 ];
 
@@ -680,17 +712,41 @@ function SkillColumn({
 function ExperienceCard({
   experience,
 }: {
-  experience: (typeof experiences)[number];
+  experience: Experience;
 }) {
   return (
     <div className="group relative pl-8 border-l-2 border-border-theme hover:border-accent transition-colors duration-500 py-8 first:pt-0 last:pb-0">
       <div className="absolute left-[-5px] top-8 first:top-0 w-2 h-2 rounded-full bg-text-faint group-hover:bg-accent transition-colors duration-300 ring-4 ring-background" />
       <p className="text-sm text-text-faint mb-2">{experience.date}</p>
-      <h3 className="text-xl font-semibold mb-1">{experience.company}</h3>
-      <p className="text-accent text-sm mb-3">{experience.role}</p>
-      <p className="text-text-muted text-sm leading-relaxed max-w-lg">
-        {experience.description}
-      </p>
+      <h3 className="text-xl font-semibold mb-3">{experience.company}</h3>
+      {experience.roles.length === 1 ? (
+        <>
+          <p className="text-accent text-base font-semibold leading-6 mb-1.5">{experience.roles[0].role}</p>
+          <p className="text-text-muted text-sm leading-relaxed max-w-lg">{experience.roles[0].description}</p>
+        </>
+      ) : (
+        // Promotion: one accent timeline joining every role held at this company.
+        <ol>
+          {experience.roles.map((r, i) => (
+            <li key={r.role} className="relative pl-6 pb-6 last:pb-0">
+              <span
+                aria-hidden
+                className={`absolute left-0 top-[7px] z-[1] h-2.5 w-2.5 rounded-full ring-4 ${
+                  i === 0 ? "bg-accent ring-accent-subtle" : "bg-text-faint ring-background"
+                }`}
+              />
+              {i < experience.roles.length - 1 && (
+                <span aria-hidden className="absolute left-[4px] top-3 -bottom-3 w-0.5 bg-text-faint/50" />
+              )}
+              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 mb-1.5">
+                <p className="text-accent text-base font-semibold leading-6">{r.role}</p>
+                <p className="text-xs text-text-faint">{r.date}</p>
+              </div>
+              <p className="text-text-muted text-sm leading-relaxed max-w-lg">{r.description}</p>
+            </li>
+          ))}
+        </ol>
+      )}
       <a
         href={experience.url}
         target="_blank"

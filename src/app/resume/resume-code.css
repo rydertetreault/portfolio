@@ -92,6 +92,14 @@
 .tok-num { color: var(--code-type); }
 .tok-section { color: var(--accent); font-style: normal; letter-spacing: 0.18em; }
 .tok-rule { color: var(--code-punc); font-style: normal; opacity: 0.7; }
+/* job titles and company names stand apart from the highlight prose */
+.tok-role { color: var(--code-type); font-weight: 700; }
+.tok-company { color: var(--code-str); font-weight: 700; }
+
+/* roles held at one company (promotion): their indent guide is a heavier grey line */
+.tp-transcript .tp-guide.tp-guide-promo {
+  border-left: 2px solid color-mix(in srgb, var(--text-faint) 50%, transparent);
+}
 
 .tp-cursor .tp-code::after {
   content: "";
@@ -103,10 +111,8 @@
   background: var(--accent);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .tp-guide {
-    transition: none;
-  }
+html.reduce-motion .tp-guide {
+  transition: none;
 }
 
 /* status bar: "typing… click to skip" while the transcript is being written */
@@ -203,7 +209,75 @@
   font-weight: 600;
 }
 
+/* ── experience: company heading, then each role with its own dates ── */
+.md-preview .md-exp + .md-exp {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+
+.md-preview .md-exp h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.md-preview .md-role {
+  margin-top: 0.6rem;
+}
+
+.md-preview .md-role h4 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.5rem;
+  font-size: 0.95rem;
+  line-height: 1.5rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.md-preview .md-role ul {
+  margin-top: 0.25rem;
+}
+
+/* promotion: roles at the same company share an accent timeline (dot per role, joined) */
+.md-preview .md-roles-promo .md-role {
+  position: relative;
+  padding-left: 1.4rem;
+}
+.md-preview .md-roles-promo .md-role + .md-role {
+  margin-top: 1.1rem;
+}
+.md-preview .md-roles-promo .md-role::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  left: 0;
+  top: calc(0.75rem - 4.5px);
+  width: 9px;
+  height: 9px;
+  border-radius: 9999px;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-subtle);
+}
+/* earlier roles: grey dot; only the current role is accent */
+.md-preview .md-roles-promo .md-role:not(:first-child)::before {
+  background: var(--text-faint);
+  box-shadow: 0 0 0 3px var(--background);
+}
+.md-preview .md-roles-promo .md-role:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  left: 3.5px;
+  width: 2px;
+  top: 0.75rem;
+  bottom: calc(-1.1rem - 0.75rem);
+  background: color-mix(in srgb, var(--text-faint) 50%, transparent);
+}
+
 .md-preview h3 em,
+.md-preview h4 em,
 .md-preview li > em {
   margin-left: auto;
   font-style: normal;

@@ -80,7 +80,7 @@ export default function ResumeEditor({ lines }: { lines: CodeLine[] }) {
           {visible.map((l, i) => (
             <div key={i} data-line {...(l.progress ? { "data-progress": true } : {})}>
               {Array.from({ length: l.depth }, (_, g) => (
-                <span key={g} className="tp-guide" aria-hidden />
+                <span key={g} className={`tp-guide${l.promoGuide === g ? " tp-guide-promo" : ""}`} aria-hidden />
               ))}
               <span className="tp-code">
                 {l.toks.length === 0 ? "\u00a0" : l.toks.map((t, j) => <Token key={j} tok={t} />)}
@@ -152,7 +152,7 @@ function Preview() {
   return (
     <article className="md-preview px-6 py-8 sm:px-12 sm:py-10">
       <h1>Ryder Tetreault</h1>
-      <p className="md-lead">Software Developer · Augusta, GA</p>
+      <p className="md-lead">Software Engineer · AI · Cyber Defense — Augusta, GA</p>
       <p className="md-contact">
         <a href="tel:+17066276492">(706) 627-6492</a>
         <span>·</span>
@@ -177,18 +177,26 @@ function Preview() {
 
       <h2>Experience</h2>
       {experience.map((e) => (
-        <section key={e.company}>
+        <section key={e.company} className="md-exp">
           <h3>
-            {e.role} <span className="md-at">@ {e.company}</span>
-            <em>
-              {e.date} · {e.location}
-            </em>
+            {e.company}
+            <em>{e.location}</em>
           </h3>
-          <ul>
-            {e.bullets.map((b, i) => (
-              <li key={i}>{b}</li>
+          <div className={`md-roles${e.roles.length > 1 ? " md-roles-promo" : ""}`}>
+            {e.roles.map((r) => (
+              <div key={r.role} className="md-role">
+                <h4>
+                  {r.role}
+                  <em>{r.date}</em>
+                </h4>
+                <ul>
+                  {r.bullets.map((b, i) => (
+                    <li key={i}>{b}</li>
+                  ))}
+                </ul>
+              </div>
             ))}
-          </ul>
+          </div>
         </section>
       ))}
 
