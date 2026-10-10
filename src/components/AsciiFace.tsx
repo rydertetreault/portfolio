@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { useReducedMotionPref } from "@/lib/motion";
 import { LEFT_HAND, RIGHT_HAND } from "./hand-ascii";
 import CursorGlyphStream from "./CursorGlyphStream";
 import FingerStream from "./FingerStream";
@@ -33,7 +34,7 @@ type AsciiFaceProps = {
 };
 
 export default function AsciiFace({ onIntroDone }: AsciiFaceProps = {}) {
-  const prefersReduce = useReducedMotion();
+  const prefersReduce = useReducedMotionPref();
   const [face, setFace] = useState<FaceData | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
   const [mounted, setMounted] = useState(true);

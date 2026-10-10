@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { normalizePathname } from "@/lib/utils";
+import { isReducedMotion } from "@/lib/motion";
 import { asciiFieldStore } from "@/components/ascii-field/store";
 import { corruptText, wipeText, decodePage } from "./corrupt";
 import "./terminal.css";
@@ -200,8 +201,6 @@ export default function PageTransition() {
   );
 
   useEffect(() => {
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
-
     const onClick = (e: MouseEvent) => {
       if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
       const a = (e.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
@@ -212,7 +211,7 @@ export default function PageTransition() {
       if (href === location.pathname.replace(/\/+$/, "")) return;
       const kind = kindFor(href);
       if (!kind) return;
-      if (reduce.matches || busy.current || !asciiFieldStore.get()) return;
+      if (isReducedMotion() || busy.current || !asciiFieldStore.get()) return;
 
       e.preventDefault();
       e.stopPropagation();

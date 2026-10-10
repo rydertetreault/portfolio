@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import ThemeProvider from "@/components/ThemeProvider";
+import MotionProvider from "@/components/MotionProvider";
+import { MOTION_INIT_SCRIPT } from "@/lib/motion-script";
 import NavBar from "@/components/NavBar";
 import { AsciiBackground } from "@/components/ascii-field";
 import PageTransition from "@/components/ascii-ui/PageTransition";
@@ -82,11 +84,14 @@ export default function RootLayout({
             __html: `(function(){try{var t=localStorage.getItem("theme");if(t==="light"||t==="dark"){document.documentElement.classList.add(t)}else{document.documentElement.classList.add(window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light")}}catch(e){document.documentElement.classList.add("dark")}})()`,
           }}
         />
+        {/* No-motion preference (nav toggle, else OS setting), applied before first paint. */}
+        <script dangerouslySetInnerHTML={{ __html: MOTION_INIT_SCRIPT }} />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ThemeProvider>
+          <MotionProvider>
           <Analytics />
           {/* Persistent ASCII plasma/topography field: one canvas for the whole site,
               morphs per route and fires a shockwave on navigation (never remounts). */}
@@ -95,6 +100,7 @@ export default function RootLayout({
           <PageTransition />
           <NavBar />
           {children}
+          </MotionProvider>
         </ThemeProvider>
       </body>
     </html>

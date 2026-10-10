@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { isReducedMotion } from "@/lib/motion";
 
 /* ═══════════════════════════════════════════════════════════
    CursorGlyphStream — a comet tail of ASCII glyphs that
@@ -85,7 +86,7 @@ export default function CursorGlyphStream({ className = "" }: { className?: stri
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (isReducedMotion()) return;
     // Mouse only: the effect is meaningless (and wasteful) on touch screens.
     if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
 

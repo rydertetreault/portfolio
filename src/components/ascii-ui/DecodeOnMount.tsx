@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { decodePage } from "./corrupt";
+import { isReducedMotion } from "@/lib/motion";
 
 /**
  * Direct loads (no page transition) still get the decode: the page's text starts
@@ -11,7 +12,7 @@ import { decodePage } from "./corrupt";
 export default function DecodeOnMount({ ms = 1500 }: { ms?: number }) {
   useEffect(() => {
     if ((window as unknown as { __asciiTransition?: boolean }).__asciiTransition) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (isReducedMotion()) return;
     const main = document.querySelector("main");
     if (!main) return;
     const id = requestAnimationFrame(() => void decodePage(main, ms));

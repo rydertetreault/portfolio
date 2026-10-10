@@ -6,9 +6,9 @@ import {
   useScroll,
   useTransform,
   useMotionValueEvent,
-  useReducedMotion,
   type MotionValue,
 } from "framer-motion";
+import { useReducedMotionPref } from "@/lib/motion";
 import { ChevronDown } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════
@@ -374,7 +374,7 @@ function PortraitCanvas({
 
 export default function AsciiPortrait() {
   const ref = useRef<HTMLDivElement>(null);
-  const prefersReduce = useReducedMotion();
+  const prefersReduce = useReducedMotionPref();
   const [sample, setSample] = useState<Sample | null>(null);
   const scanRef = useRef<HTMLSpanElement>(null);
   const stateRef = useRef<HTMLSpanElement>(null);

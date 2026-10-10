@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ElementType } from "react";
+import { isReducedMotion } from "@/lib/motion";
 
 /**
  * Text that "decodes" on mount: every character cycles through ASCII ramp glyphs
@@ -31,7 +32,7 @@ export default function AsciiReveal({
   const raf = useRef(0);
 
   useEffect(() => {
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reduce = isReducedMotion();
     const chars = Array.from(text);
     const n = chars.length;
     let start = 0;

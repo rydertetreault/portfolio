@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
+import MotionToggle from "@/components/MotionToggle";
 import { normalizePathname } from "@/lib/utils";
 import "@/components/ascii-ui/deeplink.css";
 
@@ -135,7 +136,10 @@ export default function NavBar() {
           >
             Resume
           </Link>
-          <ThemeToggle className="text-text-faint hover:text-accent" />
+          <div className="flex items-center gap-4">
+            <MotionToggle className="text-text-faint hover:text-accent" />
+            <ThemeToggle className="text-text-faint hover:text-accent" />
+          </div>
         </div>
 
         {/* Mobile hamburger */}
@@ -224,7 +228,8 @@ export default function NavBar() {
             >
               Resume
             </Link>
-            <div className="py-3">
+            <div className="py-3 flex items-center gap-6">
+              <MotionToggle className="text-text-muted hover:text-accent" />
               <ThemeToggle className="text-text-muted hover:text-accent" />
             </div>
           </div>

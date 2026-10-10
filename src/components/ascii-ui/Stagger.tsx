@@ -1,6 +1,7 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
+import { motion } from "framer-motion";
+import { useReducedMotionPref } from "@/lib/motion";
 import type { ReactNode } from "react";
 
 /** Staggered entrance for a page's blocks (fade + slight rise). */
@@ -15,7 +16,7 @@ export function Stagger({
   delay?: number;
   gap?: number;
 }) {
-  const reduce = useReducedMotion();
+  const reduce = useReducedMotionPref();
   return (
     <motion.div
       className={className}

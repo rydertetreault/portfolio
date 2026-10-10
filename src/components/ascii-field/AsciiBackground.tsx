@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { normalizePathname } from "@/lib/utils";
+import { isReducedMotion, subscribeReducedMotion } from "@/lib/motion";
 import { AsciiFieldEngine } from "./engine";
 import { asciiFieldStore } from "./store";
 import { DEFAULT_CONFIG, type AsciiFieldConfig } from "./config";
@@ -123,7 +124,6 @@ export default function AsciiBackground({
     };
     if (!asciiFieldStore.claim(inst)) return;
 
-    const reduceMq = window.matchMedia("(prefers-reduced-motion: reduce)");
     const mobileBreakpoint = config?.mobile?.breakpoint ?? DEFAULT_CONFIG.mobile.breakpoint;
 
     let engine: AsciiFieldEngine | null = null;
@@ -183,7 +183,7 @@ export default function AsciiBackground({
       engine = new AsciiFieldEngine(canvas, {
         config,
         fontFamily: resolveMonoFamily(),
-        staticMode: reduceMq.matches,
+        staticMode: isReducedMotion(),
         forceCanvas2D: backend === "canvas2d",
       });
       engineRef.current = engine;
@@ -298,7 +298,7 @@ export default function AsciiBackground({
       else engine.start();
     };
 
-    // ── reduced-motion preference toggled live ──
+    // ── no-motion preference toggled live (nav toggle or OS setting) ──
     const onReduceChange = () => {
       engine?.destroy();
       engine = null;
@@ -314,7 +314,7 @@ export default function AsciiBackground({
     window.addEventListener("pointerdown", onPointerDown, { passive: true, capture: true });
     document.documentElement.addEventListener("pointerleave", onPointerLeave);
     document.addEventListener("visibilitychange", onVisibility);
-    reduceMq.addEventListener("change", onReduceChange);
+    const unsubscribeReduce = subscribeReducedMotion(onReduceChange);
 
     teardown = () => {
       disposed = true;
@@ -330,7 +330,7 @@ export default function AsciiBackground({
       window.removeEventListener("pointerdown", onPointerDown, { capture: true });
       document.documentElement.removeEventListener("pointerleave", onPointerLeave);
       document.removeEventListener("visibilitychange", onVisibility);
-      reduceMq.removeEventListener("change", onReduceChange);
+      unsubscribeReduce();
       window.removeEventListener("ascii-field:tune", onTune);
       window.removeEventListener("ascii-field:reset", onResetTune);
       window.removeEventListener("ascii-field:snap", onSnap);

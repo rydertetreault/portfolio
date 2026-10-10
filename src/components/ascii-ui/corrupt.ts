@@ -4,6 +4,8 @@
  * nodes are left exactly as they were.
  */
 
+import { isReducedMotion } from "@/lib/motion";
+
 const GARBLE = "#%&@=+*_~<>/\\|?0123";
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
@@ -97,7 +99,7 @@ export async function revealSection(
   section: Element,
   opts: { stagger?: number; corruptMs?: number; glitchChance?: number; maxBlocks?: number } = {},
 ): Promise<void> {
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  if (isReducedMotion()) return;
   const { stagger = 80, corruptMs = 260, glitchChance = 0.22, maxBlocks = 12 } = opts;
 
   activeReveal?.cancel();

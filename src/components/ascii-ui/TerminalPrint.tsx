@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, type ReactNode } from "react";
+import { isReducedMotion } from "@/lib/motion";
 
 /**
  * Types its `[data-line]` descendants out character by character like terminal
@@ -47,7 +48,7 @@ export default function TerminalPrint({
     if (!root) return;
     const lines = Array.from(root.querySelectorAll<HTMLElement>("[data-line]"));
     if (lines.length === 0) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (isReducedMotion()) return;
 
     // Collect every text node per line (in document order) and blank them.
     type L = { el: HTMLElement; nodes: { node: Text; text: string }[]; chars: number; progress: boolean };

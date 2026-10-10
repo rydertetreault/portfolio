@@ -193,10 +193,8 @@ body {
   animation: caret 1.1s steps(1) infinite;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .animate-caret {
-    animation: none;
-  }
+html.reduce-motion .animate-caret {
+  animation: none;
 }
 
 /* ─── Element glitch (sliced jitter) used by section load-ins ─── */
@@ -215,10 +213,8 @@ body {
   will-change: transform, clip-path;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .ascii-glitch {
-    animation: none;
-  }
+html.reduce-motion .ascii-glitch {
+  animation: none;
 }
 
 /* Page arriving under a text transition: hidden until its first decoded frame */
@@ -255,4 +251,33 @@ nav {
 }
 @keyframes intro-caret-blink {
   to { visibility: hidden; }
+}
+
+/* ─── No-motion mode ───
+   html.reduce-motion is set by the nav toggle, or follows the OS
+   prefers-reduced-motion setting (see src/lib/motion.ts). JS-driven effects
+   check the same class; this switches off every CSS animation/transition. */
+html.reduce-motion,
+html.reduce-motion *,
+html.reduce-motion *::before,
+html.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  animation-delay: 0ms !important;
+  transition-duration: 0.01ms !important;
+  transition-delay: 0ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* Before hydration the server-rendered homepage intro is still in the DOM;
+   under no-motion keep it hidden and show the content straight away. */
+html.reduce-motion body > div.fixed.inset-0.z-\[100\] {
+  visibility: hidden !important;
+}
+html.reduce-motion [data-home-content] {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+html.reduce-motion body[data-intro-active] canvas.ascii-field-canvas {
+  opacity: 1 !important;
 }

@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useState } from "react";
 import AsciiFace from "./AsciiFace";
 import HomeContent from "./HomeContent";
 import type { GitHubRepo } from "@/lib/github";
+import { useReducedMotionPref } from "@/lib/motion";
 
 /**
  * Client-side shell that coordinates the auto-playing ASCII intro overlay with
@@ -27,12 +28,22 @@ export default function HomeShell({ repos }: { repos: GitHubRepo[] }) {
     const id = requestAnimationFrame(() => setSkipIntro(true));
     return () => cancelAnimationFrame(id);
   }, []);
-  const showContent = introDone || skipIntro;
+  // No-motion mode skips the intro too (AsciiFace renders nothing under it).
+  const reduceMotion = useReducedMotionPref();
+  const noIntro = skipIntro || reduceMotion;
+  // Once skipped for no-motion, turning motion back on must not replay the intro
+  // over the page the visitor is already reading.
+  useEffect(() => {
+    if (!reduceMotion) return;
+    const id = requestAnimationFrame(() => setSkipIntro(true));
+    return () => cancelAnimationFrame(id);
+  }, [reduceMotion]);
+  const showContent = introDone || noIntro;
 
   // Hide the site-wide ASCII background field while the intro (hands screen)
   // is up; it fades back in behind the overview once the intro finishes.
   // Layout effect so it applies before first paint (no flash of the field).
-  const introActive = !skipIntro && !introDone;
+  const introActive = !noIntro && !introDone;
   useLayoutEffect(() => {
     if (!introActive) return;
     document.body.setAttribute("data-intro-active", "");
@@ -41,8 +52,9 @@ export default function HomeShell({ repos }: { repos: GitHubRepo[] }) {
 
   return (
     <>
-      {!skipIntro && <AsciiFace onIntroDone={() => setIntroDone(true)} />}
+      {!noIntro && <AsciiFace onIntroDone={() => setIntroDone(true)} />}
       <div
+        data-home-content
         aria-hidden={!showContent}
         style={{
           opacity: showContent ? 1 : 0,
