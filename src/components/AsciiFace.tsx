@@ -7,11 +7,9 @@ import { LEFT_HAND, RIGHT_HAND } from "./hand-ascii";
 import CursorGlyphStream from "./CursorGlyphStream";
 import FingerStream from "./FingerStream";
 import LiveDecode from "./LiveDecode";
-import AsciiCorruption, { corruptionBus } from "./AsciiCorruption";
-import IntroStage, { type IntroEvent } from "./intro/IntroStage";
-import ScanReadout, { type ReadoutLine } from "./intro/ScanReadout";
+import AsciiCorruption from "./AsciiCorruption";
+import HandDissolve from "./intro/HandDissolve";
 import ThemeToggle from "./ThemeToggle";
-import { loadFaceData, type FaceData } from "./intro/face-data";
 
 /* ═══════════════════════════════════════════════════════════
    AsciiFace — homepage + intro overlay.
@@ -19,10 +17,9 @@ import { loadFaceData, type FaceData } from "./intro/face-data";
    idle   (the homepage) two ASCII hands framing a "scroll to trace"
           cue; glyphs trickle off the fingertips; the cursor leaves
           a glyph trail.
-   trace  (the intro, on scroll) the trickle becomes a flood: every
-          glyph is pulled off both hands and forms the face in the
-          middle; the face is scanned and identified; the overview
-          takes over. See intro/IntroStage.tsx for the beat itself.
+   trace  (the intro, on scroll) the hands dissolve tip-outward:
+          every glyph lifts off, drifts and fades. See
+          intro/HandDissolve.tsx for the beat itself.
    done   overlay fades; HomeContent (the overview) fades in.
    ═══════════════════════════════════════════════════════════ */
 
@@ -35,38 +32,17 @@ type AsciiFaceProps = {
 
 export default function AsciiFace({ onIntroDone }: AsciiFaceProps = {}) {
   const prefersReduce = useReducedMotionPref();
-  const [face, setFace] = useState<FaceData | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
   const [mounted, setMounted] = useState(true);
-  const [handsGone, setHandsGone] = useState(false);
-  const [lines, setLines] = useState<ReadoutLine[]>([]);
 
   const leftHandRef = useRef<HTMLPreElement>(null);
   const rightHandRef = useRef<HTMLPreElement>(null);
   const ctaFrameRef = useRef<HTMLDivElement>(null);
-  const counterRef = useRef<HTMLSpanElement>(null);
-  const barRef = useRef<HTMLDivElement>(null);
-
-  /* ── Preload face.bin silently on mount (during idle) ── */
-  useEffect(() => {
-    let alive = true;
-    loadFaceData()
-      .then((d) => { if (alive) setFace(d); })
-      .catch((e) => console.error("[AsciiFace]", e));
-    return () => { alive = false; };
-  }, []);
 
   /* ── Trigger: any scroll/touch/key input while idle starts the trace ── */
   useEffect(() => {
     if (phase !== "idle") return;
-    const start = () => {
-      setPhase("trace");
-      const handsVisible = (leftHandRef.current?.getBoundingClientRect().width ?? 0) > 1;
-      setLines([
-        { key: "src", label: "source", value: handsVisible ? "hands.l / hands.r" : "field" },
-        { key: "collect", label: "collecting", live: true, caret: true },
-      ]);
-    };
+    const start = () => setPhase("trace");
     const opts = { passive: true } as AddEventListenerOptions;
     window.addEventListener("wheel", start, opts);
     window.addEventListener("touchmove", start, opts);
@@ -82,42 +58,8 @@ export default function AsciiFace({ onIntroDone }: AsciiFaceProps = {}) {
     };
   }, [phase]);
 
-  /* ── Trace: calm the background corruption while the face forms ── */
-  useEffect(() => {
-    if (phase !== "trace") return;
-    corruptionBus.setPaused(true);
-    return () => corruptionBus.setPaused(false);
-  }, [phase]);
-
-  /* ── Beats reported by the stage → readout lines ── */
-  const onEvent = useCallback((e: IntroEvent) => {
-    const drop = (ls: ReadoutLine[]) => ls.map((l) => ({ ...l, caret: false }));
-    switch (e) {
-      case "assembled":
-        setHandsGone(true);
-        setLines((ls) => [...drop(ls).map((l) => (l.key === "collect" ? { ...l, live: false, value: "complete" } : l)),
-          { key: "subject", label: "subject", value: "formed" }]);
-        break;
-      case "sweep":
-        setLines((ls) => [...drop(ls), { key: "scan", label: "scanning", live: true, bar: true, caret: true }]);
-        break;
-      case "landmarks":
-        // the scan line stays live (bar keeps filling) until the match
-        setLines((ls) => [...drop(ls), { key: "lm", label: "landmarks", value: "14 / 14" }]);
-        break;
-      case "match":
-        setLines((ls) => [...drop(ls).map((l) => (l.key === "scan" ? { ...l, live: false, value: "100%" } : l)),
-          { key: "match", label: "match", value: "99.7%" },
-          { key: "id", label: "result", value: "subject identified", value2: "ryder tetreault", emphasis: true }]);
-        break;
-      case "release":
-        setLines((ls) => [...ls, { key: "open", label: "opening", value: "overview" }]);
-        setPhase("done");
-        break;
-      case "finished":
-        break;
-    }
-  }, []);
+  /* ── Dissolve finished → hand over to the overview ── */
+  const onDissolved = useCallback(() => setPhase("done"), []);
 
   /* ── Done: tell the shell, then unmount after the fade ── */
   useEffect(() => {
@@ -141,8 +83,8 @@ export default function AsciiFace({ onIntroDone }: AsciiFaceProps = {}) {
   if (prefersReduce || !mounted) return null;
 
   const showIdle = phase === "idle";
-  const showHands = !handsGone && phase !== "done";
-  const showTrace = phase === "trace" || phase === "done";
+  const showHands = phase !== "done";
+  const showTrace = phase === "trace";
 
   return (
     <AnimatePresence>
@@ -155,7 +97,7 @@ export default function AsciiFace({ onIntroDone }: AsciiFaceProps = {}) {
         className="fixed inset-0 z-[100] overflow-hidden"
       >
         {/* Dim ASCII "corruption" texture across the whole viewport. Full on the
-            homepage; eased back once the trace starts so the face is clean. */}
+            homepage; eased back once the hands start dissolving. */}
         <motion.div
           key="corruption"
           aria-hidden
@@ -167,32 +109,8 @@ export default function AsciiFace({ onIntroDone }: AsciiFaceProps = {}) {
           <AsciiCorruption />
         </motion.div>
 
-        {/* Scrim behind the face while it forms / is scanned */}
-        <AnimatePresence>
-          {showTrace && (
-            <motion.div
-              key="scrim"
-              aria-hidden
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 1.4, ease: [0.4, 0.0, 0.2, 1] }}
-              className="pointer-events-none absolute inset-0 z-[5]"
-            >
-              <div
-                className="absolute inset-0"
-                style={{
-                  background:
-                    "radial-gradient(ellipse 34% 44% at 50% 50%, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.72) 45%, rgba(0,0,0,0.28) 75%, transparent 92%)",
-                }}
-              />
-              <div data-ascii-quiet className="absolute left-1/2 top-1/2 h-[48vmin] w-[36vmin] -translate-x-1/2 -translate-y-1/2" />
-            </motion.div>
-          )}
-        </AnimatePresence>
-
         {/* ── The hands. Mounted through idle AND the trace: the stage erodes
-            their text cell by cell as the glyphs are pulled off. ── */}
+            their text cell by cell as the glyphs dissolve. ── */}
         <AnimatePresence>
           {showHands && (
             <>
@@ -301,24 +219,16 @@ export default function AsciiFace({ onIntroDone }: AsciiFaceProps = {}) {
           )}
         </AnimatePresence>
 
-        {/* ── Trace: the flood, the face, the scan ── */}
+        {/* ── Trace: the hands dissolve ── */}
         {showTrace && (
-          <IntroStage
-            face={face}
+          <HandDissolve
             hands={[
               { el: leftHandRef, text: LEFT_HAND, side: -1 },
               { el: rightHandRef, text: RIGHT_HAND, side: 1 },
             ]}
-            counterRef={counterRef}
-            barRef={barRef}
-            onEvent={onEvent}
+            onDone={onDissolved}
           />
         )}
-        <AnimatePresence>
-          {showTrace && phase !== "done" && (
-            <ScanReadout key="readout" lines={lines} counterRef={counterRef} barRef={barRef} />
-          )}
-        </AnimatePresence>
 
         {/* Theme toggle: the site nav is hidden while the intro is up, so
             expose light/dark switching directly on the overlay. */}

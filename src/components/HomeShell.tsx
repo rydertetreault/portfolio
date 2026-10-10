@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import AsciiFace from "./AsciiFace";
+import FieldBuild from "./intro/FieldBuild";
 import HomeContent from "./HomeContent";
 import type { GitHubRepo } from "@/lib/github";
 import { useReducedMotionPref } from "@/lib/motion";
@@ -50,9 +51,19 @@ export default function HomeShell({ repos }: { repos: GitHubRepo[] }) {
     return () => document.body.removeAttribute("data-intro-active");
   }, [introActive]);
 
+  // After the hands dissolve, the waveform background is built in cell by cell.
+  // Runs once: "idle" → "running" → "done" (AsciiFace may re-fire onIntroDone).
+  const [build, setBuild] = useState<"idle" | "running" | "done">("idle");
+  const onIntroDone = useCallback(() => {
+    setIntroDone(true);
+    setBuild((b) => (b === "idle" ? "running" : b));
+  }, []);
+  const onBuilt = useCallback(() => setBuild("done"), []);
+
   return (
     <>
-      {!noIntro && <AsciiFace onIntroDone={() => setIntroDone(true)} />}
+      {!noIntro && <AsciiFace onIntroDone={onIntroDone} />}
+      {build === "running" && !noIntro && <FieldBuild onDone={onBuilt} />}
       <div
         data-home-content
         aria-hidden={!showContent}
