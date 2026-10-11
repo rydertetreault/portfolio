@@ -55,8 +55,8 @@ export const metadata: Metadata = {
     images: [
       {
         url: "/banner.png",
-        width: 1536,
-        height: 1024,
+        width: 1600,
+        height: 600,
         type: "image/png",
         alt: "Ryder Tetreault | AI Integration & Cyber Defense",
       },
