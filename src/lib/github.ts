@@ -19,6 +19,8 @@ export type GitHubRepo = {
   screenshots?: string[];
   appStore?: string;
   private?: boolean;
+  /** Logo of the company the project was made for (shown beside the title). */
+  logo?: { src: string; alt: string };
 };
 
 const GITHUB_USERNAME = "rydertetreault";
@@ -72,8 +74,64 @@ const categoryOverrides: Record<string, ProjectCategory> = {
 /** Non-GitHub projects to include alongside repos */
 const manualProjects: GitHubRepo[] = [
   {
+    name: "Praxis-AI-Website",
+    subtitle: "Praxis AI · praxis-ai.com",
+    logo: { src: "/logos/praxis-ai.png", alt: "Praxis AI" },
+    description:
+      "A ground-up redesign of the Praxis AI company website, telling the story of Human-First Digital Twins™ through an interactive WebGL knowledge graph, a Digital Twin chat preview, and a scroll-driven narrative.",
+    longDescription:
+      "I redesigned praxis-ai.com from scratch as one scroll-driven story: from a person, to their knowledge, to the people it reaches. The homepage walks through the company's \"4 P's\" (Provenance, Purpose, Protection, Performance), with a Ray Kurzweil / Digital RAI showcase, real Digital Twin use cases for learning, teams, and legacy, a community photo gallery, and an awards timeline.\n\nThe interactive centerpieces are the IP Vault™ \"Super Brain\", a WebGL knowledge graph visitors can drag, zoom, and explore, and Meet Pria, a phone-style chat preview of the company's own Digital Twin. The same design system runs through the rest of the site, including the Innovation Hub (a searchable, filterable article library) and the PraxisShield™ product page. Motion is built with GSAP and Lenis smooth scrolling, and every animation respects reduced-motion preferences.\n\nMy role: Sole designer and front-end developer. I designed and built the entire site, from the visual design and interactions to the custom WordPress theme. Backend work was handled by our backend engineer.",
+    category: "Professional",
+    language: "JavaScript",
+    topics: ["ui/ux", "web design", "wordpress", "gsap", "webgl", "vite", "praxis ai"],
+    screenshots: [
+      "/projects/praxis-ai-website/01.png",
+      "/projects/praxis-ai-website/02.png",
+      "/projects/praxis-ai-website/03.png",
+      "/projects/praxis-ai-website/04.png",
+      "/projects/praxis-ai-website/05.png",
+      "/projects/praxis-ai-website/06.png",
+      "/projects/praxis-ai-website/07.png",
+    ],
+    private: true,
+    html_url: "",
+    homepage: "https://praxis-ai.com",
+    stargazers_count: 0,
+    forks_count: 0,
+    fork: false,
+    created_at: "2026-08-01T00:00:00Z",
+    pushed_at: "2026-10-19T00:00:00Z",
+  },
+  {
+    name: "Pria",
+    subtitle: "Praxis AI · Digital Twin platform",
+    logo: { src: "/logos/praxis-ai.png", alt: "Praxis AI" },
+    description:
+      "A redesigned interface for Pria, Praxis AI's platform for Human-First Digital Twins™, bringing chat, real-time voice, multi-agent work, and twin management together in one workspace.",
+    longDescription:
+      "Pria is the app people use to talk with Praxis AI's Digital Twins. I designed and built its new interface from the ground up, replacing the classic UI with a single workspace built around the conversation.\n\nA collapsible sidebar ties together chat, AgentSpace, the Twins gallery, Assistants, and voice, with favorites and date-grouped history. Next to the chat, a four-tab context panel opens up what's usually hidden: live sub-agent runs with their progress and tools, the retrieval, files, and usage behind each answer, the active twin and its knowledge setup, and agent access controls. A tiered model picker explains in plain language what each level does and what it costs, and Convo mode turns the same twin into a real-time, face-to-face voice conversation.\n\nThe redesign carries through AgentSpace (describe a goal, then watch Pria plan it and dispatch agents), a Twins gallery for choosing who you talk to, and a reorganized account area covering profile, data, privacy, sharing, memory, knowledge, and billing.\n\nMy role: Sole designer and front-end developer. I designed and built the entire new UI, from the interaction design and visual system to the production front end.",
+    category: "Professional",
+    language: "React",
+    topics: ["ui/ux", "product design", "front-end", "ai chat", "voice", "multi-agent", "digital twins", "praxis ai"],
+    screenshots: [
+      "/projects/pria/01.png",
+      "/projects/pria/02.png",
+      "/projects/pria/03.png",
+      "/projects/pria/04.png",
+    ],
+    private: true,
+    html_url: "",
+    homepage: null,
+    stargazers_count: 0,
+    forks_count: 0,
+    fork: false,
+    created_at: "2026-06-01T00:00:00Z",
+    pushed_at: "2026-10-19T00:00:00Z",
+  },
+  {
     name: "media-library",
     subtitle: "Maha Media · Ram Dass Love Serve Remember Foundation",
+    logo: { src: "/logos/lsrf.png", alt: "Ram Dass Love Serve Remember Foundation" },
     description:
       "A custom digital media library giving a non-profit's team a single home for decades of archival audio, video, images, and documents, with AI-powered transcription, tagging, and semantic search.",
     longDescription:
@@ -94,6 +152,7 @@ const manualProjects: GitHubRepo[] = [
   {
     name: "analytics-api",
     subtitle: "Maha Media · Be Here Now Network",
+    logo: { src: "/logos/lsrf.png", alt: "Ram Dass Love Serve Remember Foundation" },
     description:
       "Frontend design for the Be Here Now Network's internal analytics dashboard. Built the UI for visualizing Google Analytics 4 site metrics and YouTube channel analytics in a unified reporting platform.",
     longDescription:

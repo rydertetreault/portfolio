@@ -57,7 +57,7 @@ export default function Lightbox({
               e.stopPropagation();
               onClose();
             }}
-            className="absolute top-4 right-4 rounded-full p-2 text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+            className="absolute top-4 right-4 z-10 rounded-full p-2 text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
             aria-label="Close"
           >
             <X size={22} />
@@ -70,7 +70,7 @@ export default function Lightbox({
                   e.stopPropagation();
                   onIndexChange((index - 1 + images.length) % images.length);
                 }}
-                className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full p-2 text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                className="absolute left-2 sm:left-4 top-1/2 z-10 -translate-y-1/2 rounded-full p-2 bg-black/50 sm:bg-transparent text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
                 aria-label="Previous"
               >
                 <ChevronLeft size={26} />
@@ -80,7 +80,7 @@ export default function Lightbox({
                   e.stopPropagation();
                   onIndexChange((index + 1) % images.length);
                 }}
-                className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full p-2 text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                className="absolute right-2 sm:right-4 top-1/2 z-10 -translate-y-1/2 rounded-full p-2 bg-black/50 sm:bg-transparent text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
                 aria-label="Next"
               >
                 <ChevronRight size={26} />

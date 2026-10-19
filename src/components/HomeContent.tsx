@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
+import CompanyLogo from "@/components/CompanyLogo";
 import Link from "next/link";
 import {
   Github,
@@ -101,13 +102,13 @@ const experiences: Experience[] = [
         role: "UI/UX Engineer",
         date: "Oct 2026 - Present",
         description:
-          "Designing and building the user experience of the Praxis AI platform, from user flows and interface design through production front-end, and supporting broader software engineering across the product.",
+          "Designing and building the user experience of the Praxis AI platform, from user flows and interface design through production front-end, including designing and building the new interface for Pria, the Digital Twin app. Also supporting broader software engineering across the product.",
       },
       {
         role: "Engineering Intern",
         date: "Jun 2026 - Oct 2026",
         description:
-          "Conducted security and functionality audits across integrations and data flows, helped develop and red-team PraxisShield™ (AI security framework), and supported Praxis AI agents as a Forward Deployed Engineer (FDE). Promoted to full time.",
+          "Conducted security and functionality audits across integrations and data flows, helped develop and red-team PraxisShield™ (AI security framework), supported Praxis AI agents as a Forward Deployed Engineer (FDE), and solely designed and built the redesigned praxis-ai.com. Promoted to full time.",
       },
     ],
   },
@@ -321,6 +322,8 @@ export default function HomeContent({ repos }: { repos: GitHubRepo[] }) {
   }, [sections]);
 
   const FEATURED_NAMES = [
+    "Praxis-AI-Website",
+    "Pria",
     "media-library",
     "analytics-api",
     "SnapShift",
@@ -760,14 +763,14 @@ function ExperienceCard({
 }
 
 function FeaturedProjectCard({ repo }: { repo: GitHubRepo }) {
-  // Pick the link target: App Store > Live Site (homepage) > nothing if private.
+  // Pick the link target: App Store > Live Site (homepage) > nothing (lock icon if private).
   let href: string | null = null;
   let LinkIcon: React.ComponentType<{ size?: number; className?: string }> | null = null;
 
   if (repo.appStore) {
     href = repo.appStore;
     LinkIcon = AppleIcon;
-  } else if (!repo.private && repo.homepage) {
+  } else if (repo.homepage) {
     href = repo.homepage;
     LinkIcon = ExternalLink;
   }
@@ -776,12 +779,14 @@ function FeaturedProjectCard({ repo }: { repo: GitHubRepo }) {
     <div className="flex items-start justify-between gap-4">
       <div className="space-y-2 min-w-0">
         <div className="flex items-center gap-3">
-          {repo.language && (
+          {repo.logo ? (
+            <CompanyLogo src={repo.logo.src} alt={repo.logo.alt} className="h-5 w-5" />
+          ) : repo.language ? (
             <span
               className="inline-block h-2.5 w-2.5 rounded-full shrink-0"
               style={{ backgroundColor: "#a3e635" }}
             />
-          )}
+          ) : null}
           <h3 className="text-base font-semibold group-hover:text-accent-hover transition-colors truncate">
             {formatRepoName(repo.name)}
           </h3>

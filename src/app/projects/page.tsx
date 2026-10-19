@@ -20,7 +20,7 @@ export default async function ProjectsPage() {
           <h1 className="text-5xl sm:text-6xl font-semibold tracking-[-0.03em]">Projects</h1>
           <p className="max-w-xl text-lg text-text-muted">A collection of things I&apos;ve built.</p>
           <p className="font-mono text-[11px] tracking-[0.25em] text-text-faint">
-            {repos.length} REPOS <span className="mx-2 text-border-theme">/</span> SORTED BY ACTIVITY{" "}
+            {repos.length} REPOS <span className="mx-2 text-border-theme">/</span> PROFESSIONAL FIRST, BY ACTIVITY{" "}
             <span className="mx-2 text-border-theme">/</span> GITHUB API
           </p>
         </header>

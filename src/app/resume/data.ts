@@ -17,6 +17,7 @@ export const experience: ExperienceEntry[] = [
         date: "October 2026 - Present",
         bullets: [
           "Designing and building the user experience of the Praxis AI platform, from user flows and interface design through production front-end implementation.",
+          "Solely designed and built the new interface for Pria, the Praxis AI Digital Twin app: unified navigation, a context panel exposing agent runs, retrieval, and twin setup, a tiered model picker, AgentSpace, and real-time voice conversations.",
           "Improving usability, accessibility, and visual consistency across the product, shipping user-facing features alongside the engineering team.",
           "Supporting broader software engineering work across the platform, including Praxis AI agent features and platform integrity.",
         ],
@@ -28,6 +29,7 @@ export const experience: ExperienceEntry[] = [
           "Contributed to UI/UX front-end, platform integrity, and AI infrastructure initiatives, reporting to the VP of Engineering; promoted to full time.",
           "Conducted security and functionality audits of the Praxis AI platform across integrations, data flows, and system architecture.",
           "Helped develop and test PraxisShield™, an AI security framework, including agentic security research and using AI agents to red-team internal systems.",
+          "Solely designed and built the front end of the redesigned company website (praxis-ai.com), including an interactive WebGL knowledge graph, a Digital Twin chat preview, and scroll-driven GSAP animation.",
           "Worked on Praxis AI agents and performed professional services as a Forward Deployed Engineer (FDE).",
         ],
       },
@@ -70,6 +72,23 @@ export const projects: {
   bullets: string[];
 }[] = [
   {
+    name: "Praxis AI Website",
+    date: "August 2026 - October 2026",
+    context: "Praxis AI",
+    link: "praxis-ai.com",
+    bullets: [
+      "Designed and built a ground-up redesign of the Praxis AI company website as sole designer and front-end developer: a scroll-driven narrative with a WebGL knowledge graph, a Digital Twin chat preview, an Innovation Hub article library, and the PraxisShield™ product page, delivered as a custom WordPress theme with GSAP motion and reduced-motion support.",
+    ],
+  },
+  {
+    name: "Pria",
+    date: "June 2026 - Present",
+    context: "Praxis AI · Digital Twin platform",
+    bullets: [
+      "Designed and built, as sole designer and front-end developer, a new interface for Pria, Praxis AI's platform for Human-First Digital Twins™, unifying chat, real-time voice, multi-agent workflows, and twin management in one workspace, with a context panel that surfaces live sub-agent runs, retrieval sources, and usage behind every answer.",
+    ],
+  },
+  {
     name: "Media Library",
     date: "February 2026 - Present",
     context: "Maha Media · Ram Dass Love Serve Remember Foundation",
@@ -102,14 +121,6 @@ export const projects: {
     link: "bardownski.hockey",
     bullets: [
       "Full-stack sports club site built with Next.js and TypeScript featuring live match results, player stats, roster management, news, and highlight integration.",
-    ],
-  },
-  {
-    name: "Jeff Ray Discord Bot",
-    date: "Nov 2025 - Dec 2025",
-    context: "Individual Project",
-    bullets: [
-      "Node.js Discord bot with slash commands, secure API token handling, and community features including a judge/oracle system and jail/leaderboard mechanic.",
     ],
   },
 ];
