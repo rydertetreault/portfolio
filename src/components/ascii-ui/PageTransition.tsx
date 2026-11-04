@@ -31,10 +31,12 @@ import "./terminal.css";
 
 type Kind = "cloud" | "terminal";
 
-/** Only the two tabs get choreography; other internal links navigate normally. */
+/**
+ * Projects and the resume now open as lightboxes over the ocean (components/ocean),
+ * so no route gets this choreography any more; kept for pages outside the ocean.
+ */
 function kindFor(path: string): Kind | null {
-  if (path === "/resume" || path.startsWith("/resume/")) return "terminal";
-  if (path === "/projects") return "cloud";
+  void path;
   return null;
 }
 

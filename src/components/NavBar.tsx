@@ -11,7 +11,7 @@ import "@/components/ascii-ui/deeplink.css";
 
 const sectionItems = [
   { id: "experience", label: "Experience" },
-  { id: "skills", label: "Skills" },
+  { id: "projects", label: "Projects" },
   { id: "education", label: "Education" },
   { id: "contact", label: "Contact" },
 ];
@@ -62,8 +62,10 @@ export default function NavBar() {
     window.setTimeout(() => document.documentElement.classList.remove("ascii-deeplink"), 4000);
   };
 
-  // The homepage (the ocean) brings its own header.
-  if (isHome) return null;
+  // Ocean pages (the homepage and its lightboxes) bring their own header.
+  const isOcean =
+    isHome || isResume || pathname === "/contact" || (isProjects && !pathname.startsWith("/projects/snapshift"));
+  if (isOcean) return null;
 
   return (
     <nav

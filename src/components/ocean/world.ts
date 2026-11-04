@@ -8,12 +8,12 @@
  *
  * Top view (north up):
  *
- *        E1      E0         swell 3 (z -48)
- *     E2                    swell 2 (z -36)
- *       E3                  swell 1 (z -24)
- *    currents
- *    still water            origin (0, 0)
- *          whirlpool
+ *        E1      E0           swell 3 (z -74)
+ *     E2                      swell 2 (z -62)
+ *       E3                    swell 1 (z -50)
+ *    whirlpool                currents (z -42 .. 12)
+ *    calm water, sun ↓
+ *                             origin (0, 0)
  */
 
 export type Vec2 = [number, number];
@@ -47,41 +47,48 @@ export const FLOW_SPEED: Vec2 = [-0.15, -0.02];
 
 /* ── the events (one per stop) ── */
 
-/** Experience: three long crests running east-west, one per role. */
+/** Accent palette indices (CSS vars --ocean-a1..3, read by the engine and used by the text). */
+export const ACCENTS = ["--ocean-a1", "--ocean-a2", "--ocean-a3"] as const;
+
+/** About: three currents flowing north from under the dive, one per skill group. */
+export const CURRENTS = {
+  x: 0,
+  gap: 2.9,
+  width: 0.95,
+  /** Far end (north) and near end of the lanes. */
+  z0: -42,
+  z1: 12,
+  speeds: [2.2, 3.1, 2.6],
+  /** Accent per lane (1-based palette index), matching the skill group headings. */
+  colors: [1, 2, 3],
+};
+
+/** Experience: three long crests running east-west, one per company. */
 export const SWELL = {
-  crests: [-24, -36, -48],
+  crests: [-50, -62, -74],
   x: 4,
   height: 2.0,
   width: 3.4,
   /** Crests fade out this far east / west of `x`. */
   reach: 34,
+  colors: [1, 2, 3],
 };
 
 /** Projects: one eddy per featured project. arms < 0 turns the other way. */
-export const EDDIES: { c: Vec2; arms: number }[] = [
-  { c: [-6, -64], arms: 3 },
-  { c: [-21, -72], arms: -2 },
-  { c: [-36, -67], arms: 4 },
-  { c: [-46, -54], arms: -3 },
+export const EDDIES: { c: Vec2; arms: number; color: number }[] = [
+  { c: [-6, -90], arms: 3, color: 1 },
+  { c: [-21, -98], arms: -2, color: 2 },
+  { c: [-36, -93], arms: 4, color: 3 },
+  { c: [-46, -80], arms: -3, color: 1 },
 ];
 export const EDDY_R = 4.2;
 export const EDDY_DEPTH = 0.9;
 
-/** Skills: three currents flowing south, side by side. */
-export const CURRENTS = {
-  x: -50,
-  gap: 4.4,
-  width: 1.35,
-  z0: -58,
-  z1: -8,
-  speeds: [2.2, 3.1, 2.6],
-};
-
-/** Education: still water. */
-export const STILL = { c: [-49, 2] as Vec2, r: 16 };
+/** Education: calm open water out to the horizon, a low sun ahead. */
+export const CALM = { c: [-50, -30] as Vec2, r: 45, sunYaw: -180, sunElev: 2.2 };
 
 /** Contact: the whirlpool. */
-export const WHIRL = { c: [-30, 18] as Vec2, r: 6.5, depth: 3.2, eye: 2.2, arms: 5, tight: 11 };
+export const WHIRL = { c: [-44, -44] as Vec2, r: 6.5, depth: 3.2, eye: 2.2, arms: 5, tight: 11 };
 
 /* ── CPU mirrors (camera placement) ── */
 

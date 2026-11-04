@@ -47,9 +47,8 @@ function resolveMonoFamily(): string {
 // for the overview. Keeping "/" in the map means the field never unmounts when
 // navigating between routes.
 const DEFAULT_ROUTE_PRESETS: Record<string, PresetName> = {
-  // "/" is the ocean (components/ocean), which renders its own field.
-  "/projects": "hero",
-  "/resume": "resume",
+  // The ocean (components/ocean) renders its own field for "/", /projects, /resume, /contact.
+  "/projects/snapshift": "hero",
 };
 
 function presetForPath(path: string, map: Record<string, PresetName>): PresetName | null {

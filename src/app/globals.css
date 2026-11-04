@@ -35,6 +35,10 @@
   /* ASCII cloud glyph colours (read by the canvas engine): lowlands → peaks.
      Grey-on-light has far less punch than grey-on-black, so the light ramp is
      darker and the field's opacity is boosted via --ascii-gain. */
+  /* Ocean accents (homepage): each stop's item in the water and its text share one. */
+  --ocean-a1: #4d7c0f;
+  --ocean-a2: #c2410c;
+  --ocean-a3: #a16207;
   --ascii-lo: #6a6a6a;
   --ascii-hi: #111111;
   --ascii-gain: 1.55;
@@ -62,6 +66,9 @@
   --shadow-color: rgba(0, 0, 0, 0.20);
   --gradient-accent-opacity: 0.05;
   --dot-grid-opacity: 0.04;
+  --ocean-a1: #a3e635;
+  --ocean-a2: #fb923c;
+  --ocean-a3: #facc15;
   --ascii-lo: #5c5c5c;
   --ascii-hi: #cfcfcf;
   --ascii-gain: 1;
@@ -86,6 +93,9 @@
     --shadow-color: rgba(0, 0, 0, 0.20);
     --gradient-accent-opacity: 0.05;
     --dot-grid-opacity: 0.04;
+    --ocean-a1: #a3e635;
+    --ocean-a2: #fb923c;
+    --ocean-a3: #facc15;
     --ascii-lo: #5c5c5c;
     --ascii-hi: #cfcfcf;
     --ascii-gain: 1;

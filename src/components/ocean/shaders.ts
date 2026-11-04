@@ -11,7 +11,9 @@
  */
 import {
   BRIGHTNESS,
+  CALM,
   CURRENTS,
+  EDDIES,
   EDDY_DEPTH,
   EDDY_R,
   LEVELS,
@@ -23,14 +25,13 @@ import {
   PLASMA_WARP,
   QUIET,
   RAMP,
-  STILL,
   SWELL,
   WHIRL,
 } from "./world";
 
 const f = (n: number) => (Number.isInteger(n) ? n.toFixed(1) : String(n));
 
-export const NLEV = 4;
+export const NLEV = 5;
 export const MAX_QUIET = 8;
 export const MAX_EDDY = 4;
 
@@ -91,7 +92,7 @@ float fbm3(vec3 p) {
   return s / n;
 }`;
 
-/** The field: plasma + events. field(p, full) = (height, band value 0..1). */
+/** The field: plasma + events. field(p, full) = (height, band 0..1, accent index, accent amount). */
 const FIELD = `
 uniform float uTime;
 uniform float uPhase;
@@ -99,16 +100,19 @@ uniform float uMorph;
 uniform vec2  uFlow;
 uniform float uAmp;      // plasma relief: 0 = flat (Origin) .. 1
 uniform float uSwellW;
+uniform vec3  uCrest;    // how lit each crest's foam is (the company you're at)
 uniform vec4  uEddy[${MAX_EDDY}];   // centre x, z, weight, arms (sign = direction)
 uniform float uCurW;
-uniform float uStillW;
+uniform float uCalmW;
 uniform float uWhirlW;
+uniform float uWhirlPhase;  // accumulated spin (speeds up as you dive in)
 
 const float PD = ${f(PLASMA_DIST)};
 const float NORM = ${f(PLASMA_NORM)};
 const float WARP = ${f(PLASMA_WARP)};
 const float PMIX = ${f(PLASMA_MIX)};
 const float PAMP = ${f(PLASMA_AMP)};
+const float EDDY_COL[${MAX_EDDY}] = float[${MAX_EDDY}](${EDDIES.map((e) => f(e.color)).join(", ")});
 
 vec2 warpQ(vec2 fl) {
   vec3 a = vec3(fl * 0.09, uMorph * 0.7);
@@ -132,35 +136,44 @@ float softSat(float x) { return 0.5 + 0.5 * tanh((x - 0.5) * 2.0) / tanh(1.0); }
 
 vec2 rot(vec2 d, float a) { float c = cos(a), s = sin(a); return vec2(c * d.x - s * d.y, s * d.x + c * d.y); }
 
-// A turning vortex at c: twists the plasma around it and adds spiral arms + a dip.
-// Returns (height, spiral band, blend); writes the twisted sample point into pp.
-vec3 vortex(vec2 p, inout vec2 pp, vec2 c, float R, float arms, float w, float depth, float eye, float spin, float twist, float tight) {
+struct Vx { float h; float band; float blend; float acc; };
+
+// A turning vortex at c: spiral arms (rotated by ang), a dip, and a calm eye.
+// Twists the plasma sample point pp around it.
+Vx vortex(vec2 p, inout vec2 pp, vec2 c, float R, float arms, float w, float depth, float eye, float ang, float twist, float tight) {
   vec2 d = p - c;
   float r = length(d);
-  if (w < 0.001 || r > R * 2.2) return vec3(0.0);
+  if (w < 0.001 || r > R * 2.2) return Vx(0.0, 0.0, 0.0, 0.0);
   float fall = exp(-r * r / (R * R));
   float dir = sign(arms);
   pp = c + rot(pp - c, twist * dir * w * exp(-r * r / (R * R * 2.0)));
   float a = atan(d.y, d.x);
-  float s = sin(abs(arms) * (dir * a - spin * uTime) + tight * log(r + 0.35));
-  float core = smoothstep(eye * 0.4, eye, r);           // the calm eye
+  float s = sin(abs(arms) * (dir * a - ang) + tight * log(r + 0.35));
+  float core = smoothstep(eye * 0.4, eye, r);
   float band = 0.5 + 0.5 * s * core;
   float h = -depth * (0.6 * exp(-r * r / (R * R * 0.25)) + 0.4 * fall) + 0.14 * s * fall * core;
-  return vec3(h * w, band, w * (1.0 - smoothstep(R * 0.55, R * 1.7, r)));
+  float blend = w * (1.0 - smoothstep(R * 0.55, R * 1.7, r));
+  float acc = smoothstep(0.55, 0.95, s) * core * blend;  // the crest of each arm
+  return Vx(h * w, band, blend, acc);
 }
 
-vec2 field(vec2 p, bool full) {
+void accent(inout vec2 ac, float idx, float amt) {
+  if (amt > ac.y) ac = vec2(idx, amt);
+}
+
+vec4 field(vec2 p, bool full) {
   vec2 pp = p;
   float h = 0.0;
   float v = 0.0;
+  vec2 ac = vec2(0.0);
 
   // Vortices first: they bend the plasma that gets sampled below.
-  vec3 vt[${MAX_EDDY + 1}];
+  Vx vt[${MAX_EDDY + 1}];
   for (int i = 0; i < ${MAX_EDDY}; i++) {
-    vt[i] = vortex(p, pp, uEddy[i].xy, ${f(EDDY_R)}, uEddy[i].w, uEddy[i].z, ${f(EDDY_DEPTH)}, 0.6, 0.35, 0.0, 7.0);
+    vt[i] = vortex(p, pp, uEddy[i].xy, ${f(EDDY_R)}, uEddy[i].w, uEddy[i].z, ${f(EDDY_DEPTH)}, 0.6, 0.35 * uTime, 0.0, 7.0);
   }
   vt[${MAX_EDDY}] = vortex(p, pp, vec2(${f(WHIRL.c[0])}, ${f(WHIRL.c[1])}), ${f(WHIRL.r)}, ${f(WHIRL.arms)}, uWhirlW,
-                       ${f(WHIRL.depth)}, ${f(WHIRL.eye)}, 0.45, 2.0, ${f(WHIRL.tight)});
+                       ${f(WHIRL.depth)}, ${f(WHIRL.eye)}, uWhirlPhase, 2.0, ${f(WHIRL.tight)});
 
   vec2 fl = pp + uFlow;
   vec2 q = warpQ(fl);
@@ -169,39 +182,42 @@ vec2 field(vec2 p, bool full) {
   v = clamp(raw, 0.0, 1.0);
   if (full) v = mix(fbm3(vec3(w * 0.1, uMorph)) * 0.75 + 0.5, v, PMIX);
   v = smoothstep(0.04, 1.0, v); // hero preset threshold / softness
+  float relief = PAMP * (softSat(raw) - 0.5) * uAmp;
 
-  // Still water: the relief settles, the bands thin out, slow rings spread.
-  float calm = 0.0;
-  if (uStillW > 0.001) {
-    float r = length(p - vec2(${f(STILL.c[0])}, ${f(STILL.c[1])}));
-    calm = uStillW * (1.0 - smoothstep(${f(STILL.r * 0.55)}, ${f(STILL.r)}, r));
-    float ring = sin(r * 1.5 - uTime * 0.7) * exp(-r * 0.07);
-    v = mix(v, 0.3 + (v - 0.5) * 0.15 + 0.32 * ring, calm);
-    h += 0.08 * ring * calm;
+  // Calm water to the horizon: low relief, long slow swells rolling in from the sun.
+  if (uCalmW > 0.001) {
+    float r = length(p - vec2(${f(CALM.c[0])}, ${f(CALM.c[1])}));
+    float calm = uCalmW * (1.0 - smoothstep(${f(CALM.r * 0.7)}, ${f(CALM.r)}, r));
+    vec2 sd = vec2(${f(Math.sin((CALM.sunYaw * Math.PI) / 180))}, ${f(-Math.cos((CALM.sunYaw * Math.PI) / 180))});
+    float swl = sin(dot(p, sd) * 0.45 + uTime * 0.5) * 0.6 + sin(dot(p, vec2(sd.y, -sd.x)) * 0.21 + uTime * 0.23) * 0.4;
+    relief *= 1.0 - 0.75 * calm;
+    h += 0.28 * swl * calm;
+    v = mix(v, 0.4 + (v - 0.5) * 0.35 + 0.12 * swl, calm);
   }
+  h += relief;
 
-  h += PAMP * (softSat(raw) - 0.5) * uAmp * (1.0 - 0.85 * calm);
-
-  // Swell: three long crests, one per role.
+  // Swell: three long crests, one per company; the foam on top is that company's colour.
   if (uSwellW > 0.001) {
-    float lat = 1.0 - smoothstep(${f(SWELL.reach * 0.6)}, ${f(SWELL.reach)}, abs(p.x - ${f(SWELL.x)}));
+    float lat = (1.0 - smoothstep(${f(SWELL.reach * 0.6)}, ${f(SWELL.reach)}, abs(p.x - ${f(SWELL.x)}))) * uSwellW;
     float s = 0.0;
     ${SWELL.crests
       .map(
         (zc, k) => `{
       float d = (p.y - ${f(zc)} - 0.7 * sin(p.x * 0.13 + ${f(k * 1.7)})) / ${f(SWELL.width)};
-      s += exp(-d * d) * (0.95 + 0.05 * sin(uTime * 0.5 + ${f(k * 2.1)}));
+      float c = exp(-d * d) * (0.95 + 0.05 * sin(uTime * 0.5 + ${f(k * 2.1)}));
+      s += c;
+      accent(ac, ${f(SWELL.colors[k])}, exp(-d * d / 0.012) * lat * uCrest[${k}]);
     }`,
       )
       .join("\n    ")}
-    s *= lat * uSwellW;
-    h += ${f(SWELL.height)} * s;
-    v = clamp(v + 0.2 * s, 0.0, 1.0);
+    h += ${f(SWELL.height)} * s * lat;
+    v = clamp(v + 0.2 * s * lat, 0.0, 1.0);
   }
 
-  // Currents: three lanes of streaks flowing south; the water between them goes quiet.
+  // Currents: three lanes of streaks flowing north, each in its skill group's colour;
+  // the water between them goes quiet.
   if (uCurW > 0.001) {
-    float zm = smoothstep(${f(CURRENTS.z0)}, ${f(CURRENTS.z0 + 6)}, p.y) * (1.0 - smoothstep(${f(CURRENTS.z1 - 6)}, ${f(CURRENTS.z1)}, p.y));
+    float zm = smoothstep(${f(CURRENTS.z0)}, ${f(CURRENTS.z0 + 8)}, p.y) * (1.0 - smoothstep(${f(CURRENTS.z1 - 4)}, ${f(CURRENTS.z1)}, p.y));
     float rx = (p.x - ${f(CURRENTS.x)}) / ${f(CURRENTS.gap * 2.4)};
     float region = exp(-rx * rx) * zm * uCurW;
     v = mix(v, 0.1 + (v - 0.5) * 0.15, region);
@@ -212,20 +228,25 @@ vec2 field(vec2 p, bool full) {
       float lx = (p.x - ${f(CURRENTS.x + (i - 1) * CURRENTS.gap)}) / ${f(CURRENTS.width)};
       float m = exp(-lx * lx) * zm * uCurW;
       if (m > 0.01) {
-        float n = snoise(vec3(p.x * 1.6 + ${f(i * 7)}, (p.y - uTime * ${f(spd)}) * 0.22, uTime * 0.05));
+        float n = snoise(vec3(p.x * 1.6 + ${f(i * 7)}, (p.y + uTime * ${f(spd)}) * 0.22, uTime * 0.05));
         v = mix(v, clamp(0.68 + 0.4 * n, 0.0, 1.0), m);
         h += 0.12 * n * m;
+        accent(ac, ${f(CURRENTS.colors[i])}, m * (0.55 + 0.45 * smoothstep(-0.1, 0.5, n)));
       }
     }`,
       )
       .join("\n    ")}
   }
 
-  for (int i = 0; i <= ${MAX_EDDY}; i++) {
-    h += vt[i].x;
-    v = mix(v, vt[i].y, vt[i].z);
+  for (int i = 0; i < ${MAX_EDDY}; i++) {
+    h += vt[i].h;
+    v = mix(v, vt[i].band, vt[i].blend);
+    accent(ac, EDDY_COL[i], vt[i].acc);
   }
-  return vec2(h, clamp(v, 0.0, 1.0));
+  h += vt[${MAX_EDDY}].h;
+  v = mix(v, vt[${MAX_EDDY}].band, vt[${MAX_EDDY}].blend);
+  accent(ac, 1.0, vt[${MAX_EDDY}].acc * 0.85);
+  return vec4(h, clamp(v, 0.0, 1.0), ac);
 }`;
 
 /** Full-screen triangle. */
@@ -235,7 +256,7 @@ void main() {
   gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
 }`;
 
-/** Pass 1: one texel per glyph cell of one level. r = band value, g = height. */
+/** Pass 1: one texel per glyph cell of one level. r = band, g = height, b = accent index, a = accent amount. */
 export const FIELD_FS = `#version 300 es
 precision highp float;
 ${NOISE}
@@ -245,8 +266,8 @@ uniform vec2 uCellK;  // this level's cell size (world)
 out vec4 o;
 void main() {
   vec2 p = uOrig + (floor(gl_FragCoord.xy) + 0.5) * uCellK;
-  vec2 fv = field(p, true);
-  o = vec4(fv.y, fv.x, 0.0, 1.0);
+  vec4 fv = field(p, true);
+  o = vec4(fv.y, fv.x, fv.z, fv.w);
 }`;
 
 /** Pass 2: the water surface. */
@@ -282,7 +303,12 @@ uniform vec3  uCam;
 uniform vec3  uBg;
 uniform vec3  uLo;
 uniform vec3  uHi;
+uniform vec3  uAcc[3];           // accent palette (--ocean-a1..3)
 uniform float uGain;
+uniform float uTime;
+uniform float uStrips;           // ambient accent strips (as on the live homepage)
+uniform vec3  uSunDir;
+uniform float uSunAmt;           // glitter path toward the sun
 uniform vec2  uFog;              // fade start, end (world distance)
 uniform float uGlyph;            // smallest glyph relative to native
 uniform vec2  uRes;
@@ -294,16 +320,62 @@ out vec4 o;
 
 const float L = ${f(LEVELS)};
 
-// Glyph of level k at xz: returns (opacity, coverage).
-vec2 glyph(int k, vec2 xz, vec2 gx, vec2 gy, float hpx) {
+float hash12(vec2 p) {
+  vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+  p3 += dot(p3, p3.yzx + 33.33);
+  return fract((p3.x + p3.y) * p3.z);
+}
+
+float bandOf(ivec2 id, int k) {
+  return floor(texelFetch(uField, ivec3(clamp(id, ivec2(0), uTex - 1), k), 0).r * L + 0.5);
+}
+
+// Glyph of level k at xz: (colour, coverage × opacity).
+vec4 glyph(int k, vec2 xz, vec2 gx, vec2 gy, float hpx) {
   float s = exp2(float(k));
   vec2 ck = (xz - uOrig[k]) / (uCell * s);
   ivec2 id = ivec2(floor(ck));
-  if (id.x < 0 || id.y < 0 || id.x >= uTex.x || id.y >= uTex.y) return vec2(0.0);
-  float v = texelFetch(uField, ivec3(id, k), 0).r;
-  float band = floor(v * L + 0.5);
-  if (band < 1.0) return vec2(0.0);
-  float a = pow(band / L, ${f(LEVEL_GAMMA)}) * ${f(BRIGHTNESS)} * uGain;
+  if (id.x < 0 || id.y < 0 || id.x >= uTex.x || id.y >= uTex.y) return vec4(0.0);
+  vec4 fv = texelFetch(uField, ivec3(id, k), 0);
+  float band = floor(fv.r * L + 0.5);
+  float accI = fv.b;
+  float accA = fv.a;
+
+  // Ambient accents: short lime / orange runs riding a contour, fading in and out.
+  if (uStrips > 0.0 && band >= 3.0 && accA < 0.3 && bandOf(id - ivec2(0, 1), k) != band) {
+    float row = float(id.y) + float(k) * 977.0;
+    float seg = floor((float(id.x) + hash12(vec2(row, 3.7)) * 40.0) / 11.0);
+    float hs = hash12(vec2(seg, row));
+    float cyc = uTime / 6.5 + hs * 13.0;
+    float on = step(hash12(vec2(seg + floor(cyc) * 1.7, row)), 0.06);
+    float ph = fract(cyc);
+    float env = on * smoothstep(0.0, 0.1, ph) * (1.0 - smoothstep(0.32, 0.45, ph)) * uStrips;
+    if (env > accA) { accA = env; accI = hs < 0.7 ? 1.0 : 2.0; }
+  }
+
+  // Glitter path toward a low sun.
+  if (uSunAmt > 0.001) {
+    vec2 cc = uOrig[k] + (vec2(id) + 0.5) * uCell * s;
+    vec2 dv = normalize(cc - uCam.xz);
+    vec2 sd = normalize(uSunDir.xz);
+    float cr = abs(dv.x * sd.y - dv.y * sd.x);
+    float tw = step(0.62, fract(hash12(vec2(id) + float(k) * 31.0) + uTime * (0.25 + 0.5 * hash12(vec2(id.yx)))));
+    float g = exp(-cr * cr / 0.0012) * step(0.0, dot(dv, sd)) * tw * uSunAmt;
+    if (g > accA) { accA = g; accI = 2.0; band = max(band, 4.0); }
+  }
+
+  if (accA > 0.3) band = max(band, 3.0);
+  if (band < 1.0) return vec4(0.0);
+  float a = min(1.0, pow(band / L, ${f(LEVEL_GAMMA)}) * ${f(BRIGHTNESS)} * uGain);
+  vec3 col = mix(uLo, uHi, smoothstep(${f(RAMP[0])}, ${f(RAMP[1])}, a));
+  if (accA > 0.001) {
+    int ai = clamp(int(accI + 0.5) - 1, 0, 2);
+    vec3 ac = ai == 0 ? uAcc[0] : (ai == 1 ? uAcc[1] : uAcc[2]);
+    float t = min(1.0, accA * 1.3);
+    col = mix(col, ac, t);
+    a = mix(a, max(a, 0.85), t);
+  }
+
   vec3 uvw = vec3(fract(ck), band - 1.0);
   gx /= s;
   gy /= s;
@@ -312,7 +384,7 @@ vec2 glyph(int k, vec2 xz, vec2 gx, vec2 gy, float hpx) {
   float t = smoothstep(uNative.y * 1.05, uNative.y * 1.8, hk);
   float cov = t > 0.0 ? mix(cs, textureGrad(uGlyphL, uvw, gx, gy).r, t) : cs;
   cov *= 1.0 - smoothstep(uNative.y * 5.0, uNative.y * 8.0, hk); // too close to read: let it go
-  return vec2(min(a, 1.0), cov);
+  return vec4(col, a * cov);
 }
 
 void main() {
@@ -324,6 +396,7 @@ void main() {
   float wpx = 1.0 / max(1e-5, length(vec2(gx.x, gy.x)));
   float hpx = 1.0 / max(1e-5, length(vec2(gx.y, gy.y)));
   float rel = sqrt((wpx / uNative.x) * (hpx / uNative.y));
+
   // Level k draws glyphs at rel * 2^k. Prefer the level that keeps glyphs at least ~uGlyph
   // (crisp, never shrunk into grey), blending only right at each switch.
   float lodRaw = log2(uGlyph / rel);
@@ -332,13 +405,14 @@ void main() {
   float tk = smoothstep(0.0, 0.25, fract(lod));
   int k1 = min(k0 + 1, ${NLEV - 1});
   if (k0 == k1) tk = 0.0;
-  vec2 g0 = tk < 0.999 ? glyph(k0, xz, gx, gy, hpx) : vec2(0.0);
-  vec2 g1 = tk > 0.001 ? glyph(k1, xz, gx, gy, hpx) : vec2(0.0);
+
+  vec4 g0 = tk < 0.999 ? glyph(k0, xz, gx, gy, hpx) : vec4(0.0);
+  vec4 g1 = tk > 0.001 ? glyph(k1, xz, gx, gy, hpx) : vec4(0.0);
 
   // Fade: distance, and beyond the coarsest level.
   float d = distance(uCam, vW);
   float fade = 1.0 - smoothstep(uFog.x, uFog.y, d);
-  fade *= 1.0 - smoothstep(${f(NLEV - 1.4)}, ${f(NLEV - 1)}, lodRaw);
+  fade *= 1.0 - 0.6 * smoothstep(${f(NLEV - 1.4)}, ${f(NLEV + 0.5)}, lodRaw);
 
   // Quiet zones behind text.
   vec2 px = vec2(gl_FragCoord.x, uRes.y - gl_FragCoord.y);
@@ -351,11 +425,56 @@ void main() {
   }
   fade *= 1.0 - ${f(QUIET)} * q;
 
-  vec3 c = uBg;
-  vec3 col0 = mix(uLo, uHi, smoothstep(${f(RAMP[0])}, ${f(RAMP[1])}, g0.x));
-  vec3 col1 = mix(uLo, uHi, smoothstep(${f(RAMP[0])}, ${f(RAMP[1])}, g1.x));
-  vec3 a = mix(uBg, col0, g0.x * g0.y);
-  vec3 b = mix(uBg, col1, g1.x * g1.y);
-  c = mix(uBg, mix(a, b, tk), fade);
-  o = vec4(c, 1.0);
+  vec3 a = mix(uBg, g0.rgb, g0.a);
+  vec3 b = mix(uBg, g1.rgb, g1.a);
+  o = vec4(mix(uBg, mix(a, b, tk), fade), 1.0);
+}`;
+
+/** Sky: a low sun drawn in glyphs (screen-locked cells), only when uSunAmt > 0. */
+export const SKY_FS = `#version 300 es
+precision highp float;
+precision highp sampler2DArray;
+uniform sampler2DArray uGlyphS;
+uniform vec2  uNative;
+uniform vec2  uRes;
+uniform vec3  uCamR;
+uniform vec3  uCamU;
+uniform vec3  uCamF;
+uniform float uTanHalf;
+uniform vec3  uSunDir;
+uniform float uSunAmt;
+uniform float uTime;
+uniform vec3  uBg;
+uniform vec3  uSunCol;
+uniform vec3  uLo;
+uniform vec4  uQuiet[${MAX_QUIET}];
+uniform float uQuietA[${MAX_QUIET}];
+uniform int   uQuietN;
+uniform float uFeather;
+out vec4 o;
+void main() {
+  vec2 cell = floor(gl_FragCoord.xy / uNative);
+  vec2 cc = (cell + 0.5) * uNative;
+  vec2 ndc = cc / uRes * 2.0 - 1.0;
+  vec3 dir = normalize(uCamF + ndc.x * uTanHalf * (uRes.x / uRes.y) * uCamR + ndc.y * uTanHalf * uCamU);
+  float ang = acos(clamp(dot(dir, uSunDir), -1.0, 1.0));
+  const float R = 0.05;
+  float band = 0.0;
+  vec3 col = uSunCol;
+  if (ang < R) band = ang < R * 0.6 ? 7.0 : 6.0;
+  else if (ang < R * 1.7) band = mod(cell.x + cell.y, 2.0) < 1.0 && sin(ang * 140.0 - uTime * 2.0) > 0.0 ? 4.0 : 0.0;
+  // A thin horizon line.
+  if (band < 1.0 && abs(dir.y + 0.006) < 0.0035) { band = 3.0; col = mix(uLo, uSunCol, 0.35); }
+  float a = band > 0.0 ? (band >= 6.0 ? 0.95 : 0.55) * uSunAmt : 0.0;
+  vec2 px = vec2(gl_FragCoord.x, uRes.y - gl_FragCoord.y);
+  for (int i = 0; i < ${MAX_QUIET}; i++) {
+    if (i >= uQuietN) break;
+    vec4 r = uQuiet[i];
+    vec2 dd = max(max(r.xy - px, px - r.zw), 0.0);
+    a *= 1.0 - (1.0 - smoothstep(0.0, uFeather, length(dd))) * uQuietA[i];
+  }
+  vec2 uv = (gl_FragCoord.xy - cell * uNative) / uNative;
+  uv.y = 1.0 - uv.y;
+  float cov = band > 0.0 ? textureLod(uGlyphS, vec3(uv, band - 1.0), 0.0).r : 0.0;
+  o = vec4(mix(uBg, col, a * cov), 1.0);
 }`;

@@ -5,10 +5,10 @@
  *
  * Pacing is in viewport heights of scroll: `travel` to get there, `hold` while you read.
  */
-import { EDDIES, SWELL, WHIRL, swellAt, type Vec2 } from "./world";
+import { CALM, EDDIES, SWELL, WHIRL, swellAt, type Vec2 } from "./world";
 import type { Key, Shot, Vec3 } from "./timeline";
 
-export type Section = "origin" | "about" | "experience" | "projects" | "skills" | "education" | "contact";
+export type Section = "origin" | "about" | "experience" | "projects" | "education" | "contact" | "directory";
 
 export type Beat = {
   id: string;
@@ -19,7 +19,7 @@ export type Beat = {
   travel: number;
   hold: number;
   /** Where the text sits; the camera frames the event on the other side. */
-  side: "left" | "right" | "center";
+  side: "left" | "right" | "center" | "split";
 };
 
 const SEA: Omit<Shot, "pos" | "yaw" | "pitch" | "fov"> = { roll: 0, amp: 1, fog: 60, glyph: 1.7 };
@@ -41,8 +41,9 @@ function aim(target: Vec2, yaw: number, dist: number, height: number, side: numb
 
 const ORIGIN: Shot = { pos: [0, 0, 0], yaw: 0, pitch: -90, roll: 0, fov: 30, span: 11, amp: 0, fog: 500, glyph: 0.75 };
 
-const DIVE: Shot = { pos: [0.8, 4.2, -1.2], yaw: 6, pitch: -52, roll: -5, fov: 44, amp: 0.55, fog: 120, glyph: 1.2 };
-const ABOUT: Shot = { ...SEA, pos: [1.4, 1.75, -4], yaw: 8, pitch: -11, fov: 55 };
+const DIVE: Shot = { pos: [0.4, 5.5, 2.2], yaw: 3, pitch: -55, roll: -4, fov: 46, amp: 0.55, fog: 120, glyph: 1.2 };
+/** About: looking north up the three currents. */
+const ABOUT: Shot = { ...SEA, pos: [0, 6.2, 8.5], yaw: 0, pitch: -24, fov: 56, fog: 75 };
 
 const EXP_X = [SWELL.x - 1, SWELL.x + 2, SWELL.x - 2];
 const EXP_YAW = [4, -6, 6];
@@ -52,22 +53,21 @@ const EXP: Shot[] = SWELL.crests.map((zc, k) => {
 });
 /** Down into the trough before each crest. */
 const trough = (k: number): Shot => {
-  const z = k === 0 ? -13 : (SWELL.crests[k - 1] + SWELL.crests[k]) / 2 + 2;
+  const z = k === 0 ? SWELL.crests[0] + 10 : (SWELL.crests[k - 1] + SWELL.crests[k]) / 2 + 2;
   return { ...SEA, pos: [EXP_X[k], 1.3, z], yaw: EXP_YAW[k], pitch: -6, fov: 60 };
 };
 
 const PROJ_YAW = [-35, -75, -120, -160];
-const PROJ: Shot[] = EDDIES.map((e, k) =>
-  aim(e.c, PROJ_YAW[k], 6.5, 7.5, k % 2 ? -4.2 : 4.2, { fov: 54 }),
-);
+const PROJ: Shot[] = EDDIES.map((e, k) => aim(e.c, PROJ_YAW[k], 6.5, 7.5, k % 2 ? -4.2 : 4.2, { fov: 54 }));
 
-const SKILLS: Shot = { ...SEA, pos: [-43.5, 8.5, -47], yaw: -150, pitch: -36, fov: 56 };
-const EDUCATION: Shot = { ...SEA, pos: [-45.5, 3.2, -8], yaw: -172, pitch: -15, fov: 52, fog: 70 };
+/** Education: low over calm water, the sun on the horizon to the right of the text. */
+const EDUCATION: Shot = { ...SEA, pos: [-50, 1.15, -64], yaw: CALM.sunYaw - 16, pitch: 1.5, fov: 50, fog: 150 };
 
-const WHIRL_APPROACH = aim(WHIRL.c, -215, 14, 7.5, 0, { fov: 56, fog: 80 });
+const WHIRL_YAW = -200;
+const WHIRL_APPROACH = aim(WHIRL.c, WHIRL_YAW, 14, 7.5, 0, { fov: 56, fog: 80 });
 const CONTACT: Shot = {
   pos: [WHIRL.c[0], 0, WHIRL.c[1]],
-  yaw: -180,
+  yaw: WHIRL_YAW,
   pitch: -90,
   roll: 0,
   fov: 34,
@@ -76,10 +76,12 @@ const CONTACT: Shot = {
   fog: 500,
   glyph: 1.0,
 };
+/** Down the funnel, corkscrewing, into the dark. */
+const DIVE_IN: Shot = { ...CONTACT, span: undefined, pos: [WHIRL.c[0], 0.6, WHIRL.c[1]], yaw: WHIRL_YAW + 220, fov: 80, glyph: 1.3 };
 
 export const BEATS: Beat[] = [
   { id: "origin", section: "origin", shot: ORIGIN, travel: 0, hold: 0.25, side: "left" },
-  { id: "about", section: "about", via: [DIVE], shot: ABOUT, travel: 1.5, hold: 1.0, side: "left" },
+  { id: "about", section: "about", via: [DIVE], shot: ABOUT, travel: 1.6, hold: 1.2, side: "split" },
   ...EXP.map(
     (s, k): Beat => ({
       id: `exp-${k}`,
@@ -101,9 +103,9 @@ export const BEATS: Beat[] = [
       side: k % 2 ? "left" : "right",
     }),
   ),
-  { id: "skills", section: "skills", shot: SKILLS, travel: 1.3, hold: 1.1, side: "left" },
-  { id: "education", section: "education", shot: EDUCATION, travel: 1.2, hold: 1.0, side: "left" },
+  { id: "education", section: "education", shot: EDUCATION, travel: 1.4, hold: 1.1, side: "left" },
   { id: "contact", section: "contact", via: [WHIRL_APPROACH], shot: CONTACT, travel: 1.8, hold: 0.6, side: "center" },
+  { id: "directory", section: "directory", shot: DIVE_IN, travel: 1.6, hold: 0.4, side: "center" },
 ];
 
 /* ── derived timing ── */
@@ -145,7 +147,6 @@ export const SECTIONS: { id: Section; label: string; u: number }[] = (
     ["about", "About"],
     ["experience", "Experience"],
     ["projects", "Projects"],
-    ["skills", "Skills"],
     ["education", "Education"],
     ["contact", "Contact"],
   ] as [Section, string][]
@@ -166,19 +167,43 @@ function eventWeight(u: number, i0: number, i1: number, stays = false): number {
   return inW * outW;
 }
 
-export type Events = { swell: number; eddies: number[]; currents: number; still: number; whirl: number };
+export type Events = {
+  currents: number;
+  swell: number;
+  crest: [number, number, number];
+  eddies: number[];
+  calm: number;
+  whirl: number;
+  /** 0..1 down the whirlpool. */
+  dive: number;
+  /** 0..1 the screen going black at the bottom. */
+  blackout: number;
+};
 
 export function eventsAt(u: number): Events {
   const e0 = beatIndex("exp-0");
   const p0 = beatIndex("proj-0");
+  const di = beatIndex("directory");
+  const dw = WINDOWS[di];
+  const dt = BEATS[di].travel;
   return {
+    currents: eventWeight(u, beatIndex("about"), beatIndex("about")),
     swell: eventWeight(u, e0, e0 + 2),
+    crest: [0, 1, 2].map((k) => textOpacity(u, e0 + k)) as [number, number, number],
     eddies: EDDIES.map((_, k) => eventWeight(u, p0 + k, p0 + k)),
-    currents: eventWeight(u, beatIndex("skills"), beatIndex("skills")),
-    still: eventWeight(u, beatIndex("education"), beatIndex("education")),
+    calm: eventWeight(u, beatIndex("education"), beatIndex("education")),
     whirl: eventWeight(u, beatIndex("contact"), beatIndex("contact"), true),
+    dive: smooth(ramp(u, dw.start, dw.arrive)),
+    blackout: smooth(ramp(u, dw.start + dt * 0.55, dw.arrive - dt * 0.05)),
   };
 }
+
+/** Sun direction for the Education horizon. */
+export const SUN_DIR: Vec3 = (() => {
+  const y = rad(CALM.sunYaw);
+  const e = rad(CALM.sunElev);
+  return [Math.sin(y) * Math.cos(e), Math.sin(e), -Math.cos(y) * Math.cos(e)];
+})();
 
 /** Opacity of a beat's text at u: in as the camera settles, out as it leaves. */
 export function textOpacity(u: number, i: number): number {

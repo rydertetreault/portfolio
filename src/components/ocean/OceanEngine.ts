@@ -2,10 +2,10 @@
  * OceanEngine: WebGL2 renderer for the ocean (see shaders.ts for the two passes).
  * Framework-agnostic: OceanCanvas.tsx feeds it scroll, theme, quiet zones and size.
  */
-import { MAX_EDDY, MAX_QUIET, NLEV, FIELD_FS, QUAD_VS, SURFACE_FS, SURFACE_VS } from "./shaders";
+import { MAX_EDDY, MAX_QUIET, NLEV, FIELD_FS, QUAD_VS, SKY_FS, SURFACE_FS, SURFACE_VS } from "./shaders";
 import { EDDIES, FLOW_SPEED, FONT_SIZE, GLYPHS, LINE_HEIGHT, MORPH_SPEED, PHASE_SPEED, PLASMA_AMP, SPAN, swellAt } from "./world";
 import { sampleCamera, type Camera } from "./timeline";
-import { KEYS, eventsAt } from "./route";
+import { KEYS, SUN_DIR, eventsAt, type Events } from "./route";
 
 type Uniforms = Record<string, WebGLUniformLocation | null>;
 
@@ -81,8 +81,10 @@ export class OceanEngine {
   private gl: WebGL2RenderingContext;
   private fieldProg: WebGLProgram;
   private surfProg: WebGLProgram;
+  private skyProg: WebGLProgram;
   private fu: Uniforms;
   private su: Uniforms;
+  private ku: Uniforms;
   private fieldTex: WebGLTexture;
   private fbo: WebGLFramebuffer;
   private glyphS: WebGLTexture;
@@ -92,6 +94,7 @@ export class OceanEngine {
   private raf = 0;
   private last = 0;
   private running = false;
+  private dead = false;
 
   private dpr = 1;
   private w = 1; // device px
@@ -109,6 +112,7 @@ export class OceanEngine {
   private phase = 0;
   private morph = 0;
   private flow: [number, number] = [0, 0];
+  private whirlPhase = 0;
   private u = 0; // smoothed scroll (viewport heights)
   private uTarget = 0;
   private reduced = false;
@@ -116,6 +120,7 @@ export class OceanEngine {
   private bg: [number, number, number] = [0.92, 0.92, 0.92];
   private lo: [number, number, number] = [0.4, 0.4, 0.4];
   private hi: [number, number, number] = [0.07, 0.07, 0.07];
+  private acc = new Float32Array([0.3, 0.49, 0.06, 0.76, 0.33, 0.05, 0.63, 0.38, 0.03]);
   private gain = 1;
   private quiet: Quiet[] = [];
 
@@ -139,6 +144,8 @@ export class OceanEngine {
     this.surfProg = compile(gl, SURFACE_VS, SURFACE_FS);
     this.fu = uniforms(gl, this.fieldProg);
     this.su = uniforms(gl, this.surfProg);
+    this.skyProg = compile(gl, QUAD_VS, SKY_FS);
+    this.ku = uniforms(gl, this.skyProg);
     this.fieldTex = gl.createTexture()!;
     this.fbo = gl.createFramebuffer()!;
     this.glyphS = gl.createTexture()!;
@@ -215,7 +222,8 @@ export class OceanEngine {
     this.resize(true);
   }
 
-  setColors(bg: string, lo: string, hi: string, gain: number): void {
+  setColors(bg: string, lo: string, hi: string, gain: number, accents: string[]): void {
+    accents.forEach((c, i) => this.acc.set(parseColor(c), i * 3));
     this.bg = parseColor(bg);
     this.lo = parseColor(lo);
     this.hi = parseColor(hi);
@@ -240,6 +248,7 @@ export class OceanEngine {
   }
 
   resize(force = false): void {
+    if (this.dead) return;
     const dpr = Math.min(window.devicePixelRatio || 1, 1.5); // as the live field (perf.maxDevicePixelRatio)
     const cssW = this.canvas.clientWidth || window.innerWidth;
     const cssH = this.canvas.clientHeight || window.innerHeight;
@@ -283,7 +292,7 @@ export class OceanEngine {
   }
 
   start(): void {
-    if (this.running) return;
+    if (this.running || this.dead) return;
     this.running = true;
     this.last = performance.now();
     const loop = (t: number) => {
@@ -301,10 +310,12 @@ export class OceanEngine {
 
   dispose(): void {
     this.stop();
+    this.dead = true;
     // Free resources but keep the context: React (StrictMode / remounts) may reuse this canvas.
     const gl = this.gl;
     gl.deleteProgram(this.fieldProg);
     gl.deleteProgram(this.surfProg);
+    gl.deleteProgram(this.skyProg);
     gl.deleteTexture(this.fieldTex);
     gl.deleteTexture(this.glyphS);
     gl.deleteTexture(this.glyphL);
@@ -315,6 +326,7 @@ export class OceanEngine {
   /* ── per frame ── */
 
   private frame(now: number): void {
+    if (this.dead) return;
     const dt = Math.min(0.05, Math.max(0, (now - this.last) / 1000));
     this.last = now;
 
@@ -326,17 +338,19 @@ export class OceanEngine {
     const ev = eventsAt(this.u);
     if (!this.reduced) {
       this.time += dt;
-      const slow = 1 - 0.75 * ev.still;
+      const slow = 1 - 0.4 * ev.calm;
       this.phase += dt * PHASE_SPEED * slow;
       this.morph += dt * MORPH_SPEED * slow;
       this.flow[0] += dt * FLOW_SPEED[0] * slow;
       this.flow[1] += dt * FLOW_SPEED[1] * slow;
+      // The whirlpool spins up as you go down it.
+      this.whirlPhase += dt * (0.45 + 5 * ev.dive * ev.dive);
     }
 
     const aspect = this.w / this.h;
     const cam = this.debugCam ? { ...this.debugCam, pos: [...this.debugCam.pos] as [number, number, number] } : sampleCamera(KEYS, this.u, aspect);
     // Ride the water: never dip below the swell / waves under the camera.
-    if (cam.pitch > -89.9) {
+    if (ev.dive < 0.01 && cam.pitch > -89.9) {
       const floor = swellAt(cam.pos[0], cam.pos[2]) * ev.swell + PLASMA_AMP * 0.5 * cam.amp + 0.75;
       if (cam.pos[1] < floor) cam.pos[1] = floor;
     }
@@ -365,7 +379,7 @@ export class OceanEngine {
     const fz = -Math.cos(yawR) * Math.cos(pitchR);
     // Ground focus: where the view axis meets the water (clamped for shallow views).
     const tHit = fy < -0.05 ? Math.min(cam.pos[1] / -fy, 14) : 14;
-    const focus: [number, number] = [cam.pos[0] + fx * tHit * 0.6, cam.pos[2] + fz * tHit * 0.6];
+    const hl = Math.hypot(fx, fz) || 1;
 
     gl.useProgram(this.fieldProg);
     this.setFieldUniforms(this.fu, ev);
@@ -377,6 +391,9 @@ export class OceanEngine {
       const s = 2 ** lv;
       const cx = this.cell[0] * s;
       const cz = this.cell[1] * s;
+      // Each level is centred ahead of the camera, further out for the coarser ones.
+      const ahead = Math.min(tHit * 0.6 + (Math.min(this.texW * cx, this.texH * cz) * 0.3 * (lv > 0 ? 1 : 0)), 200) * Math.hypot(fx, fz);
+      const focus = [cam.pos[0] + (fx / hl) * ahead, cam.pos[2] + (fz / hl) * ahead];
       const ox = Math.floor((focus[0] - (this.texW * cx) / 2) / cx) * cx;
       const oz = Math.floor((focus[1] - (this.texH * cz) / 2) / cz) * cz;
       origins.push(ox, oz);
@@ -392,6 +409,7 @@ export class OceanEngine {
     gl.clearColor(this.bg[0], this.bg[1], this.bg[2], 1);
     gl.clearDepth(1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    if (ev.calm > 0.001) this.drawSky(cam, aspect, ev.calm);
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LESS);
 
@@ -400,7 +418,7 @@ export class OceanEngine {
     this.setFieldUniforms(su, ev);
     gl.uniformMatrix4fv(su.uVP, false, this.viewProj(cam, aspect));
     gl.uniform2f(su.uCenter, cam.pos[0] + fx * 2, cam.pos[2] + fz * 2);
-    gl.uniform1f(su.uRadius, Math.max(40, cam.pos[1] * 6));
+    gl.uniform1f(su.uRadius, Math.max(40, cam.pos[1] * 6, Math.min(cam.fog, 200) * 0.8));
     gl.uniform2fv(su.uOrig, origins);
     gl.uniform2f(su.uCell, this.cell[0], this.cell[1]);
     gl.uniform2i(su.uTex, this.texW, this.texH);
@@ -410,19 +428,14 @@ export class OceanEngine {
     gl.uniform3fv(su.uLo, this.lo);
     gl.uniform3fv(su.uHi, this.hi);
     gl.uniform1f(su.uGain, this.gain);
+    gl.uniform3fv(su.uAcc, this.acc);
+    gl.uniform1f(su.uStrips, 1);
+    gl.uniform3fv(su.uSunDir, SUN_DIR);
+    gl.uniform1f(su.uSunAmt, ev.calm);
     gl.uniform2f(su.uFog, cam.fog * 0.45, cam.fog);
     gl.uniform1f(su.uGlyph, cam.glyph);
     gl.uniform2f(su.uRes, this.w, this.h);
-    const q = new Float32Array(MAX_QUIET * 4);
-    const qa = new Float32Array(MAX_QUIET);
-    this.quiet.forEach((r, i) => {
-      q.set([r.x0 * this.dpr, r.y0 * this.dpr, r.x1 * this.dpr, r.y1 * this.dpr], i * 4);
-      qa[i] = r.a;
-    });
-    gl.uniform4fv(su.uQuiet, q);
-    gl.uniform1fv(su.uQuietA, qa);
-    gl.uniform1i(su.uQuietN, this.quiet.length);
-    gl.uniform1f(su.uFeather, 60 * this.dpr);
+    this.setQuietUniforms(su);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.fieldTex);
@@ -456,7 +469,7 @@ export class OceanEngine {
     return out;
   }
 
-  private setFieldUniforms(u: Uniforms, ev: ReturnType<typeof eventsAt>): void {
+  private setFieldUniforms(u: Uniforms, ev: Events): void {
     const gl = this.gl;
     gl.uniform1f(u.uTime, this.time);
     gl.uniform1f(u.uPhase, this.phase);
@@ -464,15 +477,57 @@ export class OceanEngine {
     gl.uniform2f(u.uFlow, this.flow[0], this.flow[1]);
     gl.uniform1f(u.uAmp, this.cam?.amp ?? 0);
     gl.uniform1f(u.uSwellW, ev.swell);
+    gl.uniform3fv(u.uCrest, ev.crest);
     const e = new Float32Array(MAX_EDDY * 4);
     EDDIES.forEach((d, i) => e.set([d.c[0], d.c[1], ev.eddies[i], d.arms], i * 4));
     gl.uniform4fv(u.uEddy, e);
     gl.uniform1f(u.uCurW, ev.currents);
-    gl.uniform1f(u.uStillW, ev.still);
+    gl.uniform1f(u.uCalmW, ev.calm);
     gl.uniform1f(u.uWhirlW, ev.whirl);
+    gl.uniform1f(u.uWhirlPhase, this.whirlPhase);
   }
 
-  private viewProj(c: Camera, aspect: number): Float32Array {
+  private setQuietUniforms(u: Uniforms): void {
+    const gl = this.gl;
+    const q = new Float32Array(MAX_QUIET * 4);
+    const qa = new Float32Array(MAX_QUIET);
+    this.quiet.forEach((r, i) => {
+      q.set([r.x0 * this.dpr, r.y0 * this.dpr, r.x1 * this.dpr, r.y1 * this.dpr], i * 4);
+      qa[i] = r.a;
+    });
+    gl.uniform4fv(u.uQuiet, q);
+    gl.uniform1fv(u.uQuietA, qa);
+    gl.uniform1i(u.uQuietN, this.quiet.length);
+    gl.uniform1f(u.uFeather, 60 * this.dpr);
+  }
+
+  /** The low sun on the Education horizon (screen-locked glyph cells). */
+  private drawSky(c: Camera, aspect: number, amt: number): void {
+    const gl = this.gl;
+    const { f, r, up } = this.basis(c);
+    gl.disable(gl.DEPTH_TEST);
+    gl.useProgram(this.skyProg);
+    const k = this.ku;
+    gl.uniform2f(k.uNative, this.cellW, this.cellH);
+    gl.uniform2f(k.uRes, this.w, this.h);
+    gl.uniform3fv(k.uCamR, r);
+    gl.uniform3fv(k.uCamU, up);
+    gl.uniform3fv(k.uCamF, f);
+    gl.uniform1f(k.uTanHalf, Math.tan((c.fov * Math.PI) / 360));
+    gl.uniform3fv(k.uSunDir, SUN_DIR);
+    gl.uniform1f(k.uSunAmt, amt);
+    gl.uniform1f(k.uTime, this.time);
+    gl.uniform3fv(k.uBg, this.bg);
+    gl.uniform3fv(k.uSunCol, this.acc.subarray(3, 6));
+    gl.uniform3fv(k.uLo, this.lo);
+    this.setQuietUniforms(k);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.glyphS);
+    gl.uniform1i(k.uGlyphS, 1);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  }
+
+  private basis(c: Camera): { f: number[]; r: number[]; up: number[] } {
     const yaw = (c.yaw * Math.PI) / 180;
     const pitch = (c.pitch * Math.PI) / 180;
     const roll = (c.roll * Math.PI) / 180;
@@ -486,6 +541,11 @@ export class OceanEngine {
       up = up.map((v, i) => v * cr - r[i] * sr);
       r = r2;
     }
+    return { f, r, up };
+  }
+
+  private viewProj(c: Camera, aspect: number): Float32Array {
+    const { f, r, up } = this.basis(c);
     const p = c.pos;
     const dot = (a: number[], b: number[]) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
     // View matrix (rows: right, up, -forward).

@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import type { MotionValue } from "framer-motion";
 import { OceanEngine, type Quiet } from "./OceanEngine";
 import { BEATS, TRACK, WINDOWS, eventsAt } from "./route";
+import { ACCENTS } from "./world";
 import { useReducedMotionPref } from "@/lib/motion";
 
 function cssVar(name: string): string {
@@ -35,7 +36,7 @@ export default function OceanCanvas({ camU }: { camU: MotionValue<number> }) {
     if (process.env.NODE_ENV !== "production") Object.assign(window, { __ocean: engine, __route: { BEATS, WINDOWS, eventsAt } });
 
     const theme = () =>
-      engine.setColors(cssVar("--background"), cssVar("--ascii-lo"), cssVar("--ascii-hi"), parseFloat(cssVar("--ascii-gain")) || 1);
+      engine.setColors(cssVar("--background"), cssVar("--ascii-lo"), cssVar("--ascii-hi"), parseFloat(cssVar("--ascii-gain")) || 1, ACCENTS.map(cssVar));
     theme();
     const mo = new MutationObserver(theme);
     mo.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
@@ -58,7 +59,9 @@ export default function OceanCanvas({ camU }: { camU: MotionValue<number> }) {
     engine.quietSource = () => {
       const out: Quiet[] = [];
       document.querySelectorAll<HTMLElement>("[data-ocean-quiet]").forEach((el) => {
-        const a = parseFloat(getComputedStyle(el).opacity) * (parseFloat(el.dataset.oceanQuiet || "1") || 1);
+        const stop = el.closest<HTMLElement>("[data-ocean-stop]");
+        const a =
+          parseFloat(getComputedStyle(stop ?? el).opacity) * (parseFloat(el.dataset.oceanQuiet || "1") || 1);
         if (a < 0.02) return;
         const r = el.getBoundingClientRect();
         if (r.bottom < 0 || r.top > window.innerHeight || r.width === 0) return;
