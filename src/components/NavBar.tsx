@@ -62,6 +62,9 @@ export default function NavBar() {
     window.setTimeout(() => document.documentElement.classList.remove("ascii-deeplink"), 4000);
   };
 
+  // The /sea prototype brings its own HUD.
+  if (pathname.startsWith("/sea")) return null;
+
   return (
     <nav
       className={`fixed top-0 left-0 right-0 z-50 bg-surface backdrop-blur-2xl border-b transition-[border-color,box-shadow] duration-500 ${
