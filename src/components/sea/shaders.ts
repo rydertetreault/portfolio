@@ -33,7 +33,6 @@ import {
   MAX_HEIGHT,
   OCEAN,
   OCEAN_RANGE,
-  PILLAR_HEIGHT,
   PLASMA_AMP,
   PLASMA_DIST,
   PLASMA_MIX,
@@ -42,7 +41,9 @@ import {
   REGIONS,
   SUN,
   SWELLS,
+  SWELL_ALONG,
 } from "./world";
+import { CHART_REACH, CHART_SECTIONS, CHART_SITES, sectionIndex } from "./chart";
 
 const f = (n: number) => (Number.isInteger(n) ? n.toFixed(1) : String(n));
 const v4 = (a: number, b: number, c: number, d: number) => `vec4(${f(a)}, ${f(b)}, ${f(c)}, ${f(d)})`;
@@ -128,11 +129,15 @@ const terms = (ws: Wave[], fn: string) =>
 
 const NREG = REGIONS.length;
 const NBEACON = BEACONS.length;
+const NTERR = CHART_SITES.length;
+const TERR_A = CHART_SITES.map((t) => `vec2(${f(t.pos[0])}, ${f(t.pos[1])})`).join(", ");
+/** Per plot: section index (borders between sections are drawn heavier than inside one). */
+const TERR_SECTION = CHART_SITES.map((t) => sectionIndex(t.stop)).join(", ");
+const TERR_COLOR = CHART_SITES.map((t) => CHART_SECTIONS[sectionIndex(t.stop)].color).join(", ");
 const REG_A = REGIONS.map((r) => v4(r.center[0], r.center[1], r.inner, r.outer)).join(",\n  ");
 const REG_B = REGIONS.map((r) => v4(r.amp ?? 1, r.swell ?? 0, r.terrace ?? 0, r.cross ?? 0)).join(",\n  ");
 const REG_C = REGIONS.map((r) => v4(r.scan ?? 0, r.ice ?? 0, r.flow ?? 0, r.ping ?? 0)).join(",\n  ");
 const REG_D = REGIONS.map((r) => v4(r.spec ?? 1, r.beam ?? 0, r.color, 0)).join(",\n  ");
-const BEACON_A = BEACONS.map((b, i) => v4(b.pos[0], b.pos[1], b.color, i * 1.7)).join(",\n  ");
 
 const WORLD = `
 const float PD = ${f(PLASMA_DIST)};
@@ -160,10 +165,6 @@ const vec4 REG_D[NREG] = vec4[NREG](
 ); // spec, beam, colour, -
 
 const int NBEACON = ${NBEACON};
-const vec4 BEACON[NBEACON] = vec4[NBEACON](
-  ${BEACON_A}
-); // xz, colour, phase
-const float PILLAR_H = ${f(PILLAR_HEIGHT)};
 
 uniform float uTime;
 uniform float uPhase;
@@ -174,20 +175,30 @@ uniform int   uRipN;
 uniform float uOcean;
 uniform float uChop;
 uniform int   uRegMask;  // regions within reach of the camera (bit i = REG_*[i])
+// Loop bounds come from uniforms (always NREG / 3 ...) so the HLSL compiler behind
+// ANGLE (Windows Chrome / Firefox) can't unroll the loops: unrolled raymarch loops
+// took seconds to compile there and held the first frame back.
+uniform int   uNReg;
+uniform int   uThree;
 
 float regionW(int i, vec2 p) {
   vec4 a = REG_A[i];
   return 1.0 - smoothstep(a.z, a.w, length(p - a.xy));
 }
 
-float swellH(vec2 p, float t) {
-  float h = 0.0;
-${terms(SWELLS, "sin")}
-  return h;
-}
-
 // Sharp-crested travelling wave: broad troughs, peaked crests.
 float crest(float x) { float s = 0.5 + 0.5 * sin(x); return s * s * 1.6 - 0.55; }
+
+// Groundswell: long-crested, near-parallel trains rolling in (sets form where they beat),
+// each crest line slowly rising and falling along its length so it isn't ruler-straight.
+float swellH(vec2 p, float t) {
+  float h = 0.0;
+${SWELLS.map(
+  (s) =>
+    `  h += ${f(s.a)} * crest(dot(p, vec2(${f(s.d[0])}, ${f(s.d[1])})) * ${f(s.k)} - t * ${f(s.w)} + ${f(s.ph)}) * (${f(1 - SWELL_ALONG)} + ${f(SWELL_ALONG)} * sin(dot(p, vec2(${f(s.d[1])}, ${f(-s.d[0])})) * 0.16 + t * 0.07 + ${f(s.ph)}));`,
+).join("\n")}
+  return h;
+}
 
 // Gentle crest bending so the swells aren't ruler-straight (cheap: no noise).
 vec2 oceanWarp(vec2 p) {
@@ -211,8 +222,7 @@ ${terms(CHOP, "sin")}
 // Click / arrival ripples: expanding rings in world space.
 float ripples(vec2 p) {
   float h = 0.0;
-  for (int i = 0; i < ${MAX_RIPPLES}; i++) {
-    if (i >= uRipN) break;
+  for (int i = 0; i < uRipN; i++) {
     vec4 r = uRip[i];
     float age = uTime - r.z;
     if (age < 0.0 || age > 7.0) continue;
@@ -256,6 +266,8 @@ struct Sea {
   float glowCol; // its palette index
   float region;  // dominant region id (0 = open sea)
   float regionW; // its weight
+  float crestD;  // phase distance to the nearest crest of the dominant wave train (0 = on it)
+  float crestK;  // that train's wavenumber (phase → world distance)
 };
 
 // The ocean with every region's character applied (no plasma).
@@ -265,7 +277,7 @@ float oceanSea(vec2 p, bool full, inout Sea s) {
   float amp = 1.0, swell = 0.0, terr = 0.0, cross_ = 0.0, ice = 0.0, flow = 0.0, ping = 0.0;
   float extra = 0.0;
   float best = 0.0;
-  for (int i = 0; i < NREG; i++) {
+  for (int i = 0; i < uNReg; i++) {
     if ((uRegMask & (1 << i)) == 0) continue;
     vec4 a = REG_A[i];
     float d = length(p - a.xy);
@@ -318,6 +330,16 @@ float oceanSea(vec2 p, bool full, inout Sea s) {
   }
   h += extra;
   if (full) {
+    // Crest lines of whichever train dominates here (open-sea train 0, or the groundswell).
+    vec2 d0 = vec2(${f(OCEAN[0].d[0])}, ${f(OCEAN[0].d[1])});
+    float ph0 = dot(wp, d0) * ${f(OCEAN[0].k)} - t * ${f(OCEAN[0].w)} + ${f(OCEAN[0].ph)};
+    float k0 = ${f(OCEAN[0].k)};
+    if (swell > 0.5) {
+      ph0 = dot(p, vec2(${f(SWELLS[0].d[0])}, ${f(SWELLS[0].d[1])})) * ${f(SWELLS[0].k)} - t * ${f(SWELLS[0].w)} + ${f(SWELLS[0].ph)};
+      k0 = ${f(SWELLS[0].k)};
+    }
+    s.crestD = abs(mod(ph0 - 1.5708 + 3.14159, 6.28318) - 3.14159);
+    s.crestK = k0;
     s.swell = swell * swellH(p, t);
     s.ice = ice;
     if (ice > 0.001) s.crack = smoothstep(0.9, 0.98, 1.0 - abs(snoise(vec3(p * 0.7, 3.0)))) * ice;
@@ -328,7 +350,7 @@ float oceanSea(vec2 p, bool full, inout Sea s) {
 
 // Geometric height of the sea surface (raymarch + normals).
 float geo(vec2 p) {
-  Sea s = Sea(0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+  Sea s = Sea(0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 3.0, 1.0);
   float h = 0.0;
 #if SEA_MODE == 1
   {
@@ -351,9 +373,20 @@ float geo(vec2 p) {
   return h + ripples(p);
 }
 
+// Heights at p, p + (e, 0), p + (0, e): one call site, so one inlined copy of geo().
+vec3 heights(vec2 p, float e) {
+  vec3 r = vec3(0.0);
+  for (int k = 0; k < uThree; k++) {
+    vec2 o = k == 1 ? vec2(e, 0.0) : (k == 2 ? vec2(0.0, e) : vec2(0.0));
+    float h = geo(p + o);
+    if (k == 0) r.x = h; else if (k == 1) r.y = h; else r.z = h;
+  }
+  return r;
+}
+
 // Full evaluation at a hit point.
 Sea seaAt(vec2 p) {
-  Sea s = Sea(0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+  Sea s = Sea(0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 3.0, 1.0);
   float hP = 0.0, bP = 0.0, hO = 0.0, bO = 0.0;
 #if SEA_MODE == 1
   {
@@ -412,6 +445,11 @@ uniform float uAccent;
 uniform vec4  uLens;     // device px x, y (top-left origin), radius, strength
 uniform int   uSteps;
 uniform float uFarT;     // beyond this the sea is fogged / filtered flat: stop marching
+uniform vec3  uLight;    // camera-relative key light
+uniform vec3  uSun;      // camera-relative sun (glitter + horizon glow)
+uniform float uRelief;   // slope exaggeration for shading
+uniform vec2  uWaveVel;  // dominant wave train's phase velocity (accents ride it)
+uniform int   uNTerr;
 
 layout(location = 0) out vec4 o0;
 layout(location = 1) out vec4 o1;
@@ -419,8 +457,8 @@ layout(location = 1) out vec4 o1;
 ${NOISE}
 ${WORLD}
 
-// Closest approach between the ray and a vertical light pillar → (distance, ray t).
-vec2 rayPillar(vec3 ro, vec3 rd, vec3 a, float hgt) {
+// Closest approach between the ray and a vertical segment → (distance, ray t, segment s 0 = bottom).
+vec3 rayPillar(vec3 ro, vec3 rd, vec3 a, float hgt) {
   vec3 ba = vec3(0.0, hgt, 0.0);
   vec3 w0 = ro - a;
   float B = dot(rd, ba), C = hgt * hgt, D = dot(rd, w0), E = dot(ba, w0);
@@ -428,19 +466,62 @@ vec2 rayPillar(vec3 ro, vec3 rd, vec3 a, float hgt) {
   float s = den > 1e-4 ? clamp((E - B * D) / den, 0.0, 1.0) : 0.0;
   vec3 q = a + ba * s;
   float t = max(dot(q - ro, rd), 0.0);
-  return vec2(length(ro + rd * t - q), t);
+  return vec3(length(ro + rd * t - q), t, s);
 }
 
-void beacons(vec3 ro, vec3 rd, float tHit, inout float glow, inout float col) {
-  for (int i = 0; i < NBEACON; i++) {
-    vec4 b = BEACON[i];
-    // On the chart the pillars shrink to stubs: dots on the map, not streaks.
-    vec2 r = rayPillar(ro, rd, vec3(b.x, -0.4, b.y), PILLAR_H * (1.0 - 0.97 * uChart));
-    float wdt = max(0.06, r.y * uPixAngle * 1.1);
-    float g = exp(-pow(r.x / wdt, 2.0)) + 0.25 * exp(-r.x / (wdt * 5.0));
-    g *= 0.8 + 0.2 * sin(uTime * 2.2 + b.w);
-    if (r.y > tHit + 0.1) g *= 0.12; // behind a wave
-    if (g > glow) { glow = g; col = b.z; }
+float hash2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+
+// Chart plots: nearest site (warped, so borders and coasts wander like real ones).
+const vec2 TERR[${NTERR}] = vec2[${NTERR}](${TERR_A});
+float territory(vec2 p) {
+  vec2 q = p + 2.0 * vec2(snoise(vec3(p * 0.085, 5.0)), snoise(vec3(p * 0.085 + 19.0, 5.0)));
+  float d1 = 1e9;
+  int i1 = -1;
+  for (int i = 0; i < uNTerr; i++) {
+    float d = length(q - TERR[i]);
+    if (d < d1) { d1 = d; i1 = i; }
+  }
+  return d1 > ${f(CHART_REACH)} ? 0.0 : float(i1 + 1);
+}
+
+// Waypoint beams: a column of light falling out of the sky onto the water as you
+// approach a waypoint (bottom = its falling head, brightest), standing while you read.
+// Only the active ones are uploaded, so other sections never show them.
+uniform vec4 uBeam[NBEACON];   // x, z, bottom y, strength
+uniform vec4 uBeamB[NBEACON];  // palette colour, phase, top y, -
+uniform int  uBeamN;
+
+void beams(vec3 ro, vec3 rd, float tHit, inout float glow, inout float col) {
+  for (int i = 0; i < uBeamN; i++) {
+    vec4 b = uBeam[i];
+    vec4 c = uBeamB[i];
+    vec3 r = rayPillar(ro, rd, vec3(b.x, b.z, b.y), max(0.05, c.z - b.z));
+    float wdt = max(0.045, r.y * uPixAngle * 0.8);
+    float core = exp(-pow(r.x / wdt, 2.0));
+    float halo = exp(-r.x / (wdt * 3.5));
+    // Bright falling head, tail fading up into the sky.
+    float tail = mix(1.0, 0.25, r.z);
+    float g = (core + 0.2 * halo) * tail * b.w * (0.88 + 0.12 * sin(uTime * 3.1 + c.y));
+    if (r.y > tHit + 0.1) g *= 0.1; // behind a wave
+    if (g > glow) { glow = g; col = c.x; }
+  }
+}
+
+// Beam impacts: an expanding ring of light on the water + a flash at the strike point.
+uniform vec4 uImp[4];  // x, z, t0, palette colour
+uniform int  uImpN;
+
+void impacts(vec2 p, inout float glow, inout float col) {
+  for (int i = 0; i < uImpN; i++) {
+    vec4 m = uImp[i];
+    float age = uTime - m.z;
+    if (age < 0.0 || age > 3.5) continue;
+    float d = length(p - m.xy);
+    float ring = exp(-pow((d - 0.3 - age * 2.6) / (0.22 + age * 0.12), 2.0)) * exp(-age * 0.9);
+    float ring2 = exp(-pow((d - age * 1.5) / 0.16, 2.0)) * exp(-age * 1.6) * 0.7;
+    float flash = exp(-d * d * 1.5) * exp(-age * 3.0) * 1.2;
+    float g = max(max(ring, ring2), flash);
+    if (g > glow) { glow = g; col = 8.0 + m.w; } // 8 + colour: lying on the water
   }
 }
 
@@ -452,6 +533,7 @@ void packOut(float v, float lime, float orng, float spec, float inten,
   o1 = vec4(clamp(glow, 0.0, 1.0), glowCol / 255.0, region / 255.0, a);
 }
 
+#if SEA_MODE == 3
 void underwater(vec3 ro, vec3 rd) {
   float t = 0.0;
   bool hit = false;
@@ -460,7 +542,8 @@ void underwater(vec3 ro, vec3 rd) {
     float tmax = min((MAXH - ro.y) / rd.y, 45.0); // the murk swallows everything beyond
     t = t0;
     float dt = 0.0;
-    for (int i = 0; i < 64; i++) {
+    for (int i = 0; i < uSteps; i++) {
+      if (i >= 64) break;
       vec3 p = ro + rd * t;
       float h = geo(p.xz);
       if (p.y > h) { hit = true; break; }
@@ -474,8 +557,8 @@ void underwater(vec3 ro, vec3 rd) {
   if (hit) {
     vec3 p = ro + rd * t;
     float e = 0.06;
-    float h0 = geo(p.xz);
-    vec3 n = normalize(vec3(h0 - geo(p.xz + vec2(e, 0.0)), e, h0 - geo(p.xz + vec2(0.0, e))));
+    vec3 hh = heights(p.xz, e);
+    vec3 n = normalize(vec3(hh.x - hh.y, e, hh.x - hh.z));
     float window = smoothstep(0.35, 0.95, rd.y);           // Snell's window overhead
     float caust = pow(clamp(dot(n, vec3(0.0, 1.0, 0.0)), 0.0, 1.0), 6.0);
     v = 0.16 + 0.62 * window * (0.55 + 0.45 * caust);
@@ -489,9 +572,10 @@ void underwater(vec3 ro, vec3 rd) {
   float shaft = pow(max(snoise(vec3(sp * 5.0, uTime * 0.06)), 0.0), 2.0) * smoothstep(-0.3, 0.7, rd.y);
   v += shaft * 0.35;
   float glow = 0.0, gc = 0.0;
-  beacons(ro, rd, hit ? t : 1e5, glow, gc);
+  beams(ro, rd, hit ? t : 1e5, glow, gc);
   packOut(v, 0.0, 0.0, 0.0, inten, glow * 0.6, gc, 0.0, 0.0, false);
 }
+#endif
 
 void main() {
   vec2 c = gl_FragCoord.xy;
@@ -502,12 +586,23 @@ void main() {
   vec3 rd = normalize(uCamRot * vec3(ndc.x * aspect * uTanHalf, ndc.y * uTanHalf, 1.0));
   vec3 ro = uCamPos;
 
+#if SEA_MODE == 1
+  // Hero (straight down on the plasma): hit the plane directly. No raymarch, no lighting,
+  // so this variant compiles in milliseconds and the first frame is never held back.
+  float t = ro.y / max(-rd.y, 1e-3);
+  vec3 p = ro + rd * t;
+  Sea s = seaAt(p.xz);
+  float glow = 0.0, gc = 0.0;
+  beams(ro, rd, t, glow, gc);
+  impacts(p.xz, glow, gc);
+  vec2 fl = p.xz + uFlow;
+  float lime = smoothstep(0.55, 0.9, snoise(vec3(fl * 1.6, uTime * 0.22))) * uAccent;
+  float orng = smoothstep(0.6, 0.92, snoise(vec3(fl * 1.3 + 41.0, uTime * 0.17))) * 0.3 * uAccent;
+  packOut(s.band, lime, orng, 0.0, 1.0, glow, gc, 0.0, 0.0, false);
+#else
 #if SEA_MODE == 3
   underwater(ro, rd);
   return;
-#endif
-#if SEA_MODE == 0
-  if (uUnder > 0.5) { underwater(ro, rd); return; }
 #endif
 
   // Clip the ray to the slab that can contain the surface.
@@ -527,8 +622,7 @@ void main() {
   float t = t0;
   if (any && tmax > t0) {
     float dt = 0.0, lh = 0.0, ly = 0.0;
-    for (int i = 0; i < 160; i++) {
-      if (i >= uSteps) break;
+    for (int i = 0; i < uSteps; i++) {
       vec3 p = ro + rd * t;
       float h = geo(p.xz);
       if (p.y < h) {
@@ -552,12 +646,12 @@ void main() {
   }
 
   float glow = 0.0, gc = 0.0;
-  beacons(ro, rd, hit ? t : 1e5, glow, gc);
+  beams(ro, rd, hit ? t : 1e5, glow, gc);
 
   float horizon = smoothstep(0.004, 0.02, uFog);
   if (!hit) {
     // Sky: a soft glow hugging the horizon (only once the camera has tilted).
-    float sun = pow(max(dot(rd, SUN), 0.0), 240.0);
+    float sun = pow(max(dot(rd, uSun), 0.0), 240.0);
     float hg = max(exp(-abs(rd.y) * 38.0), sun * 0.9) * horizon;
     o0 = vec4(0.0, 1.0, hg, 0.0);
     o1 = vec4(glow, gc / 255.0, 0.0, 0.0);
@@ -572,24 +666,30 @@ void main() {
   Sea s = seaAt(p.xz);
   float b = s.band;
 
-  float dif = 0.75, spec = 0.0, lightMul = 1.0;
+  // Lighting. The light is camera-relative (always raking across the waves from one side,
+  // whatever the heading) and the normal's slope is exaggerated for shading only: real
+  // ocean slopes are gentle, and unexaggerated they shade to one flat grey.
+  float dif = 0.6, spec = 0.0, lightMul = 1.0;
   if (uShade > 0.001) {
     float e = max(0.03, fp * 0.6);
-    float h0 = geo(p.xz);
-    float hx = geo(p.xz + vec2(e, 0.0)) - h0;
-    float hz = geo(p.xz + vec2(0.0, e)) - h0;
-    vec3 n = normalize(vec3(-hx, e, -hz));
-    dif = clamp(dot(n, LIGHT), 0.0, 1.0);
-    lightMul = mix(1.0, 0.2 + 1.05 * dif, uShade);
-    vec3 hv = normalize(SUN - rd);
-    spec = pow(clamp(dot(n, hv), 0.0, 1.0), 64.0) * uShade * s.spec * (1.0 - far * 0.6);
+    vec3 hh = heights(p.xz, e);
+    vec2 g = vec2(hh.y - hh.x, hh.z - hh.x);
+    vec3 n = normalize(vec3(-g.x * uRelief, e, -g.y * uRelief));
+    dif = clamp(dot(n, uLight) * 0.5 + 0.5, 0.0, 1.0); // wrapped: troughs dim, never void
+    dif = smoothstep(0.18, 0.92, dif);
+    lightMul = mix(1.0, 0.25 + 0.95 * dif, uShade);
+    vec3 nt = normalize(vec3(-g.x * 1.6, e, -g.y * 1.6));
+    spec = pow(clamp(dot(nt, normalize(uSun - rd)), 0.0, 1.0), 140.0) * uShade * s.spec * (1.0 - far * 0.5);
   }
 
-  // Lit value: the glyph follows the light across the wave, height only tints it.
-  float shade = 0.2 + 0.8 * dif;
-  float litV = shade * 0.72 + (b - 0.5) * 0.4 + spec * 0.25;
+  // Lit value: light rakes across each wave (lit faces dense, shadowed faces sparse);
+  // the height still lifts crests so every wave reads as a ridge.
+  float crestK = smoothstep(0.55, 0.85, b);
+  // Fine moving texture (the chop) so broad faces aren't solid blocks of one glyph.
+  float tex = uChop > 0.001 ? chopH(p.xz, uTime) / ${f(CHOP_AMP)} : 0.0;
+  float litV = 0.1 + 0.5 * dif + 0.22 * crestK + 0.07 * tex * (1.0 - far) + spec * 0.3;
   float v = mix(b, litV, uLit);
-  float farV = mix(clamp(0.42 + s.swell * 0.3, 0.0, 1.0), 0.18 + 0.5 * shade, uLit);
+  float farV = mix(clamp(0.42 + s.swell * 0.3, 0.0, 1.0), 0.16 + 0.5 * dif, uLit);
   v = mix(v, farV, far);
 
   // Region character in the value.
@@ -600,16 +700,35 @@ void main() {
   float fog = exp(-t * uFog);
   float inten = clamp(mix(lightMul, 1.0, uLit) * fog, 0.0, 1.0);
 
-  // Accent patches ride the flowing field; the ASCII pass puts them on band edges.
+  // Accents. On the plasma they ride its flow (as on the old field); on the ocean they're
+  // tied to the waves themselves: lime foam breaking along the crests (it travels with
+  // them), warm glitter where the sun catches a face. Both move because the waves do.
   vec2 fl = p.xz + uFlow;
-  float lime = smoothstep(0.55, 0.9, snoise(vec3(fl * 1.6, uTime * 0.22))) * (1.0 - far) * uAccent;
-  float orng = smoothstep(0.6, 0.92, snoise(vec3(fl * 1.3 + 41.0, uTime * 0.17))) * (0.3 + 0.7 * min(1.0, abs(s.swell) * 3.0 + s.regionW)) * (1.0 - far) * uAccent;
+  float limeP = smoothstep(0.55, 0.9, snoise(vec3(fl * 1.6, uTime * 0.22)));
+  float orngP = smoothstep(0.6, 0.92, snoise(vec3(fl * 1.3 + 41.0, uTime * 0.17))) * (0.3 + 0.7 * min(1.0, abs(s.swell) * 3.0 + s.regionW));
+  vec2 wq = p.xz - uWaveVel * uTime;
+  // Foam: a thin line along each crest (width ~ a glyph cell's footprint, so it stays a
+  // line near and far), broken up by noise that travels with the waves.
+  float wph = s.crestK * max(0.3, fp * 1.1);
+  float onCrest = 1.0 - smoothstep(wph * 0.55, wph, s.crestD);
+  float foamN = snoise(vec3(wq * vec2(0.35, 0.2), uTime * 0.15)) * 0.65 + snoise(vec3(wq * 1.3, uTime * 0.5)) * 0.35;
+  float limeO = onCrest * smoothstep(-0.35, 0.15, foamN);
+  float crestF = onCrest;
+  // Warm: sparse sun glints that flicker across the faces as the waves pass.
+  float glint = smoothstep(0.5, 0.9, spec) * step(0.55, hash2(floor(p.xz * 3.0) + floor(uTime * 6.0)));
+  float orngO = glint + 0.5 * s.regionW * smoothstep(0.7, 0.92, snoise(vec3(wq * 0.9 + 41.0, uTime * 0.4))) * (1.0 - crestF);
+  float oc = SEA_MODE >= 2 ? 1.0 : uOcean;
+  float near = 1.0 - far * 0.85;
+  float lime = mix(limeP, limeO, oc) * near * fog * uAccent;
+  float orng = clamp(mix(orngP, orngO, oc), 0.0, 1.0) * near * uAccent;
 
   if (s.glow > glow) { glow = s.glow; gc = s.glowCol; }
+  impacts(p.xz, glow, gc);
 
-  // ── Map view: a nautical chart, with the cursor scanning the live sea through it ──
+  // ── Map view: a nautical chart of the site's sections, the cursor scanning the live sea ──
   float chart = 0.0;
   bool grid = false;
+  float terr = 0.0;
   if (uChart > 0.001) {
     float lens = 0.0;
     if (uLens.w > 0.001) {
@@ -617,18 +736,23 @@ void main() {
       lens = (1.0 - smoothstep(0.62, 1.0, d)) * uLens.w;
     }
     chart = uChart * (1.0 - lens);
+    terr = territory(p.xz);
+    float detail = snoise(vec3(p.xz * 0.3, uTime * 0.05));
     float cur = snoise(vec3(p.xz * 0.045, uTime * 0.012));
-    float detail = snoise(vec3(p.xz * 0.14, 3.0));
-    float chartV = 0.2 + 0.13 * cur + 0.06 * detail + 0.14 * s.regionW + 0.08 * clamp(s.swell, -1.0, 1.0);
-    v = mix(v, chartV, chart);
+    // Territories: an even tinted fill. Open sea: nearly empty, a few drifting marks.
+    float chartV = terr > 0.0 ? 0.24 + 0.05 * cur : 0.06 + 0.16 * smoothstep(0.2, 0.8, cur + 0.4 * detail);
+    v = mix(v - s.glow * 0.25, chartV, chart);
     inten = mix(inten, 1.0, chart);
-    lime *= 1.0 - chart * 0.85;
-    orng *= 1.0 - chart * 0.85;
+    lime *= 1.0 - chart;
+    orng *= 1.0 - chart;
+    // Graticule: just a '+' at each intersection, not lines.
     vec2 gq = abs(fract(p.xz / 16.0 + 0.5) - 0.5) * 16.0;
-    grid = min(gq.x, gq.y) < fp * 0.55;
+    grid = max(gq.x, gq.y) < fp * 0.7;
   }
 
-  packOut(v, lime, orng, spec * fog, inten, glow, gc, s.regionW > 0.5 ? s.region : 0.0, chart, grid);
+  glow *= 1.0 - chart; // the chart shows territories, not the beams / scanlines on the water
+  packOut(v, lime, orng, spec * fog * (1.0 - chart), inten, glow, gc, chart > 0.01 ? terr : (s.regionW > 0.5 ? s.region : 0.0), chart, grid);
+#endif
 }`;
 
 /* Cursor contour trace (port of ascii-field engine.ts: seed search + tracePath). */
@@ -640,11 +764,12 @@ uniform sampler2D uScene;
 uniform vec2  uGrid;     // cols, rows
 uniform ivec2 uPtrCell;  // cursor cell (col, row from top)
 uniform int   uN;
+uniform int   uSearch;  // 9: rows searched for the seed edge   (uniform bounds: see uNReg)
+uniform int   uJump;    // 4: max rows the contour may jump per column
 
 out vec4 o;
 
 const float L = ${f(LEVELS)};
-const int MAX_JUMP = 4;
 
 int bandAt(int c, int r) {
   if (c < 0 || r < 0 || c >= int(uGrid.x) || r >= int(uGrid.y)) return -1;
@@ -672,7 +797,7 @@ void main() {
   // Nearest band edge (any band >= 1) within reach of the cursor.
   int best = -1;
   int bestD = 99;
-  for (int dr = -9; dr <= 9; dr++) {
+  for (int dr = -uSearch; dr <= uSearch; dr++) {
     int r = prow + dr;
     int b = bandAt(pc, r);
     if (b < 1) continue;
@@ -688,13 +813,12 @@ void main() {
   int c = pc;
   int r = best;
   int lastDr = 0;
-  for (int i = 0; i < 32; i++) {
-    if (i >= steps) break;
+  for (int i = 0; i < steps; i++) {
     int nc = c + dir;
     if (nc < 0 || nc >= int(uGrid.x)) { o = vec4(0.0); return; }
     int bestDr = 99;
     float bestScore = 1e9;
-    for (int dr = -MAX_JUMP; dr <= MAX_JUMP; dr++) {
+    for (int dr = -uJump; dr <= uJump; dr++) {
       int nr = r + dr;
       if (bandAt(nc, nr) != band) continue;
       if (bandAt(nc, nr + side) == band) continue; // interior, not the edge
@@ -751,12 +875,14 @@ uniform vec4  uQuiet[${MAX_QUIET}];  // rect x0,y0,x1,y1 (device px)
 uniform float uQuietS[${MAX_QUIET}]; // strength
 uniform int   uQuietN;
 uniform float uQuietFeather;
+uniform float uOceanAmt;  // 0 plasma (accents on band edges) .. 1 ocean (accents ride the waves)
 
 layout(location = 0) out vec4 o0;
 layout(location = 1) out vec4 o1;
 
 const float L = ${f(LEVELS)};
-const int REG_COLOR[${REGIONS.length}] = int[${REGIONS.length}](${REGIONS.map((r) => r.color).join(", ")});
+const int TERR_SECTION[${NTERR}] = int[${NTERR}](${TERR_SECTION});
+const int TERR_COLOR[${NTERR}] = int[${NTERR}](${TERR_COLOR});
 const int G_EXTRA = 10;   // extra glyphs after the ramp: / \\ | _ < > ^ ~
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -860,44 +986,82 @@ void main() {
     int dn = bandAt(cell - ivec2(0, 1));
     bool edge = band > 0 && ((up >= 0 && up != band) || (dn >= 0 && dn != band));
 
-    // Map view: regions tinted in their colour, dotted borders, graticule.
+    // Map view: one territory per section, pieced together from its plots.
+    //   coast (plot ↔ open sea) '~', section borders '-' '|' '+', plot borders dotted.
     if (chartAmt > 0.01) {
-      int rid = int(floor(d2.b * 255.0 + 0.5));
-      if (rid > 0) {
-        int rc = REG_COLOR[clamp(rid - 1, 0, ${REGIONS.length - 1})];
-        col = mix(col, pal(rc), 0.55 * chartAmt);
-        alpha = max(alpha, 0.16 * chartAmt);
-        bool border = regionAt(cell + ivec2(1, 0)) != rid || regionAt(cell - ivec2(1, 0)) != rid ||
-                      regionAt(cell + ivec2(0, 1)) != rid || regionAt(cell - ivec2(0, 1)) != rid;
-        if (border) {
-          glyph = 1; // '.'
-          col = pal(rc);
-          alpha = max(alpha, 0.7 * chartAmt);
+      int id = regionAt(cell);
+      if (id > 0) {
+        int sec = TERR_SECTION[id - 1];
+        vec3 pc = pal(TERR_COLOR[id - 1]);
+        col = mix(col, pc, 0.45 * chartAmt);
+        alpha = max(alpha, 0.13 * chartAmt);
+        int nu = regionAt(cell + ivec2(0, 1)), nd = regionAt(cell - ivec2(0, 1));
+        int nl = regionAt(cell - ivec2(1, 0)), nr = regionAt(cell + ivec2(1, 0));
+        bool coast = nu == 0 || nd == 0 || nl == 0 || nr == 0;
+        // Shared borders are drawn by the lower id only, so lines stay one cell thick.
+        bool sH = (nu > id && TERR_SECTION[nu - 1] != sec) || (nd > id && TERR_SECTION[nd - 1] != sec);
+        bool sV = (nl > id && TERR_SECTION[nl - 1] != sec) || (nr > id && TERR_SECTION[nr - 1] != sec);
+        bool pH = (nu > id && TERR_SECTION[nu - 1] == sec) || (nd > id && TERR_SECTION[nd - 1] == sec);
+        bool pV = (nl > id && TERR_SECTION[nl - 1] == sec) || (nr > id && TERR_SECTION[nr - 1] == sec);
+        if (coast) {
+          glyph = G_EXTRA + 7; // '~'
+          col = pc;
+          alpha = max(alpha, 0.62 * chartAmt);
+          accent = true;
+        } else if (sH || sV) {
+          bool up = nu > id && TERR_SECTION[nu - 1] != sec, dn = nd > id && TERR_SECTION[nd - 1] != sec;
+          bool lf = nl > id && TERR_SECTION[nl - 1] != sec, rt = nr > id && TERR_SECTION[nr - 1] != sec;
+          // '-' '|' and, where the border runs diagonally, '/' '\'
+          glyph = sH && sV ? ((up && lf) || (dn && rt) ? G_EXTRA : G_EXTRA + 1) : (sV ? G_EXTRA + 2 : 3);
+          col = mix(pc, uHi, 0.25);
+          alpha = max(alpha, 0.72 * chartAmt);
+          accent = true;
+        } else if ((pH || pV) && mod(cellF.x + cellF.y, 2.0) < 1.0) {
+          glyph = pV && !pH ? 2 : 1; // ':' '.'
+          col = pc;
+          alpha = max(alpha, 0.45 * chartAmt);
           accent = true;
         }
+      } else {
+        alpha *= 1.0 - 0.35 * chartAmt; // open sea sits back behind the territories
       }
       if (grid && !accent) {
-        glyph = 1;
-        col = mix(col, uHi, 0.5 * chartAmt);
-        alpha = max(alpha, 0.24 * chartAmt);
+        glyph = 5; // '+'
+        col = mix(col, uHi, 0.4 * chartAmt);
+        alpha = max(alpha, 0.2 * chartAmt);
       }
     }
 
-    // Accent strips on band edges (lime on high contours, orange on mid ones).
-    if (edge && !accent) {
+    // Accents. Plasma: strips on band edges (lime on high contours, orange on mid ones).
+    // Ocean: the scene already put them on the waves (foam on crests, glitter on faces).
+    if (!accent) {
       float gv = floor(d.g * 255.0 + 0.5);
       float lime = floor(gv / 16.0) / 14.0;
       float orng = mod(gv, 16.0) / 15.0;
       float vis = clamp(inten * 1.4, 0.0, 1.0);
       float pick = hash(floor(cellF / vec2(9.0, 3.0)));
-      if (lime > 0.35 && band >= int(L) - 2) {
-        col = uPal[int(pick * 2.999)];
-        alpha = max(alpha, (0.5 + 0.45 * lime) * vis);
-        accent = true;
-      } else if (orng > 0.35 && band >= 2 && band <= int(L) - 2) {
-        col = uPal[3 + int(pick * 1.999)];
-        alpha = max(alpha, (0.45 + 0.45 * orng) * vis);
-        accent = true;
+      if (uOceanAmt > 0.5) {
+        if (lime > 0.3) {
+          col = uPal[int(hash(floor(cellF / vec2(5.0, 2.0))) * 2.999)];
+          alpha = max(alpha, (0.42 + 0.5 * lime) * vis);
+          glyph = lime > 0.7 ? G_EXTRA + 7 : (band >= 4 ? band : 4); // '~' foam, else dense
+          accent = true;
+        } else if (orng > 0.3) {
+          col = uPal[3 + int(pick * 1.999)];
+          alpha = max(alpha, (0.4 + 0.5 * orng) * vis);
+          glyph = orng > 0.7 ? 6 : 5; // '*' / '+'
+          accent = true;
+        }
+      } else if (edge) {
+        if (lime > 0.35 && band >= int(L) - 2) {
+          col = uPal[int(pick * 2.999)];
+          alpha = max(alpha, (0.5 + 0.45 * lime) * vis);
+          accent = true;
+        } else if (orng > 0.35 && band >= 2 && band <= int(L) - 2) {
+          col = uPal[3 + int(pick * 1.999)];
+          alpha = max(alpha, (0.45 + 0.45 * orng) * vis);
+          accent = true;
+        }
       }
     }
 

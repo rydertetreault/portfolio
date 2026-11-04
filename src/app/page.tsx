@@ -8,5 +8,5 @@ export default async function Home() {
   const projects = FEATURED_PROJECTS.map((name) => repos.find((r) => r.name === name)).filter(
     (r): r is GitHubRepo => !!r,
   );
-  return <SeaExperience projects={projects} />;
+  return <SeaExperience projects={projects} archive={repos} />;
 }

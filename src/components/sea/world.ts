@@ -50,19 +50,24 @@ export const FLOW_SPEED: [number, number] = [-0.15, -0.02];
  */
 export const OCEAN: { d: [number, number]; k: number; w: number; a: number; ph: number }[] = [
   { d: [0.12, 0.99], k: 0.62, w: 0.78, a: 0.3, ph: 0.0 },
-  { d: [-0.45, 0.89], k: 0.95, w: 0.97, a: 0.17, ph: 2.1 },
-  { d: [0.55, 0.83], k: 1.45, w: 1.2, a: 0.09, ph: 4.4 },
-  { d: [-0.2, 0.98], k: 2.3, w: 1.52, a: 0.045, ph: 1.2 },
+  { d: [-0.45, 0.89], k: 0.95, w: 0.97, a: 0.11, ph: 2.1 },
+  { d: [0.55, 0.83], k: 1.45, w: 1.2, a: 0.05, ph: 4.4 },
+  { d: [-0.2, 0.98], k: 2.3, w: 1.52, a: 0.022, ph: 1.2 },
 ];
 /** Band value = 0.5 + height / OCEAN_RANGE (≈ trough → crest across the 7 bands). */
-export const OCEAN_RANGE = 1.3;
+export const OCEAN_RANGE = 1.0;
 
-/** Long-period swell (the experience region, the deep). */
+/**
+ * Groundswell (the experience region): long-crested, near-parallel trains rolling toward
+ * the camera, sharp-crested. Slightly different wavenumbers so the crests group into sets.
+ * Each crest line also swells and fades along its length (SWELL_ALONG).
+ */
 export const SWELLS: { d: [number, number]; k: number; w: number; a: number; ph: number }[] = [
-  { d: [0.28, 0.96], k: 0.55, w: 0.9, a: 0.42, ph: 0.0 },
-  { d: [-0.64, 0.77], k: 0.83, w: 1.15, a: 0.26, ph: 1.7 },
-  { d: [0.92, 0.39], k: 1.3, w: 1.5, a: 0.14, ph: 4.1 },
+  { d: [0.1, 0.995], k: 0.62, w: 0.92, a: 0.46, ph: 0.0 },
+  { d: [-0.07, 0.998], k: 0.78, w: 1.05, a: 0.2, ph: 1.7 },
 ];
+/** 0..1 how much each swell crest varies in height along its length. */
+export const SWELL_ALONG = 0.35;
 
 /** Fine chop: shading detail only (never moves the contours). */
 export const CHOP: { d: [number, number]; k: number; w: number; a: number; ph: number }[] = [
@@ -151,13 +156,21 @@ function regionWeight(r: Region, x: number, z: number): number {
   return 1 - smoothstep(r.inner, r.outer, Math.sqrt(dx * dx + dz * dz));
 }
 
+const crest = (x: number) => {
+  const s = 0.5 + 0.5 * Math.sin(x);
+  return s * s * 1.6 - 0.55;
+};
+
 /** Swell height at (x, z) including each region's swell weight. Mirrors the shader. */
 export function swellAt(x: number, z: number, t: number): number {
   let amp = 0;
   for (const r of REGIONS) if (r.swell) amp += r.swell * regionWeight(r, x, z);
   if (amp <= 0) return 0;
   let h = 0;
-  for (const s of SWELLS) h += s.a * Math.sin((s.d[0] * x + s.d[1] * z) * s.k - t * s.w + s.ph);
+  for (const s of SWELLS) {
+    const along = 1 - SWELL_ALONG + SWELL_ALONG * Math.sin((s.d[1] * x - s.d[0] * z) * 0.16 + t * 0.07 + s.ph);
+    h += s.a * crest((s.d[0] * x + s.d[1] * z) * s.k - t * s.w + s.ph) * along;
+  }
   return h * amp;
 }
 

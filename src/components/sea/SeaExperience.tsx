@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { motion, useMotionValueEvent, useTransform, type MotionValue } from "framer-motion";
-import SeaCanvas from "./SeaCanvas";
-import CursorGlyphStream from "@/components/CursorGlyphStream";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { AnimatePresence, motion, useMotionValueEvent, useTransform, type MotionValue } from "framer-motion";
+import SeaCanvas, { seaStore } from "./SeaCanvas";
+import { ArchivePanel, DossierPanel } from "./dossier";
+import { archiveDetour, archiveOverview, waypointDetour, type DetourTarget } from "./detours";
 import { Hud, MapOverlay, TransitLabels, Waypoint, jumpTo, jumpToStop, useSeaU } from "./hud";
 import {
   AboutCard,
@@ -13,8 +14,8 @@ import {
   HeroCard,
   InsertionLog,
   MapCard,
+  NowCard,
   ProjectCard,
-  SkillsCard,
 } from "./cards";
 import { BEATS, TRACK_VH, WINDOWS, beatIndex, stopForHash } from "./journey";
 import { BEACONS } from "./world";
@@ -80,28 +81,106 @@ const RIGHT = "left-6 right-6 sm:left-auto sm:right-[7vw] sm:max-w-xl";
 /** Long cards scroll inside on short screens instead of being cut off. */
 const SCROLL = "max-h-[64vh] overflow-y-auto sm:max-h-[72vh] [scrollbar-width:thin]";
 
-export default function SeaExperience({ projects }: { projects: GitHubRepo[] }) {
+/** A side trip off the journey: a project's dossier, or the archive of everything. */
+type View = { kind: "repo"; repo: GitHubRepo } | { kind: "archive" } | null;
+
+export default function SeaExperience({ projects, archive }: { projects: GitHubRepo[]; archive: GitHubRepo[] }) {
   const u = useSeaU();
+  const [view, setView] = useState<View>(null);
+  const opener = useRef<HTMLElement | null>(null);
 
-  // Hero-only cursor glyph stream (as on the previous homepage's landing screen).
-  const [heroOn, setHeroOn] = useState(true);
-  useMotionValueEvent(u, "change", (v) => setHeroOn(v < 0.5));
-  const heroFade = useTransform(u, [0, 0.35], [1, 0]);
+  // Where a view lives in the sea: waypoint projects get a cove beside their beacon,
+  // everything else is in the archive waters.
+  const detourFor = useCallback(
+    (v: View): DetourTarget | null => {
+      if (!v) return null;
+      if (v.kind === "archive") return archiveOverview();
+      const k = projects.findIndex((p) => p.name === v.repo.name);
+      if (k >= 0) return waypointDetour(k);
+      return archiveDetour(Math.max(0, archive.findIndex((p) => p.name === v.repo.name)));
+    },
+    [projects, archive],
+  );
 
-  // Deep links: /#experience, /#projects, … land on that stop.
+  /** Open / change / close the side trip. `push` records it in history so Back returns to course. */
+  const go = useCallback(
+    (v: View, push = true) => {
+      if (v && !view) opener.current = document.activeElement as HTMLElement | null;
+      setView(v);
+      const d = detourFor(v);
+      seaStore.get()?.setDetour(d?.shot ?? null, d?.focus);
+      const hash = !v ? "" : v.kind === "archive" ? "#archive" : `#dossier/${v.repo.name}`;
+      if (push && typeof window !== "undefined" && window.location.hash !== hash) {
+        const url = window.location.pathname + window.location.search + hash;
+        if (v && !view) history.pushState({ seaView: true }, "", url);
+        else history.replaceState(history.state, "", url);
+      }
+      if (!v) window.setTimeout(() => opener.current?.focus({ preventScroll: true }), 0);
+    },
+    [view, detourFor],
+  );
+  const close = useCallback(() => {
+    if (history.state?.seaView) history.back(); // popstate closes it
+    else go(null);
+  }, [go]);
+  const open = useCallback((repo: GitHubRepo) => go({ kind: "repo", repo }), [go]);
+
+  // While detoured: the page can't scroll (the journey is paused where you left it).
   useEffect(() => {
-    const go = (smooth: boolean) => {
+    if (!view) return;
+    const el = document.documentElement;
+    const prev = el.style.overflow;
+    el.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !document.querySelector('[aria-label="Screenshot viewer"]')) close();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      el.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [view, close]);
+
+  // Deep links: /#experience, /#projects, … land on that stop; /#dossier/<repo>, /#archive open a detour.
+  useEffect(() => {
+    const viewForHash = (): View | undefined => {
+      const h = window.location.hash.replace(/^#/, "");
+      if (h === "archive") return { kind: "archive" };
+      if (h.startsWith("dossier/")) {
+        const name = decodeURIComponent(h.slice(8));
+        const repo = archive.find((r) => r.name === name) ?? projects.find((r) => r.name === name);
+        return repo ? { kind: "repo", repo } : undefined;
+      }
+      return undefined;
+    };
+    const route = (smooth: boolean) => {
+      const v = viewForHash();
+      if (v) return go(v, false);
+      if (view) go(null, false);
       const stop = stopForHash(window.location.hash);
       if (stop) jumpToStop(stop, smooth);
     };
     if (window.location.hash) {
       if ("scrollRestoration" in history) history.scrollRestoration = "manual";
-      requestAnimationFrame(() => go(false));
+      requestAnimationFrame(() => {
+        // Wait for the engine so the detour has a camera to move.
+        const tryRoute = (n: number) => (seaStore.get() || n > 30 ? route(false) : requestAnimationFrame(() => tryRoute(n + 1)));
+        tryRoute(0);
+      });
     }
-    const onHash = () => go(true);
+    const onHash = () => route(true);
+    const onPop = () => route(true);
     window.addEventListener("hashchange", onHash);
-    return () => window.removeEventListener("hashchange", onHash);
-  }, []);
+    window.addEventListener("popstate", onPop);
+    return () => {
+      window.removeEventListener("hashchange", onHash);
+      window.removeEventListener("popstate", onPop);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view]);
+
+  const recent = useMemo(() => archive.filter((r) => !r.private).slice(0, 4), [archive]);
+  const detoured = view !== null;
 
   const projBeats = BEATS.map((b, i) => ({ b, i })).filter(({ b }) => b.stop === "waypoints");
   const names = useMemo(() => {
@@ -121,13 +200,50 @@ export default function SeaExperience({ projects }: { projects: GitHubRepo[] }) 
       {/* The scroll track: its height *is* the journey. */}
       <div style={{ height: `${TRACK_VH * 100}vh` }} aria-hidden />
 
-      {heroOn && (
-        <motion.div style={{ opacity: heroFade }} aria-hidden>
-          <CursorGlyphStream />
-        </motion.div>
-      )}
+      <Hud u={u} onArchive={() => go({ kind: "archive" })} />
 
-      <Hud u={u} />
+      {/* Side trips: the dossier / archive opens over the sea once the camera has flown out. */}
+      <AnimatePresence>
+        {view && (
+          <motion.aside
+            key={view.kind === "repo" ? view.repo.name : "archive"}
+            initial={{ opacity: 0, x: 40 }}
+            animate={{ opacity: 1, x: 0, transition: { delay: 0.55, duration: 0.5 } }}
+            exit={{ opacity: 0, x: 30, transition: { duration: 0.25 } }}
+            data-sea-quiet={0.92}
+            className="fixed left-6 right-6 top-[12vh] z-30 sm:left-auto sm:right-[6vw] sm:w-[min(46rem,52vw)]"
+          >
+            {view.kind === "archive" ? (
+              <ArchivePanel repos={archive} onOpen={(r) => go({ kind: "repo", repo: r })} onClose={close} />
+            ) : (
+              (() => {
+                const k = projects.findIndex((p) => p.name === view.repo.name);
+                const list = k >= 0 ? projects : archive;
+                const i = list.findIndex((p) => p.name === view.repo.name);
+                const warm = k >= 0 ? (BEACONS.find((x) => x.id === projBeats[k]?.b.region)?.color ?? 1) >= 4 : i % 2 === 1;
+                return (
+                  <DossierPanel
+                    repo={view.repo}
+                    code={k >= 0 ? `03.${k + 1}` : `A.${String(i + 1).padStart(2, "0")}`}
+                    warm={warm}
+                    onClose={close}
+                    canStep={list.length > 1}
+                    onStep={(dir) => go({ kind: "repo", repo: list[(i + dir + list.length) % list.length] })}
+                  />
+                );
+              })()
+            )}
+          </motion.aside>
+        )}
+      </AnimatePresence>
+
+      {/* The journey itself: paused and hidden while on a side trip. */}
+      <div
+        inert={detoured}
+        aria-hidden={detoured || undefined}
+        className="transition-opacity duration-500"
+        style={{ opacity: detoured ? 0 : 1 }}
+      >
       <Waypoint names={names} />
       <MapOverlay u={u} names={names} />
       <TransitLabels u={u} />
@@ -177,14 +293,16 @@ export default function SeaExperience({ projects }: { projects: GitHubRepo[] }) 
             label={`Project: ${formatRepoName(repo.name)}`}
             className={`${side} top-[12vh] sm:top-[14vh] ${SCROLL}`}
           >
-            {(a) => <ProjectCard repo={repo} index={k} total={projBeats.length} active={a} warm={warm} />}
+            {(a) => (
+              <ProjectCard repo={repo} index={k} total={projBeats.length} active={a} warm={warm} onDossier={() => open(repo)} />
+            )}
           </Panel>
         );
       })}
 
       {/* 04 / The Current */}
-      <Panel u={u} {...win("skills")} quiet={0.9} label="Skills" className={`left-6 right-6 top-[14vh] sm:left-[7vw] sm:right-[7vw] sm:max-w-4xl ${SCROLL}`}>
-        {(a) => <SkillsCard active={a} />}
+      <Panel u={u} {...win("skills")} quiet={0.9} label="The Current" className={`left-6 right-6 top-[14vh] sm:left-[7vw] sm:right-[7vw] sm:max-w-4xl ${SCROLL}`}>
+        {(a) => <NowCard active={a} recent={recent} onOpen={open} />}
       </Panel>
 
       {/* 05 / The Harbor */}
@@ -198,7 +316,7 @@ export default function SeaExperience({ projects }: { projects: GitHubRepo[] }) 
         {...win("map")}
         quiet={0.7}
         label="Map"
-        className="bottom-[16vh] left-1/2 w-[min(88vw,40rem)] -translate-x-1/2 sm:bottom-[12vh]"
+        className="bottom-[10vh] left-6 right-6 sm:bottom-auto sm:left-8 sm:right-auto sm:top-[20vh] sm:w-60"
       >
         {(a) => <MapCard active={a} />}
       </Panel>
@@ -214,6 +332,7 @@ export default function SeaExperience({ projects }: { projects: GitHubRepo[] }) 
       >
         {(a) => <ContactCard active={a} onSurface={() => jumpTo(0)} />}
       </Panel>
+      </div>
     </main>
   );
 }

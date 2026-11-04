@@ -13,9 +13,10 @@
  */
 
 import { GLYPH_FS, MAX_QUIET, MAX_RIPPLES, RESOLVE_FS, TRACE_FS, TRACE_N, VS, sceneFS, type SeaMode } from "./shaders";
-import { newCamera, nearestRestU, sampleCamera, type Camera, type Vec3 } from "./timeline";
-import { BEATS, KEYS, STOPS } from "./journey";
-import { FLOW_SPEED, MORPH_SPEED, PHASE_SPEED, REGIONS, swellAt } from "./world";
+import { newCamera, nearestRestU, sampleCamera, type Camera, type Shot, type Vec3 } from "./timeline";
+import { BEATS, KEYS, STOPS, WINDOWS } from "./journey";
+import { BEACONS, FLOW_SPEED, MORPH_SPEED, OCEAN, PHASE_SPEED, REGIONS, SWELLS, swellAt } from "./world";
+import { CHART_SITES } from "./chart";
 
 const GLYPHS = " .:-=+*#%@" + "/\\|_<>^~";
 
@@ -75,25 +76,46 @@ function parseColor(c: string): [number, number, number] {
   return [+m[0] / 255, +m[1] / 255, +m[2] / 255];
 }
 
-function compile(gl: WebGL2RenderingContext, vs: string, fs: string): WebGLProgram {
+type Pending = { prog: WebGLProgram; vs: WebGLShader; fs: WebGLShader; t0: number };
+
+/** Queue compile + link without asking for the result (no stall: the driver may work in the background). */
+function startProgram(gl: WebGL2RenderingContext, vs: string, fs: string): Pending {
   const ascii = (s: string) => s.replace(/[^\x09\x0a\x0d\x20-\x7e]/g, "?");
   const mk = (type: number, src: string) => {
     const sh = gl.createShader(type)!;
     gl.shaderSource(sh, ascii(src));
     gl.compileShader(sh);
-    if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
-      const log = gl.getShaderInfoLog(sh);
-      gl.deleteShader(sh);
-      throw new Error("Sea shader compile failed: " + log);
-    }
     return sh;
   };
+  const t0 = performance.now();
   const p = gl.createProgram()!;
-  gl.attachShader(p, mk(gl.VERTEX_SHADER, vs));
-  gl.attachShader(p, mk(gl.FRAGMENT_SHADER, fs));
+  const v = mk(gl.VERTEX_SHADER, vs);
+  const f = mk(gl.FRAGMENT_SHADER, fs);
+  gl.attachShader(p, v);
+  gl.attachShader(p, f);
   gl.linkProgram(p);
-  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error("Sea link failed: " + gl.getProgramInfoLog(p));
-  return p;
+  return { prog: p, vs: v, fs: f, t0 };
+}
+
+/** Wait for a queued program (blocks if still compiling) and check it. */
+function finishProgram(gl: WebGL2RenderingContext, q: Pending, name: string): WebGLProgram {
+  if (!gl.getProgramParameter(q.prog, gl.LINK_STATUS)) {
+    const log =
+      gl.getShaderInfoLog(q.fs) || gl.getShaderInfoLog(q.vs) || gl.getProgramInfoLog(q.prog) || "(no log)";
+    throw new Error(`Sea shader ${name} failed: ${log}`);
+  }
+  gl.detachShader(q.prog, q.vs);
+  gl.detachShader(q.prog, q.fs);
+  gl.deleteShader(q.vs);
+  gl.deleteShader(q.fs);
+  if (process.env.NODE_ENV !== "production") {
+    console.info(`[sea] ${name} ready in ${Math.round(performance.now() - q.t0)} ms`);
+  }
+  return q.prog;
+}
+
+function compile(gl: WebGL2RenderingContext, vs: string, fs: string, name = "program"): WebGLProgram {
+  return finishProgram(gl, startProgram(gl, vs, fs), name);
 }
 
 function uniforms(gl: WebGL2RenderingContext, p: WebGLProgram): Uniforms {
@@ -138,6 +160,9 @@ export class SeaEngine {
   private glyphTex!: WebGLTexture;
   private cellFbo!: WebGLFramebuffer;
   private variantTimer = 0;
+  /** Scene variants compiling in the background (KHR_parallel_shader_compile when available). */
+  private pending: { mode: SeaMode; q: Pending; frames: number }[] = [];
+  private parallel: { COMPLETION_STATUS_KHR: number } | null = null;
   private vao!: WebGLVertexArrayObject;
   private sceneTex!: WebGLTexture;
   private sceneTex2!: WebGLTexture;
@@ -211,6 +236,26 @@ export class SeaEngine {
   private ripN = 0;
   private ripNext = 0;
 
+  // waypoint beams + their impacts on the water
+  private beamBeat = BEACONS.map((b) => BEATS.findIndex((x) => x.region === b.id));
+  private beamDrop = BEACONS.map(() => 0);
+  private beamLand = BEACONS.map(() => -99);
+  private beamA = new Float32Array(BEACONS.length * 4);
+  private beamB = new Float32Array(BEACONS.length * 4);
+  private beamN = 0;
+  private imp = new Float32Array(4 * 4);
+  private impN = 0;
+  private impNext = 0;
+  // detour: a side trip off the journey (project dossiers, the archive)
+  private detourShot: Shot | null = null;
+  private detourWant = 0;
+  private detourAmt = 0;
+  private detourFocus: { x: number; z: number; color: number } | null = null;
+  private detourArrived = false;
+  private light: Vec3 = [0, 1, 0];
+  private sun: Vec3 = [0, 0.1, -1];
+  private waveVel: [number, number] = [0, 0];
+
   // quiet zones
   private quiet = new Float32Array(MAX_QUIET * 4);
   private quietS = new Float32Array(MAX_QUIET);
@@ -258,23 +303,30 @@ export class SeaEngine {
   private initGL(): void {
     const gl = this.gl;
     this.scene = {};
-    this.buildVariant(0);
+    this.pending = [];
+    this.parallel = gl.getExtension("KHR_parallel_shader_compile");
+    // Dev: ?sea-sync simulates a browser without background shader compiles.
+    if (process.env.NODE_ENV !== "production" && window.location.search.includes("sea-sync")) this.parallel = null;
+    // Only the hero variant (tiny: no raymarch) is needed for the first frame; the heavy
+    // ocean variants compile in the background while the hero is already on screen.
     this.buildVariant(1);
-    this.traceProg = compile(gl, VS, TRACE_FS);
-    this.resolveProg = compile(gl, VS, RESOLVE_FS);
-    this.glyphProg = compile(gl, VS, GLYPH_FS);
+    this.traceProg = compile(gl, VS, TRACE_FS, "trace");
+    this.resolveProg = compile(gl, VS, RESOLVE_FS, "resolve");
+    this.glyphProg = compile(gl, VS, GLYPH_FS, "glyph");
     this.tu = uniforms(gl, this.traceProg);
     this.au = uniforms(gl, this.resolveProg);
     this.gu = uniforms(gl, this.glyphProg);
     this.cellTex = gl.createTexture()!;
     this.glyphTex = gl.createTexture()!;
     this.cellFbo = gl.createFramebuffer()!;
-    // The specialised ocean / underwater variants compile just after the first frames.
+    // Dive (mixed) first: it's the next thing the camera needs, then the open ocean, then underwater.
+    // With KHR_parallel_shader_compile they build off-thread right away. Without it a build
+    // stalls the GPU queue, so it waits until the hero has painted and settled (or the
+    // first scroll), and the variants go one at a time.
     window.clearTimeout(this.variantTimer);
-    this.variantTimer = window.setTimeout(() => {
-      this.buildVariant(2);
-      this.variantTimer = window.setTimeout(() => this.buildVariant(3), 120);
-    }, 300);
+    this.variantQueue = [0, 2, 3];
+    this.variantsStarted = false;
+    if (this.parallel) this.startVariants();
     this.vao = gl.createVertexArray()!;
     this.sceneTex = gl.createTexture()!;
     this.sceneTex2 = gl.createTexture()!;
@@ -290,14 +342,61 @@ export class SeaEngine {
 
   private buildVariant(mode: SeaMode): void {
     if (this.disposed || this.scene[mode] || this.gl.isContextLost()) return;
-    const prog = compile(this.gl, VS, sceneFS(mode));
+    const prog = compile(this.gl, VS, sceneFS(mode), `scene/${mode}`);
     this.scene[mode] = { prog, u: uniforms(this.gl, prog) };
   }
 
-  /** The cheapest compiled scene variant for the current shot. */
+  private variantQueue: SeaMode[] = [];
+  private variantsStarted = false;
+
+  private startVariants(): void {
+    if (this.variantsStarted) return;
+    this.variantsStarted = true;
+    const next = () => {
+      const m = this.variantQueue.shift();
+      if (m === undefined || this.disposed) return;
+      this.queueVariant(m);
+      this.variantTimer = window.setTimeout(next, this.parallel ? 0 : 250);
+    };
+    this.variantTimer = window.setTimeout(next, this.parallel ? 30 : 0);
+  }
+
+  private queueVariant(mode: SeaMode): void {
+    if (this.disposed || this.scene[mode] || this.gl.isContextLost()) return;
+    this.pending.push({ mode, q: startProgram(this.gl, VS, sceneFS(mode)), frames: 0 });
+  }
+
+  /** Adopt background-compiled variants once they're done (never stalls with the extension). */
+  private pollVariants(): void {
+    if (!this.pending.length) return;
+    const gl = this.gl;
+    const keep: typeof this.pending = [];
+    for (const p of this.pending) {
+      p.frames++;
+      const done = this.parallel
+        ? gl.getProgramParameter(p.q.prog, this.parallel.COMPLETION_STATUS_KHR)
+        : p.frames > 2 || this.reduced; // no extension: it's already queued ahead of us; collect it
+      if (!done) {
+        keep.push(p);
+        continue;
+      }
+      try {
+        const prog = finishProgram(gl, p.q, `scene/${p.mode}`);
+        this.scene[p.mode] = { prog, u: uniforms(gl, prog) };
+      } catch (err) {
+        console.warn("[sea]", err);
+      }
+    }
+    this.pending = keep;
+  }
+
+  /** The cheapest compiled scene variant for the current shot (falls back while others compile). */
   private pickVariant(ocean: number, under: boolean): { prog: WebGLProgram; u: Uniforms } {
     const want: SeaMode = under ? 3 : ocean >= 0.999 ? 2 : ocean <= 0.001 ? 1 : 0;
-    return this.scene[want] ?? this.scene[0]!;
+    const order: SeaMode[] =
+      want === 3 ? [3, 2, 0, 1] : want === 2 ? [2, 0, 1] : want === 0 ? [0, 2, 1] : [1, 0];
+    for (const m of order) if (this.scene[m]) return this.scene[m]!;
+    return this.scene[1]!;
   }
 
   private onLost = (e: Event): void => {
@@ -331,6 +430,8 @@ export class SeaEngine {
     const gl = this.gl;
     window.clearTimeout(this.variantTimer);
     for (const v of Object.values(this.scene)) if (v) gl.deleteProgram(v.prog);
+    for (const p of this.pending) gl.deleteProgram(p.q.prog);
+    this.pending = [];
     for (const p of [this.traceProg, this.resolveProg, this.glyphProg]) gl.deleteProgram(p);
     for (const t of [this.sceneTex, this.sceneTex2, this.traceTex, this.atlasTex, this.cellTex, this.glyphTex]) gl.deleteTexture(t);
     gl.deleteFramebuffer(this.fbo);
@@ -384,6 +485,26 @@ export class SeaEngine {
 
   clearPointer(): void {
     this.pInside = false;
+  }
+
+  /**
+   * Leave the journey for a side area of the ocean (a project dossier, the archive): the
+   * camera lifts off the scroll path, swoops out to `shot` and stays there until cleared.
+   * `focus` (world xz) gets a beam strike on arrival. Pass null to fly back.
+   */
+  setDetour(shot: Shot | null, focus?: { x: number; z: number; color: number }): void {
+    if (shot) {
+      this.detourShot = shot;
+      this.detourFocus = focus ?? null;
+      this.detourArrived = false;
+    }
+    this.detourWant = shot ? 1 : 0;
+    this.requestStatic();
+  }
+
+  /** 0 = on the journey, 1 = at the detour (eased). */
+  get detourAmount(): number {
+    return this.detourAmt;
   }
 
   /** Drop a ripple where the screen point (CSS px) meets the sea. */
@@ -584,6 +705,7 @@ export class SeaEngine {
       u = this.uSmooth;
     }
     const c = sampleCamera(KEYS, u, aspect, this.cam);
+    this.applyDetour(c, dt);
     const t = this.time;
     const pos: Vec3 = [c.pos[0], c.pos[1], c.pos[2]];
     let yaw = c.yaw;
@@ -634,6 +756,29 @@ export class SeaEngine {
     const par = Math.min(0.35, Math.abs(pos[1]) * 0.02);
     for (let i = 0; i < 3; i++) pos[i] += (this.right[i] * this.pnx - this.up[i] * this.pny) * par;
 
+    // Camera-relative lights (see the scene shader): key light ahead-left and high, so wave
+    // crests rolling toward the camera catch it; low sun straight ahead for the glitter path.
+    {
+      const fl: Vec3 = [sy, 0, -cy]; // flat forward
+      const rt: Vec3 = [cy, 0, sy];
+      const L: Vec3 = [fl[0] * 0.6 - rt[0] * 0.5, 0.62, fl[2] * 0.6 - rt[2] * 0.5];
+      const ln = Math.hypot(...L);
+      this.light = [L[0] / ln, L[1] / ln, L[2] / ln];
+      const S: Vec3 = [fl[0] + rt[0] * 0.18, 0.1, fl[2] + rt[2] * 0.18];
+      const sn = Math.hypot(...S);
+      this.sun = [S[0] / sn, S[1] / sn, S[2] / sn];
+      // Accents drift with the dominant wave train under the camera (swell or open sea).
+      const sw = REGIONS.reduce((m, r) => (r.swell ? Math.max(m, 1 - Math.min(1, Math.max(0, (Math.hypot(pos[0] - r.center[0], pos[2] - r.center[1]) - r.inner) / (r.outer - r.inner)))) : m), 0);
+      const o = OCEAN[0];
+      const w = SWELLS[0];
+      const vo = o.w / o.k;
+      const vs = w.w / w.k;
+      this.waveVel = [
+        o.d[0] * vo * (1 - sw) + w.d[0] * vs * sw,
+        o.d[1] * vo * (1 - sw) + w.d[1] * vs * sw,
+      ];
+    }
+
     this.tanHalf = Math.tan((c.fov * d2r) / 2);
     this.prevPos = this.camPos;
     this.camPos = pos;
@@ -671,6 +816,103 @@ export class SeaEngine {
     this.wasUnder = tel.underwater;
   }
 
+  /**
+   * Waypoint beams, driven by the scroll: while you travel toward a waypoint its beam falls
+   * out of the sky (accelerating), strikes the water (ripple + ring of light + flash) as you
+   * arrive, stands while you read, and fades once you leave. Only the beams of the waypoint
+   * you're heading to / at are drawn, so no section has beams standing in its background.
+   */
+  private updateBeams(u: number): void {
+    const n = BEACONS.length;
+    let k = 0;
+    for (let i = 0; i < n; i++) {
+      const bi = this.beamBeat[i];
+      if (bi < 0) continue;
+      const w = WINDOWS[bi];
+      const a = w.travelFrom + 0.12;
+      const b = w.arrive - 0.04;
+      const drop = this.reduced ? (u > b - 0.2 && u < w.leave + 0.3 ? 1 : 0) : Math.min(1, Math.max(0, (u - a) / Math.max(0.05, b - a)));
+      // Strike: the head reached the water while scrolling forward.
+      if (drop >= 1 && this.beamDrop[i] < 1 && !this.first && !this.reduced && u > a) {
+        this.beamLand[i] = this.time;
+        const [x, z] = BEACONS[i].pos;
+        this.addRipple(x, z, 0.85);
+        this.imp.set([x, z, this.time, BEACONS[i].color], this.impNext * 4);
+        this.impNext = (this.impNext + 1) % 4;
+        this.impN = Math.min(4, this.impN + 1);
+      }
+      this.beamDrop[i] = drop;
+      const fadeIn = Math.min(1, Math.max(0, (u - (a - 0.08)) / 0.1));
+      const fadeOut = 1 - Math.min(1, Math.max(0, (u - w.leave) / 0.35));
+      let str = fadeIn * fadeOut;
+      if (str <= 0.001 || drop <= 0) continue;
+      const since = this.time - this.beamLand[i];
+      str *= 1 + 1.3 * Math.exp(-Math.max(0, since) * 4.5); // flash on the strike
+      const fall = drop * drop; // gravity: accelerating
+      const bottom = 28 * (1 - fall) - 0.35;
+      // A long falling bolt that settles into a short standing beam once it lands.
+      const len = drop < 1 ? 10 : 4.5 + 5.5 * Math.exp(-Math.max(0, since) * 2.5);
+      const [x, z] = BEACONS[i].pos;
+      this.beamA.set([x, z, bottom, Math.min(1.8, str)], k * 4);
+      this.beamB.set([BEACONS[i].color, i * 1.7, bottom + len, 0], k * 4);
+      k++;
+    }
+    // A detour's destination gets its own beam, falling as the camera arrives.
+    const f = this.detourFocus;
+    if (f && this.detourWant && this.detourAmt > 0.25 && k < BEACONS.length) {
+      const drop = Math.min(1, (this.detourAmt - 0.25) / 0.73);
+      const since = this.detourArrived ? this.time - this.lastDetourStrike() : 99;
+      const bottom = 28 * (1 - drop * drop) - 0.35;
+      const len = drop < 1 ? 10 : 4.5 + 5.5 * Math.exp(-since * 2.5);
+      this.beamA.set([f.x, f.z, bottom, Math.min(1.8, 1 + 1.3 * Math.exp(-since * 4.5))], k * 4);
+      this.beamB.set([f.color, 4.2, bottom + len, 0], k * 4);
+      k++;
+    }
+    this.beamN = k;
+  }
+
+  private detourStrikeAt = 0;
+  private lastDetourStrike(): number {
+    return this.detourStrikeAt;
+  }
+
+  private applyDetour(c: Camera, dt: number): void {
+    const want = this.detourWant;
+    if (this.reduced) this.detourAmt = want;
+    else {
+      this.detourAmt += (want - this.detourAmt) * (1 - Math.exp(-dt * 1.7));
+      if (Math.abs(want - this.detourAmt) < 0.002) this.detourAmt = want;
+    }
+    const d = this.detourShot;
+    const a = this.detourAmt;
+    if (!d || a <= 0.0005) return;
+    const e = a * a * (3 - 2 * a);
+    const lerp = (x: number, y: number) => x + (y - x) * e;
+    let yaw = d.yaw;
+    while (yaw - c.yaw > 180) yaw -= 360;
+    while (yaw - c.yaw < -180) yaw += 360;
+    // Lift off the path and swoop back down: an arc, not a slide.
+    const arc = Math.sin(Math.PI * e) * (want ? 2.6 : 2.0);
+    c.pos = [lerp(c.pos[0], d.pos[0]), lerp(c.pos[1], d.pos[1]) + arc, lerp(c.pos[2], d.pos[2])];
+    c.yaw = lerp(c.yaw, yaw);
+    c.pitch = lerp(c.pitch, d.pitch) - arc * 3;
+    c.roll = lerp(c.roll, d.roll) + Math.sin(Math.PI * e) * (want ? -6 : 6);
+    c.fov = lerp(c.fov, d.fov);
+    for (const k of ["shade", "fog", "ride", "sway", "stars", "ocean", "lit", "chart", "snow"] as const) c[k] = lerp(c[k], d[k]);
+    if (a > 0.985 && want && !this.detourArrived) {
+      this.detourArrived = true;
+      this.detourStrikeAt = this.time;
+      const f = this.detourFocus;
+      if (f && !this.reduced) {
+        this.addRipple(f.x, f.z, 1);
+        this.imp.set([f.x, f.z, this.time, f.color], this.impNext * 4);
+        this.impNext = (this.impNext + 1) % 4;
+        this.impN = Math.min(4, this.impN + 1);
+        this.glitchBurst = 0.8;
+      }
+    }
+  }
+
   private measureQuiet(): void {
     this.quietN = 0;
     if (!this.quietSelector) return;
@@ -706,7 +948,10 @@ export class SeaEngine {
     // Cursor influence: on while the pointer is in the window and moved recently.
     const want = this.pInside && this.time - this.pLastMove < SEA_CONFIG.pointerIdle ? 1 : 0;
     this.pStrength = this.reduced ? 0 : this.pStrength + (want - this.pStrength) * (1 - Math.exp(-dt * 3));
+    if (!this.variantsStarted && (this.time > 1.2 || this.uTarget > 0.02 || this.reduced)) this.startVariants();
+    this.pollVariants();
     this.updateCamera(dt);
+    this.updateBeams(this.telemetry.u);
     this.measureQuiet();
     this.first = false;
 
@@ -756,7 +1001,7 @@ export class SeaEngine {
     gl.uniform1f(su.uTanHalf, this.tanHalf);
     gl.uniform1f(su.uPixAngle, (2 * this.tanHalf) / this.rows);
     gl.uniform1f(su.uShade, c.shade);
-    gl.uniform1f(su.uChop, c.shade);
+    gl.uniform1f(su.uChop, c.shade * 0.3); // texture only: shading exaggerates slopes
     gl.uniform1f(su.uFog, c.fog);
     gl.uniform1f(su.uOcean, c.ocean);
     gl.uniform1f(su.uLit, c.lit);
@@ -781,6 +1026,20 @@ export class SeaEngine {
     gl.uniform2f(su.uFlow, this.flow[0], this.flow[1]);
     gl.uniform4fv(su.uRip, this.rip);
     gl.uniform1i(su.uRipN, this.ripN);
+    gl.uniform1i(su.uNReg, REGIONS.length);
+    gl.uniform1i(su.uThree, 3);
+    gl.uniform1i(su.uNTerr, CHART_SITES.length);
+    gl.uniform3f(su.uLight, this.light[0], this.light[1], this.light[2]);
+    gl.uniform3f(su.uSun, this.sun[0], this.sun[1], this.sun[2]);
+    gl.uniform1f(su.uRelief, 3.2);
+    gl.uniform2f(su.uWaveVel, this.waveVel[0], this.waveVel[1]);
+    // On the chart the beams give way to the territories.
+    const beamN = c.chart > 0.5 ? 0 : this.beamN;
+    if (su.uBeam) gl.uniform4fv(su.uBeam, this.beamA);
+    if (su.uBeamB) gl.uniform4fv(su.uBeamB, this.beamB);
+    gl.uniform1i(su.uBeamN, beamN);
+    if (su.uImp) gl.uniform4fv(su.uImp, this.imp);
+    gl.uniform1i(su.uImpN, this.impN);
     const p0 = this.profile ? this.sync() : 0;
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     const p1 = this.profile ? this.sync() : 0;
@@ -799,6 +1058,8 @@ export class SeaEngine {
       gl.uniform2f(this.tu.uGrid, this.cols, this.rows);
       gl.uniform2i(this.tu.uPtrCell, tcol, trow);
       gl.uniform1i(this.tu.uN, TRACE_N);
+      gl.uniform1i(this.tu.uSearch, 9);
+      gl.uniform1i(this.tu.uJump, 4);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     }
     const p2 = this.profile ? this.sync() : 0;
@@ -843,6 +1104,7 @@ export class SeaEngine {
     gl.uniform1fv(au.uQuietS, this.quietS);
     gl.uniform1i(au.uQuietN, this.quietN);
     gl.uniform1f(au.uQuietFeather, SEA_CONFIG.quietFeather * this.dpr);
+    gl.uniform1f(au.uOceanAmt, c.ocean);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
 
     // ── glyph pass (per pixel): stamp the atlas ──
@@ -886,6 +1148,62 @@ export class SeaEngine {
     const out: number[] = [];
     for (let i = 0; i < n; i++) out.push(px[i * 4 + 2] > 127 ? px[i * 4] * 256 + px[i * 4 + 1] : -1);
     return out;
+  }
+
+  /**
+   * Debug: the final frame as text, one char per sampled cell (what is actually drawn).
+   * mode "glyph": the glyph itself (grey), "L" lime, "O" orange accent cells.
+   * mode "alpha": 0-9 brightness, letters for accents (l/L lime, o/O orange by brightness).
+   * Stats: visible fraction, mean / std alpha, accent fractions.
+   */
+  debugCells(stepX = 2, stepY = 1, mode: "glyph" | "alpha" | "raw" = "glyph"): { text: string; stats: Record<string, number> } {
+    const gl = this.gl;
+    const n = this.cols * this.rows * 4;
+    const col = new Uint8Array(n);
+    const gly = new Uint8Array(n);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.cellFbo);
+    gl.readBuffer(gl.COLOR_ATTACHMENT0);
+    gl.readPixels(0, 0, this.cols, this.rows, gl.RGBA, gl.UNSIGNED_BYTE, col);
+    gl.readBuffer(gl.COLOR_ATTACHMENT1);
+    gl.readPixels(0, 0, this.cols, this.rows, gl.RGBA, gl.UNSIGNED_BYTE, gly);
+    gl.readBuffer(gl.COLOR_ATTACHMENT0);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    const st = { vis: 0, mean: 0, std: 0, lime: 0, orange: 0, n: 0 };
+    let s2 = 0;
+    let text = "";
+    for (let r = 0; r < this.rows; r += stepY) {
+      let line = "";
+      for (let c = 0; c < this.cols; c += stepX) {
+        const i = ((this.rows - 1 - r) * this.cols + c) * 4;
+        const a = col[i + 3] / 255;
+        const R = col[i], G = col[i + 1], B = col[i + 2];
+        const g = gly[i];
+        st.n++;
+        st.mean += a;
+        s2 += a * a;
+        if (a <= 0.003 || g === 0) {
+          line += " ";
+          continue;
+        }
+        st.vis++;
+        const sat = Math.max(R, G, B) - Math.min(R, G, B);
+        const lime = sat > 40 && G >= R && G > B;
+        const orng = sat > 40 && R > G && G > B;
+        if (lime) st.lime++;
+        if (orng) st.orange++;
+        if (mode === "raw") line += GLYPHS[g] ?? "?";
+        else if (mode === "glyph") line += lime ? "L" : orng ? "O" : GLYPHS[g] ?? "?";
+        else if (lime) line += a > 0.5 ? "L" : "l";
+        else if (orng) line += a > 0.5 ? "O" : "o";
+        else line += String(Math.min(9, Math.floor(a * 10)));
+      }
+      text += line + "\n";
+    }
+    st.mean /= st.n;
+    st.std = Math.sqrt(Math.max(0, s2 / st.n - st.mean * st.mean));
+    const stats: Record<string, number> = {};
+    for (const [k, v] of Object.entries(st)) stats[k] = k === "n" ? v : +(k === "mean" || k === "std" ? v : v / st.n).toFixed(3);
+    return { text, stats };
   }
 
   /**

@@ -58,7 +58,7 @@ export type Beat = {
 
 /* ───────────── shot helpers ───────────── */
 
-const SEA = { ...SHOT_BASE, shade: 0.8, fog: 0.03, sway: 1, stars: 1, ocean: 1, lit: 0.55, ride: 0.2 };
+export const SEA = { ...SHOT_BASE, shade: 0.85, fog: 0.03, sway: 1, stars: 1, ocean: 1, lit: 0.9, ride: 0.2 };
 
 const d2r = Math.PI / 180;
 
@@ -66,7 +66,7 @@ const d2r = Math.PI / 180;
  * A shot looking at `target` (xz) along `heading` (deg), from `dist` back, at `alt`.
  * `off` turns the camera so the target sits that many degrees right of centre.
  */
-function aim(
+export function aim(
   target: [number, number],
   heading: number,
   dist: number,
@@ -100,31 +100,32 @@ const at = (p: [number, number], y = 0): Vec3 => [p[0], y, p[1]];
 
 const HERO: Shot = { ...SHOT_BASE, pos: [0, 0, 0], yaw: 0, pitch: -90, fov: 30, span: 11 };
 
-const SURFACE: Shot = { ...SEA, pos: [1.8, 0.85, -3.8], yaw: 22, pitch: -7, fov: 56 };
+const SURFACE: Shot = { ...SEA, pos: [1.8, 2.1, -3.8], yaw: 22, pitch: -14, fov: 56 };
 
-const SWELL_SHOT = { ...SEA, ride: 1, pitch: -7, fov: 58, fog: 0.032, shade: 0.9 };
+const SWELL_SHOT = { ...SEA, ride: 1, pitch: -15, fov: 58, fog: 0.03, shade: 0.9 };
 
-const EXP0: Shot = { ...SWELL_SHOT, pos: [3.6, 1.85, -30], yaw: 8, roll: 2 };
-const EXP1: Shot = { ...SWELL_SHOT, pos: [8.0, 1.9, -39], yaw: -14, roll: -2 };
-const EXP2: Shot = { ...SWELL_SHOT, pos: [5.5, 1.9, -49], yaw: -38 };
+const EXP0: Shot = { ...SWELL_SHOT, pos: [3.6, 3.0, -30], yaw: 8, roll: 2 };
+const EXP1: Shot = { ...SWELL_SHOT, pos: [8.0, 3.1, -39], yaw: -14, roll: -2 };
+const EXP2: Shot = { ...SWELL_SHOT, pos: [5.5, 3.1, -49], yaw: -38 };
 
-const P = ["p-glass", "p-cross", "p-terrace", "p-ping", "p-scan", "p-ice"] as const;
-const PROJ_HEADINGS = [-40, -60, -120, -153, -187, -215];
+export const P = ["p-glass", "p-cross", "p-terrace", "p-ping", "p-scan", "p-ice"] as const;
+export const PROJ_HEADINGS = [-40, -60, -120, -153, -187, -215];
 const PROJ_SHOTS: Shot[] = P.map((id, i) =>
-  aim(beacon(id), PROJ_HEADINGS[i], 9.5, 1.35, { off: i % 2 ? -11 : 11, pitch: -5 }),
+  aim(beacon(id), PROJ_HEADINGS[i], 9.5, 2.4, { off: i % 2 ? -11 : 11, pitch: -10 }),
 );
 
-const SKILLS: Shot = { ...SEA, pos: [-25, 0.95, -9], yaw: -225, pitch: -6, fov: 64, lit: 0.5 };
-const HARBOR: Shot = aim(beacon("harbor"), -220, 10, 1.6, { off: 12, pitch: -4, fov: 56 });
+const SKILLS: Shot = { ...SEA, pos: [-25, 2.2, -9], yaw: -225, pitch: -13, fov: 64 };
+const HARBOR: Shot = aim(beacon("harbor"), -220, 10, 2.4, { off: 12, pitch: -9, fov: 56 });
 
 const MAP: Shot = {
   ...SHOT_BASE,
-  pos: [-16, 0, -30],
+  // Centred off the chart's middle so the territories sit right of the map card.
+  pos: [-16, 0, -16],
   yaw: -90,
   portraitYaw: 0,
   pitch: -90,
   fov: 40,
-  span: 112,
+  span: 132,
   spanFit: "long",
   shade: 0.35,
   fog: 0.002,
@@ -156,7 +157,7 @@ export const BEATS: Beat[] = [
     // Insertion: a fast satellite-style dive, banking as it drops…
     via: [{ ...SHOT_BASE, pos: [1.0, 3.2, -1.7], yaw: 14, pitch: -58, roll: -7, fov: 44, shade: 0.45, fog: 0.01, ocean: 0.6, lit: 0.3 }],
     shot: SURFACE,
-    drift: { pos: [2.3, 0.9, -6.2], yaw: 26 },
+    drift: { pos: [2.3, 2.1, -6.2], yaw: 26 },
     hold: 1.0,
   },
   {
@@ -164,7 +165,7 @@ export const BEATS: Beat[] = [
     stop: "swell",
     travel: 1.25,
     label: "En route // The Swell",
-    via: [{ ...SURFACE, pos: [0.6, 0.95, -18], yaw: -6, pitch: -4, roll: -9, fov: 66, sway: 0.4 }],
+    via: [{ ...SURFACE, pos: [0.6, 1.9, -18], yaw: -6, pitch: -9, roll: -9, fov: 66, sway: 0.4 }],
     shot: EXP0,
     drift: ahead(EXP0, 3, -4),
     hold: 0.9,

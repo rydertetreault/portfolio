@@ -8,7 +8,10 @@ import MotionToggle from "@/components/MotionToggle";
 import { seaStore } from "./SeaCanvas";
 import HudText from "./HudText";
 import { BEATS, STOPS, TRACK_VH, WINDOWS, stopArriveU, type StopId } from "./journey";
-import { BEACONS, GEO_ORIGIN } from "./world";
+import { GEO_ORIGIN } from "./world";
+import { CHART_SECTIONS, CHART_SITES, sectionCenter } from "./chart";
+import { SEA_CONFIG } from "./SeaEngine";
+import { EDUCATION, EXPERIENCES } from "@/data/profile";
 import type { Vec3 } from "./timeline";
 
 const WARM = "#d3b75b";
@@ -75,7 +78,7 @@ function Corner({ pos }: { pos: "tl" | "tr" | "bl" | "br" }) {
   return <span className={`absolute h-5 w-5 border-text-faint/60 ${v} ${h}`} />;
 }
 
-export function Hud({ u }: { u: MotionValue<number> }) {
+export function Hud({ u, onArchive }: { u: MotionValue<number>; onArchive: () => void }) {
   const lat = useRef<HTMLElement>(null);
   const lon = useRef<HTMLElement>(null);
   const altK = useRef<HTMLElement>(null);
@@ -147,9 +150,9 @@ export function Hud({ u }: { u: MotionValue<number> }) {
 
       <div className="pointer-events-auto absolute right-8 top-7 flex items-start gap-5 text-right">
         <nav className="hidden items-center gap-5 sm:flex" aria-label="Pages">
-          <Link href="/projects" className="hover:text-accent">
+          <button onClick={onArchive} className="uppercase tracking-[0.18em] hover:text-accent">
             Projects
-          </Link>
+          </button>
           <Link href="/resume" className="hover:text-accent">
             Resume
           </Link>
@@ -347,44 +350,81 @@ export function Waypoint({ names }: { names: Record<string, string> }) {
   );
 }
 
-/* ───────────── the map: landmarks, flight path, scanner ───────────── */
+/* ───────────── the map: territories, flight path, scanner ───────────── */
 
-type Landmark = { id: string; label: string; pos: Vec3; color: string; go: () => void };
+type MapLabel = {
+  key: string;
+  /** Section name (big) or plot name (small). */
+  big: boolean;
+  text: string;
+  sub?: string;
+  pos: Vec3;
+  color: string;
+  go: () => void;
+};
 
+/**
+ * Labels for the chart (chart.ts): every section's territory gets its name at its centre,
+ * and each plot inside it (company, project, credential …) its own small label on its site.
+ * The shader draws the coasts and borders; this only names them.
+ */
 export function MapOverlay({ u, names }: { u: MotionValue<number>; names: Record<string, string> }) {
   const mapW = WINDOWS[BEATS.findIndex((b) => b.stop === "map")];
   const opacity = useTransform(u, [mapW.arrive - 0.25, mapW.arrive, mapW.leave, mapW.leave + 0.2], [0, 1, 1, 0]);
   const pointerEvents = useTransform(opacity, (o) => (o > 0.6 ? "auto" : "none"));
   const marks = useRef<(HTMLButtonElement | null)[]>([]);
+  const texts = useRef<(HTMLSpanElement | null)[]>([]);
   const path = useRef<SVGPolylineElement>(null);
   const ring = useRef<HTMLDivElement>(null);
   const ringLabel = useRef<HTMLSpanElement>(null);
 
-  const beaconColor = (id?: string) => ((BEACONS.find((x) => x.id === id)?.color ?? 1) >= 4 ? WARM : "var(--accent)");
-  const stopBeat = (stop: StopId) => BEATS.findIndex((b) => b.stop === stop);
-  const goBeat = (i: number) => () => jumpTo(WINDOWS[i].arrive + 0.06);
+  const goBeat = (id: string) => () => {
+    const i = BEATS.findIndex((b) => b.id === id);
+    if (i >= 0) jumpTo(WINDOWS[i].arrive + 0.06);
+  };
+  const hex = (c: number) => SEA_CONFIG.palette[c - 1] ?? SEA_CONFIG.palette[0];
+  const live = EXPERIENCES.filter((e) => /present/i.test(e.date));
+  const subName = (stop: StopId, sub: number): string => {
+    switch (stop) {
+      case "swell":
+        return EXPERIENCES[sub]?.company ?? "";
+      case "waypoints":
+        return names[`proj-${sub}`] ?? "";
+      case "current":
+        return sub < live.length ? live[sub].company : "Latest pushes";
+      case "harbor":
+        return EDUCATION[sub]?.title ?? "";
+      default:
+        return "";
+    }
+  };
 
-  const landmarks: Landmark[] = [
-    { id: "origin", label: "00 Origin", pos: [0, 0, 0], color: "var(--accent)", go: goBeat(0) },
-    { id: "surface", label: "01 The Surface", pos: [2.2, 0, -8], color: "var(--accent)", go: goBeat(stopBeat("surface")) },
-    { id: "swell", label: "02 The Swell", pos: [6, 0, -42], color: WARM, go: goBeat(stopBeat("swell")) },
-    ...BEATS.flatMap((b, i) =>
-      b.stop === "waypoints" && b.target
-        ? [
-            {
-              id: b.id,
-              label: `${b.mark} ${names[b.id] ?? ""}`,
-              pos: b.target,
-              color: beaconColor(b.region),
-              go: goBeat(i),
-            },
-          ]
-        : [],
-    ),
-    { id: "current", label: "04 The Current", pos: [-20, 0, -4], color: "var(--accent)", go: goBeat(stopBeat("current")) },
-    { id: "harbor", label: "05 The Harbor", pos: [-6, 0, 14], color: WARM, go: goBeat(stopBeat("harbor")) },
-    { id: "deep", label: "07 The Deep", pos: [-16, 0, -36], color: "var(--accent)", go: goBeat(stopBeat("deep")) },
-  ];
+  const labels: MapLabel[] = [];
+  CHART_SECTIONS.forEach((sec) => {
+    const stop = STOPS.find((x) => x.id === sec.stop)!;
+    const sites = CHART_SITES.filter((x) => x.stop === sec.stop);
+    const c = sectionCenter(sec.stop);
+    labels.push({
+      key: sec.stop,
+      big: true,
+      text: `${stop.code} ${stop.name}`,
+      sub: sec.caption,
+      pos: [c[0], 0, c[1]],
+      color: hex(sec.color),
+      go: goBeat(sites[0].beat),
+    });
+    if (sites.length > 1)
+      sites.forEach((site) =>
+        labels.push({
+          key: `${sec.stop}-${site.sub}`,
+          big: false,
+          text: subName(sec.stop, site.sub),
+          pos: [site.pos[0], 0, site.pos[1]],
+          color: hex(sec.color),
+          go: goBeat(site.beat),
+        }),
+      );
+  });
 
   useEffect(() => {
     let raf = 0;
@@ -392,13 +432,43 @@ export function MapOverlay({ u, names }: { u: MotionValue<number>; names: Record
       raf = requestAnimationFrame(tick);
       const e = seaStore.get();
       if (!e || u.get() < mapW.arrive - 0.4 || u.get() > mapW.leave + 0.3) return;
-      landmarks.forEach((m, i) => {
+      // Project every label, then place them greedily: section names first, then plots,
+      // each taking the first spot around its point that doesn't hit one already placed.
+      const placed: [number, number, number, number][] = [];
+      const card = document.querySelector('[aria-label="Map"]')?.getBoundingClientRect();
+      if (card && card.width) placed.push([card.left, card.top, card.right, card.bottom]);
+      const order = labels.map((m, i) => i).sort((a, b) => Number(labels[b].big) - Number(labels[a].big));
+      for (const i of order) {
         const el = marks.current[i];
-        if (!el) return;
+        const tx = texts.current[i];
+        if (!el || !tx) continue;
+        const m = labels[i];
         const p = e.project(m.pos);
         el.style.visibility = p ? "visible" : "hidden";
-        if (p) el.style.transform = `translate(${p[0].toFixed(1)}px, ${p[1].toFixed(1)}px)`;
-      });
+        if (!p) continue;
+        el.style.transform = `translate(${p[0].toFixed(1)}px, ${p[1].toFixed(1)}px)`;
+        const w = tx.offsetWidth;
+        const h = tx.offsetHeight;
+        if (!w) continue; // hidden (plot names on small screens)
+        const spots: [number, number][] = m.big
+          ? [[-w / 2, -h - 8], [-w / 2, 8], [-w / 2, -h / 2], [12, -h / 2], [-w - 12, -h / 2], [-w / 2, -h - 30], [-w / 2, 30]]
+          : [[9, -h / 2], [-w - 9, -h / 2], [-w / 2, 7], [-w / 2, -h - 7], [9, 8], [-w - 9, 8], [9, -h - 8], [-w - 9, -h - 8]];
+        let best = spots[0];
+        let bestHit = Infinity;
+        for (const sp of spots) {
+          const r: [number, number, number, number] = [p[0] + sp[0], p[1] + sp[1], p[0] + sp[0] + w, p[1] + sp[1] + h];
+          let hit = 0;
+          for (const q of placed) hit += Math.max(0, Math.min(r[2], q[2]) - Math.max(r[0], q[0])) * Math.max(0, Math.min(r[3], q[3]) - Math.max(r[1], q[1]));
+          if (r[0] < 4 || r[1] < 4 || r[2] > window.innerWidth - 4 || r[3] > window.innerHeight - 4) hit += w * h;
+          if (hit < bestHit) {
+            bestHit = hit;
+            best = sp;
+            if (hit === 0) break;
+          }
+        }
+        placed.push([p[0] + best[0] - 3, p[1] + best[1] - 2, p[0] + best[0] + w + 3, p[1] + best[1] + h + 2]);
+        tx.style.transform = `translate(${best[0].toFixed(0)}px, ${best[1].toFixed(0)}px)`;
+      }
       if (path.current) {
         const pts: string[] = [];
         const end = mapW.travelFrom;
@@ -436,7 +506,7 @@ export function MapOverlay({ u, names }: { u: MotionValue<number>; names: Record
   return (
     <motion.div style={{ opacity }} className="pointer-events-none fixed inset-0 z-[12]" aria-hidden>
       <svg className="absolute inset-0 h-full w-full">
-        <polyline ref={path} fill="none" stroke="var(--accent)" strokeOpacity={0.6} strokeWidth={1} strokeDasharray="2 6" />
+        <polyline ref={path} fill="none" stroke="var(--foreground)" strokeOpacity={0.35} strokeWidth={1} strokeDasharray="2 6" />
       </svg>
       <div
         ref={ring}
@@ -449,9 +519,9 @@ export function MapOverlay({ u, names }: { u: MotionValue<number>; names: Record
           className="absolute left-0 top-[262px] -translate-x-1/2 whitespace-nowrap font-mono text-[10px] uppercase tracking-[0.2em] text-foreground/60"
         />
       </div>
-      {landmarks.map((m, i) => (
+      {labels.map((m, i) => (
         <motion.button
-          key={m.id}
+          key={m.key}
           ref={(el) => {
             marks.current[i] = el;
           }}
@@ -460,15 +530,33 @@ export function MapOverlay({ u, names }: { u: MotionValue<number>; names: Record
           tabIndex={-1}
           className="group absolute left-0 top-0 cursor-pointer"
         >
+          {!m.big && (
+            <span
+              className="absolute block h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rotate-45 border transition-transform group-hover:scale-150"
+              style={{ borderColor: m.color }}
+            />
+          )}
           <span
-            className="absolute block h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rotate-45 border transition-transform group-hover:scale-150"
-            style={{ borderColor: m.color }}
-          />
-          <span
-            className="absolute left-3 -top-2 whitespace-nowrap bg-background/70 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.2em] transition-colors group-hover:bg-background"
-            style={{ color: m.color }}
+            ref={(el) => {
+              texts.current[i] = el;
+            }}
+            className="absolute left-0 top-0 block whitespace-nowrap"
           >
-            {m.label}
+            {m.big ? (
+              <span className="block text-center">
+                <span
+                  className="block bg-background/75 px-2 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-[0.28em] transition-colors group-hover:bg-background"
+                  style={{ color: m.color }}
+                >
+                  {m.text}
+                </span>
+                <span className="block font-mono text-[9px] uppercase tracking-[0.3em] text-foreground/60">{m.sub}</span>
+              </span>
+            ) : (
+              <span className="hidden bg-background/50 px-1 font-mono text-[9px] sm:block uppercase tracking-[0.18em] text-foreground/75 transition-colors group-hover:text-foreground">
+                {m.text}
+              </span>
+            )}
           </span>
         </motion.button>
       ))}

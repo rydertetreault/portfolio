@@ -8,7 +8,7 @@ import CompanyLogo from "@/components/CompanyLogo";
 import AppleIcon from "@/components/icons/AppleIcon";
 import Lightbox from "@/components/Lightbox";
 import HudText from "./HudText";
-import { EDUCATION, PROFILE, SKILLS, type Experience } from "@/data/profile";
+import { EDUCATION, EXPERIENCES, PROFILE, SKILLS, type Experience } from "@/data/profile";
 import type { GitHubRepo } from "@/lib/github";
 import { formatDateRange, formatRepoName } from "@/lib/utils";
 
@@ -177,12 +177,14 @@ export function ProjectCard({
   total,
   active,
   warm,
+  onDossier,
 }: {
   repo: GitHubRepo;
   index: number;
   total: number;
   active: boolean;
   warm: boolean;
+  onDossier: () => void;
 }) {
   const [shot, setShot] = useState<number | null>(null);
   const name = formatRepoName(repo.name);
@@ -248,9 +250,9 @@ export function ProjectCard({
             [ <Github size={12} /> source ]
           </a>
         )}
-        <Link href={`/projects#${repo.name}`} className={linkCls}>
+        <button onClick={onDossier} className={linkCls}>
           [ full dossier → ]
-        </Link>
+        </button>
       </div>
 
       {shots.length > 0 && (
@@ -262,7 +264,27 @@ export function ProjectCard({
 
 /* ───────────── 04 the current ───────────── */
 
-export function SkillsCard({ active }: { active: boolean }) {
+function ago(iso: string): string {
+  const d = (Date.now() - new Date(iso).getTime()) / 86400000;
+  if (d < 1) return "today";
+  if (d < 2) return "yesterday";
+  if (d < 30) return `${Math.floor(d)}d ago`;
+  if (d < 365) return `${Math.floor(d / 30)}mo ago`;
+  return `${Math.floor(d / 365)}y ago`;
+}
+
+/** What's current: live roles, the latest pushes, and the toolkit drifting past. */
+export function NowCard({
+  active,
+  recent,
+  onOpen,
+}: {
+  active: boolean;
+  recent: GitHubRepo[];
+  onOpen: (repo: GitHubRepo) => void;
+}) {
+  const live = EXPERIENCES.filter((e) => /present/i.test(e.date));
+  const tools = SKILLS.flatMap((g) => g.items);
   return (
     <Frame className="space-y-6">
       <div className="space-y-1.5">
@@ -272,26 +294,70 @@ export function SkillsCard({ active }: { active: boolean }) {
         <h2 className="text-2xl tracking-tight sm:text-3xl">
           <HudText text="The Current" active={active} delay={180} />
         </h2>
-        <p className="text-sm text-text-faint">What I work with, every day.</p>
+        <p className="text-sm text-text-faint">What&apos;s moving right now.</p>
       </div>
-      <div className="grid gap-6 sm:grid-cols-3">
-        {SKILLS.map((g, gi) => (
-          <div key={g.title} className="space-y-3">
-            <h3 className="font-mono text-[11px] uppercase tracking-[0.25em] text-accent">
-              <HudText text={g.title} active={active} delay={300 + gi * 150} />
-            </h3>
-            <ul className="flex flex-wrap gap-1.5">
-              {g.items.map((s) => (
-                <li
-                  key={s}
-                  className="border border-border-theme/70 bg-background/40 px-2 py-1 font-mono text-[11px] text-foreground/85 transition-colors hover:border-accent hover:text-accent"
+
+      <div className="grid gap-6 sm:grid-cols-2">
+        <section className="space-y-3">
+          <h3 className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.25em] text-accent">
+            <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
+            <HudText text="On deck" active={active} delay={300} />
+          </h3>
+          <ul className="space-y-4">
+            {live.map((e, i) => (
+              <li key={e.company} className="relative border-l border-text-faint/30 pl-4">
+                <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-text-faint">
+                  <HudText text={`${e.company} · since ${e.roles[e.roles.length - 1].date.split(" - ")[0]}`} active={active} delay={380 + i * 160} />
+                </p>
+                <p className="text-base font-semibold">{e.roles[0].role}</p>
+                <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-text-muted">{e.roles[0].description}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section className="space-y-3">
+          <h3 className="font-mono text-[11px] uppercase tracking-[0.25em]" style={{ color: WARM }}>
+            <HudText text="Latest pushes" active={active} delay={420} />
+          </h3>
+          <ul className="space-y-2">
+            {recent.map((r) => (
+              <li key={r.name}>
+                <button
+                  onClick={() => onOpen(r)}
+                  className="group flex w-full items-baseline justify-between gap-3 border-b border-border-theme/40 pb-2 text-left"
                 >
-                  {s}
-                </li>
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-medium text-foreground/90 transition-colors group-hover:text-accent">
+                      {formatRepoName(r.name)}
+                    </span>
+                    <span className="block font-mono text-[10px] uppercase tracking-[0.2em] text-text-faint">
+                      {r.language ?? r.category ?? "repo"}
+                    </span>
+                  </span>
+                  <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.2em] text-text-faint">
+                    {ago(r.pushed_at)} ▸
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      </div>
+
+      {/* The toolkit, drifting past like the current itself. */}
+      <div className="relative overflow-hidden border-y border-border-theme/40 py-2 [mask-image:linear-gradient(90deg,transparent,#000_12%,#000_88%,transparent)]">
+        <div className="sea-drift flex w-max font-mono text-[10px] uppercase tracking-[0.25em] text-text-faint">
+          {[0, 1].map((k) => (
+            <span key={k} aria-hidden={k === 1} className="flex gap-6 pr-6">
+              {tools.map((t) => (
+                <span key={t}>
+                  <span className="text-accent">~</span> {t}
+                </span>
               ))}
-            </ul>
-          </div>
-        ))}
+            </span>
+          ))}
+        </div>
       </div>
     </Frame>
   );
@@ -331,15 +397,16 @@ export function EducationCard({ active }: { active: boolean }) {
 
 export function MapCard({ active }: { active: boolean }) {
   return (
-    <div className="space-y-3 text-center">
+    <div className="space-y-3 text-center sm:text-left">
       <Kicker>
         <HudText text="06 / The Map" active={active} />
       </Kicker>
-      <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+      <h2 className="text-lg font-semibold tracking-tight sm:text-3xl">
         <HudText text="Every stop is a wave in the same sea." active={active} delay={200} />
       </h2>
-      <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-text-faint">
-        <span className="hidden [@media(hover:hover)]:inline">Move to scan the water · </span>Select a waypoint to travel
+      <p className="hidden font-mono text-[10px] uppercase leading-relaxed tracking-[0.25em] text-text-faint sm:block">
+        Each territory is a section of the site; its plots are what&apos;s inside.
+        <span className="hidden [@media(hover:hover)]:inline"> Move to scan the water.</span> Select a name to travel there.
       </p>
     </div>
   );
