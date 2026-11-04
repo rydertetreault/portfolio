@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ArrowUpRight, FileText, Github, Linkedin, Lock, Mail } from "lucide-react";
 import type { ReactNode } from "react";
 import { EDUCATION, EXPERIENCES, PROFILE, SKILLS, type Experience } from "@/data/profile";
-import { CURRENTS, EDDIES, SWELL } from "./world";
+import { CURRENTS, ISLANDS, SWELL } from "./world";
 import type { GitHubRepo } from "@/lib/github";
 import { formatRepoName } from "@/lib/utils";
 
@@ -76,7 +76,7 @@ export function SkillsHead() {
   return (
     <div className="space-y-3">
       <Kicker n="03">Skills</Kicker>
-      <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">Three currents.</h2>
+      <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">Core competencies</h2>
     </div>
   );
 }
@@ -125,14 +125,14 @@ export function ExperienceStop({ exp, k, n }: { exp: Experience; k: number; n: n
   );
 }
 
-/** All four featured projects at once, one column under each eddy (same colour). */
+/** All four featured projects at once, one column under each island (same colour). */
 export function ProjectsRow({ projects }: { projects: GitHubRepo[] }) {
-  const hover = (k: number) => window.dispatchEvent(new CustomEvent("ocean:eddy", { detail: k }));
+  const hover = (k: number) => window.dispatchEvent(new CustomEvent("ocean:isle", { detail: k }));
   return (
     <div className="grid gap-10 sm:grid-cols-4 sm:gap-[2.5vw]">
       {projects.map((repo, k) => {
         const desc = repo.description ?? repo.longDescription ?? "";
-        const c = accent(EDDIES[k].color);
+        const c = accent(ISLANDS[k].color);
         return (
           <article
             key={repo.name}
@@ -179,7 +179,7 @@ export function ProjectsHead() {
     <div className="flex items-end justify-between gap-6">
       <div className="space-y-3">
         <Kicker n="04">Projects</Kicker>
-        <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">Four things I&apos;ve built.</h2>
+        <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">Featured work</h2>
       </div>
       <Out href="/projects">All projects →</Out>
     </div>
@@ -192,7 +192,6 @@ export function EducationStop() {
       <Kicker n="05" color={2}>
         Education
       </Kicker>
-      <p className="max-w-md leading-relaxed text-text-muted">Calm water, a clear horizon: where it all started.</p>
       <div className="space-y-5">
         {EDUCATION.map((e) => (
           <div key={e.title}>

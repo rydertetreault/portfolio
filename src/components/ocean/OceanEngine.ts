@@ -2,9 +2,10 @@
  * OceanEngine: WebGL2 renderer for the ocean (see shaders.ts for the two passes).
  * Framework-agnostic: OceanCanvas.tsx feeds it scroll, theme, quiet zones and size.
  */
-import { FIELD_FS, FORM_FS, MAX_BOX, MAX_EDDY, MAX_QUIET, NLEV, QUAD_VS, SKY_FS, SURFACE_FS, SURFACE_VS } from "./shaders";
-import { EDDIES, FLOW_SPEED, FONT_SIZE, GLYPHS, LINE_HEIGHT, MORPH_SPEED, PHASE_SPEED, PLASMA_AMP, SPAN, swellAt } from "./world";
+import { FIELD_FS, FORM_FS, MAX_BOX, MAX_ISLE, MAX_QUIET, NLEV, QUAD_VS, SKY_FS, SURFACE_FS, SURFACE_VS } from "./shaders";
+import { ISLANDS, FLOW_SPEED, FONT_SIZE, GLYPHS, LINE_HEIGHT, MORPH_SPEED, PHASE_SPEED, PLASMA_AMP, SPAN, swellAt } from "./world";
 import { sampleCamera, type Camera } from "./timeline";
+import { oceanView } from "./nav";
 import { KEYS, SUN_DIR, eventsAt, type Events } from "./route";
 
 type Uniforms = Record<string, WebGLUniformLocation | null>;
@@ -115,8 +116,8 @@ export class OceanEngine {
   private morph = 0;
   private flow: [number, number] = [0, 0];
   private whirlPhase = 0;
-  /** Hovered project's eddy (-1 = none). */
-  eddyHi = -1;
+  /** Hovered project's island (-1 = none). */
+  isleHi = -1;
   private u = 0; // smoothed scroll (viewport heights)
   private uTarget = 0;
   private reduced = false;
@@ -378,6 +379,7 @@ export class OceanEngine {
     }
     this.cam = cam;
     this.onFrame?.(this.u);
+    oceanView.frame.forEach((fn) => fn());
     if (this.quietSource) this.quiet = this.quietSource().slice(0, MAX_QUIET);
 
     const gl = this.gl;
@@ -521,14 +523,14 @@ export class OceanEngine {
     gl.uniform1f(u.uAmp, this.cam?.amp ?? 0);
     gl.uniform1f(u.uSwellW, ev.swell);
     gl.uniform3fv(u.uCrest, ev.crest);
-    const e = new Float32Array(MAX_EDDY * 4);
-    EDDIES.forEach((d, i) => e.set([d.c[0], d.c[1], ev.eddies[i], d.arms], i * 4));
-    gl.uniform4fv(u.uEddy, e);
+    const e = new Float32Array(MAX_ISLE * 4);
+    ISLANDS.forEach((d, i) => e.set([d.c[0], d.c[1], ev.islands[i], d.seed], i * 4));
+    gl.uniform4fv(u.uIsle, e);
     gl.uniform1f(u.uCurW, ev.currents);
     gl.uniform1f(u.uCalmW, ev.calm);
     gl.uniform1f(u.uWhirlW, ev.whirl);
     gl.uniform1f(u.uWhirlPhase, this.whirlPhase);
-    gl.uniform1f(u.uEddyHi, this.eddyHi);
+    gl.uniform1f(u.uIsleHi, this.isleHi);
     gl.uniform1f(u.uAmbient, 1);
   }
 
@@ -588,6 +590,18 @@ export class OceanEngine {
       r = r2;
     }
     return { f, r, up };
+  }
+
+  /** World point → CSS px [x, y, distance], or null if behind the camera. */
+  project(p: [number, number, number]): [number, number, number] | null {
+    const c = this.cam;
+    if (!c) return null;
+    const m = this.viewProj(c, this.w / this.h);
+    const x = m[0] * p[0] + m[4] * p[1] + m[8] * p[2] + m[12];
+    const y = m[1] * p[0] + m[5] * p[1] + m[9] * p[2] + m[13];
+    const w = m[3] * p[0] + m[7] * p[1] + m[11] * p[2] + m[15];
+    if (w < 0.05) return null;
+    return [(x / w * 0.5 + 0.5) * this.cssW, (0.5 - y / w * 0.5) * (this.h / this.dpr), w];
   }
 
   private viewProj(c: Camera, aspect: number): Float32Array {

@@ -5,6 +5,7 @@ import type { MotionValue } from "framer-motion";
 import { OceanEngine, type Quiet } from "./OceanEngine";
 import { BEATS, TRACK, WINDOWS, eventsAt } from "./route";
 import { ACCENTS } from "./world";
+import { oceanView } from "./nav";
 import { useReducedMotionPref } from "@/lib/motion";
 
 function cssVar(name: string): string {
@@ -56,10 +57,11 @@ export default function OceanCanvas({ camU }: { camU: MotionValue<number> }) {
     window.addEventListener("resize", onResize);
 
     engine.onFrame = (u) => camU.set(u);
+    oceanView.project = (p) => engine.project(p);
     const hi = (e: Event) => {
-      engine.eddyHi = (e as CustomEvent<number>).detail;
+      engine.isleHi = (e as CustomEvent<number>).detail;
     };
-    window.addEventListener("ocean:eddy", hi);
+    window.addEventListener("ocean:isle", hi);
     const boxHi = (e: Event) => {
       engine.boxHi = (e as CustomEvent<number>).detail;
     };
@@ -89,13 +91,14 @@ export default function OceanCanvas({ camU }: { camU: MotionValue<number> }) {
 
     return () => {
       mo.disconnect();
-      window.removeEventListener("ocean:eddy", hi);
+      window.removeEventListener("ocean:isle", hi);
       window.removeEventListener("ocean:box", boxHi);
       window.removeEventListener("scroll", scroll);
       window.removeEventListener("resize", onResize);
       document.removeEventListener("visibilitychange", vis);
       engine.dispose();
       engineRef.current = null;
+      oceanView.project = null;
     };
   }, [camU]);
 

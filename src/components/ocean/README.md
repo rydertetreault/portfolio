@@ -25,17 +25,18 @@ ocean/
 | Stop | Water | Its item (accent) |
 | --- | --- | --- |
 | 00 Origin | the live background from straight above | — |
-| 01 About | three currents streaming north | one lane per skill group, lime / orange / gold |
+| 01 About | the camera dives; the field rises into waves | — |
 | 02 Experience | the swell, one crest per company | the crest's foam lights up in the company's colour |
-| 03 Projects | one turning eddy per featured project | the eddy's spiral arms |
-| 04 Education | calm water to the horizon | a low ASCII sun and its glitter path |
-| 05 Contact | the whirlpool, from overhead | lime spiral arms |
-| → | scroll on: dive down the funnel, black out | the directory |
+| 03 Skills | three currents streaming north | one lane per skill group, lime / orange / gold |
+| 04 Projects | four islands rise in a row (flat plateau, steep shore), sea calms around them | each island's shoreline |
+| 05 Education | calm water to the horizon | a low ASCII sun and its glitter path |
+| Contact | the maelstrom, from overhead | accent strips riding its spiral |
+| → | dive down the funnel, black out; the field forms the directory's boxes | each box's outline |
 
 **Text ↔ water:** the accents are CSS vars `--ocean-a1..3` (`globals.css`), read by the engine
-and by the text, so each heading is in the same colour as its item, with a run of its
-glyphs (`≈≈≈`, `~~~`, `@@@`, `***`) in front. Ambient lime / orange strips ride the
-contours everywhere, as on the live homepage.
+and by the text, so each heading is in the same colour as its item. Ambient lime / orange
+strips ride the contours everywhere, as on the live homepage: contour accents are only drawn
+on band edges and placed in the plasma's own flowing coordinates, so they move with it.
 
 An event builds while the camera travels to its stop and fades as it leaves, so only the
 current stop's water is active. Text fades in as the camera settles; the water dims behind
