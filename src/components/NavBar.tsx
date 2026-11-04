@@ -62,7 +62,7 @@ export default function NavBar() {
     window.setTimeout(() => document.documentElement.classList.remove("ascii-deeplink"), 4000);
   };
 
-  // The homepage (the sea) brings its own HUD.
+  // The homepage (the ocean) brings its own header.
   if (isHome) return null;
 
   return (

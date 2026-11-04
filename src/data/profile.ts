@@ -1,5 +1,5 @@
 /**
- * Profile content shared by the site (the sea journey reads it; edit here).
+ * Profile content shared by the site (the ocean homepage reads it; edit here).
  * Mirrors the copy on the previous homepage (components/HomeContent.tsx).
  */
 
@@ -127,7 +127,7 @@ export const EDUCATION: { date: string; title: string; detail: string }[] = [
   { date: "May 2026", title: "Cyber Defense Certificate", detail: "Auburn University" },
 ];
 
-/** Featured projects on the journey, in waypoint order (GitHub repo / manual project names). */
+/** Featured projects, in route order; the first 4 get an eddy on the homepage (GitHub repo / manual project names). */
 export const FEATURED_PROJECTS = [
   "Praxis-AI-Website",
   "Pria",

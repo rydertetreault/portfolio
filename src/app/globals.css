@@ -281,12 +281,3 @@ html.reduce-motion [data-home-content] {
 html.reduce-motion body[data-intro-active] canvas.ascii-field-canvas {
   opacity: 1 !important;
 }
-
-/* The Current: the toolkit ticker drifts past (two copies → seamless loop). */
-@keyframes sea-drift {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
-}
-.sea-drift { animation: sea-drift 60s linear infinite; }
-@media (prefers-reduced-motion: reduce) { .sea-drift { animation: none; } }
-html.reduce-motion .sea-drift { animation: none; }
