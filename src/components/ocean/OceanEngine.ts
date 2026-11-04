@@ -2,10 +2,9 @@
  * OceanEngine: WebGL2 renderer for the ocean (see shaders.ts for the two passes).
  * Framework-agnostic: OceanCanvas.tsx feeds it scroll, theme, quiet zones and size.
  */
-import { FIELD_FS, FORM_FS, MAX_BOX, MAX_ISLE, MAX_QUIET, NLEV, QUAD_VS, SKY_FS, SURFACE_FS, SURFACE_VS } from "./shaders";
+import { FIELD_FS, FORM_FS, MAX_PROBE, PROBE_FS, MAX_BOX, MAX_ISLE, MAX_QUIET, NLEV, QUAD_VS, SKY_FS, SURFACE_FS, SURFACE_VS } from "./shaders";
 import { ISLANDS, FLOW_SPEED, FONT_SIZE, GLYPHS, LINE_HEIGHT, MORPH_SPEED, PHASE_SPEED, PLASMA_AMP, SPAN, swellAt } from "./world";
 import { sampleCamera, type Camera } from "./timeline";
-import { oceanView } from "./nav";
 import { KEYS, SUN_DIR, eventsAt, type Events } from "./route";
 
 type Uniforms = Record<string, WebGLUniformLocation | null>;
@@ -84,6 +83,20 @@ export class OceanEngine {
   private surfProg: WebGLProgram;
   private skyProg: WebGLProgram;
   private formProg: WebGLProgram;
+  private probeProg: WebGLProgram;
+  private pu: Uniforms;
+  private probePts: WebGLTexture;
+  private probeTex: WebGLTexture;
+  private probeFbo: WebGLFramebuffer;
+  /** Two read buffers used in turn, so a buffer is never written while its readback is pending. */
+  private probePbo: WebGLBuffer[] = [];
+  private probeFence: (WebGLSync | null)[] = [null, null];
+  private probeNs = [0, 0];
+  private probeNext = 0;
+  private probeReq: Float32Array | null = null;
+  private probeOut = new Float32Array(MAX_PROBE * 4);
+  /** Water heights at the last requested probe points (one frame behind), or null. */
+  probeHeights: Float32Array | null = null;
   private mu: Uniforms;
   private fu: Uniforms;
   private su: Uniforms;
@@ -125,7 +138,7 @@ export class OceanEngine {
   private bg: [number, number, number] = [0.92, 0.92, 0.92];
   private lo: [number, number, number] = [0.4, 0.4, 0.4];
   private hi: [number, number, number] = [0.07, 0.07, 0.07];
-  private acc = new Float32Array([0.3, 0.49, 0.06, 0.76, 0.33, 0.05, 0.63, 0.38, 0.03]);
+  private acc = new Float32Array([0.3, 0.49, 0.06, 0.76, 0.33, 0.05, 0.63, 0.38, 0.03, 0.75, 0.07, 0.24]);
   private gain = 1;
   private quiet: Quiet[] = [];
 
@@ -138,8 +151,87 @@ export class OceanEngine {
   /** Hovered directory box (-1 = none). */
   boxHi = -1;
 
+  /** Ask for the water's height at these world points (x, z pairs); read probeHeights later. */
+  probe(xz: Float32Array | null): void {
+    this.probeReq = xz;
+  }
+
+  /** Collect any finished probe readbacks, then queue this frame's into a free buffer. */
+  private runProbe(ev: Events): void {
+    const gl = this.gl;
+    for (let i = 0; i < 2; i++) {
+      const f = this.probeFence[i];
+      if (!f) continue;
+      if (gl.getSyncParameter(f, gl.SYNC_STATUS) !== gl.SIGNALED) continue;
+      gl.deleteSync(f);
+      this.probeFence[i] = null;
+      const n = this.probeNs[i];
+      gl.bindBuffer(gl.PIXEL_PACK_BUFFER, this.probePbo[i]);
+      gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, this.probeOut);
+      gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+      const h = this.probeHeights && this.probeHeights.length === n ? this.probeHeights : new Float32Array(n);
+      for (let j = 0; j < n; j++) h[j] = this.probeOut[j * 4];
+      this.probeHeights = h;
+    }
+    const req = this.probeReq;
+    const slot = this.probeNext;
+    if (!req || req.length < 2 || this.probeFence[slot]) return; // nothing asked, or both in flight
+    const n = Math.min(MAX_PROBE, req.length >> 1);
+    gl.bindTexture(gl.TEXTURE_2D, this.probePts);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, n, 1, gl.RG, gl.FLOAT, req.subarray(0, n * 2));
+    gl.useProgram(this.probeProg);
+    this.setFieldUniforms(this.pu, ev);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this.probePts);
+    gl.uniform1i(this.pu.uPts, 0);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.probeFbo);
+    gl.viewport(0, 0, n, 1);
+    gl.disable(gl.DEPTH_TEST);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.bindBuffer(gl.PIXEL_PACK_BUFFER, this.probePbo[slot]);
+    gl.readPixels(0, 0, n, 1, gl.RGBA, gl.FLOAT, 0);
+    gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    this.probeFence[slot] = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+    this.probeNs[slot] = n;
+    this.probeNext = 1 - slot;
+    gl.flush();
+  }
+
+  /** Island close-up (Projects): the camera leaves the route and flies to this shot. */
+  private focusShot: Camera | null = null;
+  private focusAmt = 0;
+  private focusOn = false;
+
+  /** Fly to island k's close-up, or back to the route (null). */
+  setFocus(k: number | null): void {
+    if (k === null) {
+      this.focusOn = false;
+      return;
+    }
+    const c = ISLANDS[k].c;
+    // From the south-east, turned so the whole island sits left of centre; its details are on the right.
+    this.focusShot = { pos: [c[0] + 5.5, 7, c[1] + 12], yaw: -8, pitch: -26, roll: 0, fov: 50, amp: 1, fog: 80, glyph: 1.05 };
+    this.focusOn = true;
+  }
+
   /** Debug: fixed camera instead of the route. */
   debugCam: Camera | null = null;
+
+  /** This frame's view-projection and events (for overlays that sit in the world). */
+  private vp: Float32Array = new Float32Array(16);
+  ev: Events | null = null;
+
+  /** World point → CSS px (x, y) and view depth; null when behind the camera. */
+  project(p: [number, number, number]): [number, number, number] | null {
+    const m = this.vp;
+    const x = m[0] * p[0] + m[4] * p[1] + m[8] * p[2] + m[12];
+    const y = m[1] * p[0] + m[5] * p[1] + m[9] * p[2] + m[13];
+    const w = m[3] * p[0] + m[7] * p[1] + m[11] * p[2] + m[15];
+    if (w < 0.05) return null;
+    return [((x / w) * 0.5 + 0.5) * this.cssW, (0.5 - (y / w) * 0.5) * (this.h / this.dpr), w];
+  }
 
   /** Last camera (for debugging / tests). */
   cam: Camera | null = null;
@@ -157,6 +249,29 @@ export class OceanEngine {
     this.ku = uniforms(gl, this.skyProg);
     this.formProg = compile(gl, QUAD_VS, FORM_FS);
     this.mu = uniforms(gl, this.formProg);
+    this.probeProg = compile(gl, QUAD_VS, PROBE_FS);
+    this.pu = uniforms(gl, this.probeProg);
+    this.probePts = gl.createTexture()!;
+    gl.bindTexture(gl.TEXTURE_2D, this.probePts);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RG32F, MAX_PROBE, 1, 0, gl.RG, gl.FLOAT, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    this.probeTex = gl.createTexture()!;
+    gl.bindTexture(gl.TEXTURE_2D, this.probeTex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, MAX_PROBE, 1, 0, gl.RGBA, gl.FLOAT, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    this.probeFbo = gl.createFramebuffer()!;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.probeFbo);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.probeTex, 0);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    for (let i = 0; i < 2; i++) {
+      const b = gl.createBuffer()!;
+      gl.bindBuffer(gl.PIXEL_PACK_BUFFER, b);
+      gl.bufferData(gl.PIXEL_PACK_BUFFER, MAX_PROBE * 16, gl.STREAM_READ);
+      this.probePbo.push(b);
+    }
+    gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
     this.fieldTex = gl.createTexture()!;
     this.fbo = gl.createFramebuffer()!;
     this.glyphS = gl.createTexture()!;
@@ -328,6 +443,12 @@ export class OceanEngine {
     gl.deleteProgram(this.surfProg);
     gl.deleteProgram(this.skyProg);
     gl.deleteProgram(this.formProg);
+    gl.deleteProgram(this.probeProg);
+    this.probeFence.forEach((f) => f && gl.deleteSync(f));
+    this.probePbo.forEach((b) => gl.deleteBuffer(b));
+    gl.deleteTexture(this.probePts);
+    gl.deleteTexture(this.probeTex);
+    gl.deleteFramebuffer(this.probeFbo);
     gl.deleteTexture(this.fieldTex);
     gl.deleteTexture(this.glyphS);
     gl.deleteTexture(this.glyphL);
@@ -361,6 +482,22 @@ export class OceanEngine {
 
     const aspect = this.w / this.h;
     const cam = this.debugCam ? { ...this.debugCam, pos: [...this.debugCam.pos] as [number, number, number] } : sampleCamera(KEYS, this.u, aspect);
+    // Island close-up: ease away from the route camera and back (reduced motion: cut).
+    const fk = this.reduced ? 1 : 1 - Math.exp(-dt * 3.2);
+    this.focusAmt += ((this.focusOn ? 1 : 0) - this.focusAmt) * fk;
+    if (Math.abs((this.focusOn ? 1 : 0) - this.focusAmt) < 1e-3) this.focusAmt = this.focusOn ? 1 : 0;
+    if (this.focusShot && this.focusAmt > 0) {
+      const t = this.focusAmt * this.focusAmt * (3 - 2 * this.focusAmt);
+      const f = this.focusShot;
+      const m = (a: number, b: number) => a + (b - a) * t;
+      for (let ax = 0; ax < 3; ax++) cam.pos[ax] = m(cam.pos[ax], f.pos[ax]);
+      cam.yaw = m(cam.yaw, f.yaw);
+      cam.pitch = m(cam.pitch, f.pitch);
+      cam.roll = m(cam.roll, f.roll);
+      cam.fov = m(cam.fov, f.fov);
+      cam.fog = m(cam.fog, f.fog);
+      cam.glyph = m(cam.glyph, f.glyph);
+    }
     // Ride the water: never dip below the swell / waves under the camera.
     if (ev.dive < 0.01 && cam.pitch > -89.9) {
       const floor = swellAt(cam.pos[0], cam.pos[2]) * ev.swell + PLASMA_AMP * 0.5 * cam.amp + 0.75;
@@ -378,8 +515,9 @@ export class OceanEngine {
       cam.pos[2] = snap(cam.pos[2], this.h / 2);
     }
     this.cam = cam;
+    this.vp = this.viewProj(cam, aspect);
+    this.ev = ev;
     this.onFrame?.(this.u);
-    oceanView.frame.forEach((fn) => fn());
     if (this.quietSource) this.quiet = this.quietSource().slice(0, MAX_QUIET);
 
     const gl = this.gl;
@@ -416,6 +554,7 @@ export class OceanEngine {
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     }
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    this.runProbe(ev);
 
     // ── pass 2: the surface ──
     gl.viewport(0, 0, this.w, this.h);
@@ -429,7 +568,7 @@ export class OceanEngine {
     gl.useProgram(this.surfProg);
     const su = this.su;
     this.setFieldUniforms(su, ev);
-    gl.uniformMatrix4fv(su.uVP, false, this.viewProj(cam, aspect));
+    gl.uniformMatrix4fv(su.uVP, false, this.vp);
     gl.uniform2f(su.uCenter, cam.pos[0] + fx * 2, cam.pos[2] + fz * 2);
     gl.uniform1f(su.uRadius, Math.max(40, cam.pos[1] * 6, Math.min(cam.fog, 200) * 0.8));
     gl.uniform2fv(su.uOrig, origins);
@@ -523,6 +662,7 @@ export class OceanEngine {
     gl.uniform1f(u.uAmp, this.cam?.amp ?? 0);
     gl.uniform1f(u.uSwellW, ev.swell);
     gl.uniform3fv(u.uCrest, ev.crest);
+    gl.uniform3fv(u.uCrestB, ev.crestBuild);
     const e = new Float32Array(MAX_ISLE * 4);
     ISLANDS.forEach((d, i) => e.set([d.c[0], d.c[1], ev.islands[i], d.seed], i * 4));
     gl.uniform4fv(u.uIsle, e);
@@ -531,7 +671,8 @@ export class OceanEngine {
     gl.uniform1f(u.uWhirlW, ev.whirl);
     gl.uniform1f(u.uWhirlPhase, this.whirlPhase);
     gl.uniform1f(u.uIsleHi, this.isleHi);
-    gl.uniform1f(u.uAmbient, 1);
+    // In the swell and the currents the only colours are the items' own (ambient strips fade out).
+    gl.uniform1f(u.uAmbient, 1 - 0.95 * Math.max(ev.swell, ev.currents));
   }
 
   private setQuietUniforms(u: Uniforms): void {
@@ -545,7 +686,7 @@ export class OceanEngine {
     gl.uniform4fv(u.uQuiet, q);
     gl.uniform1fv(u.uQuietA, qa);
     gl.uniform1i(u.uQuietN, this.quiet.length);
-    gl.uniform1f(u.uFeather, 60 * this.dpr);
+    gl.uniform1f(u.uFeather, 70 * this.dpr);
   }
 
   /** The low sun on the Education horizon (screen-locked glyph cells). */
@@ -590,18 +731,6 @@ export class OceanEngine {
       r = r2;
     }
     return { f, r, up };
-  }
-
-  /** World point → CSS px [x, y, distance], or null if behind the camera. */
-  project(p: [number, number, number]): [number, number, number] | null {
-    const c = this.cam;
-    if (!c) return null;
-    const m = this.viewProj(c, this.w / this.h);
-    const x = m[0] * p[0] + m[4] * p[1] + m[8] * p[2] + m[12];
-    const y = m[1] * p[0] + m[5] * p[1] + m[9] * p[2] + m[13];
-    const w = m[3] * p[0] + m[7] * p[1] + m[11] * p[2] + m[15];
-    if (w < 0.05) return null;
-    return [(x / w * 0.5 + 0.5) * this.cssW, (0.5 - y / w * 0.5) * (this.h / this.dpr), w];
   }
 
   private viewProj(c: Camera, aspect: number): Float32Array {

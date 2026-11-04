@@ -8,16 +8,15 @@
  *
  * Top view (north up):
  *
- *    I0  I1  I2  I3           islands (z -100)
- *                             swell 3 (z -74)      currents (x 24, z -116 .. -56)
+ *   I0  I1  I2  I3            islands (z -97 .. -102)
+ *                             swell 3 (z -74)
+ *                                     currents (x 18 .. 30, z -124 .. -72)
  *     E2                      swell 2 (z -62)
  *       E3                    swell 1 (z -50)
  *    maelstrom
  *    calm water, sun ↓
  *                             origin (0, 0)
  */
-
-import { EXPERIENCES } from "@/data/profile";
 
 export type Vec2 = [number, number];
 
@@ -35,7 +34,7 @@ export const RAMP: Vec2 = [0.1, 0.95];
 /** Band k → glyph (the live ramp " .:-=+*#%@", bands 1..7). */
 export const GLYPHS = [".", ":", "-", "=", "+", "*", "#"];
 /** How much the field dims behind text (hero preset `quiet`). */
-export const QUIET = 0.9;
+export const QUIET = 0.8;
 
 export const PLASMA_DIST = 0.66;
 export const PLASMA_NORM = 0.37;
@@ -51,82 +50,44 @@ export const FLOW_SPEED: Vec2 = [-0.15, -0.02];
 /* ── the events (one per stop) ── */
 
 /** Accent palette indices (CSS vars --ocean-a1..3, read by the engine and used by the text). */
-export const ACCENTS = ["--ocean-a1", "--ocean-a2", "--ocean-a3"] as const;
+export const ACCENTS = ["--ocean-a1", "--ocean-a2", "--ocean-a3", "--ocean-a4"] as const;
 
-/** Skills: three currents flowing north, side by side, one per skill group (after the swell). */
+/** Skills: three currents side by side, one per skill group (after the swell), running from the
+ * horizon toward the camera and ending in the calm water where their group's text sits. */
 export const CURRENTS = {
+  /** Middle lane's x; lane i is at x + (i - 1) * gap (the first group on the left). */
   x: 24,
   gap: 6.0,
-  width: 1.6,
-  /** Far end (north) and near end of the lanes. */
-  z0: -116,
-  z1: -56,
-  speeds: [2.2, 3.1, 2.6],
+  width: 1.5,
+  /** Far (north) and near ends of the lanes. */
+  z0: -124,
+  z1: -72,
+  speeds: [2.4, 3.2, 2.8],
   /** Accent per lane (1-based palette index), matching the skill group headings. */
   colors: [1, 2, 3],
 };
 
-/** Experience: three long crests running east-west, one per company (newest nearest). */
+/** Experience: three long crests running east-west, one per company. */
 export const SWELL = {
   crests: [-50, -62, -74],
   x: 4,
-  height: 2.0,
-  width: 2.4,
+  height: 1.35,
+  width: 3.4,
   /** Crests fade out this far east / west of `x`. */
   reach: 34,
   colors: [1, 2, 3],
 };
 
-/* ── the timeline: time runs west → east along the swell ── */
-
-const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
-const today = new Date();
-/** Months since year 0, now. */
-export const NOW_M = today.getFullYear() * 12 + today.getMonth();
-/** "Jun 2026" → months since year 0 (start of that month); anything else ("Present") → now. */
-export function month(s: string): number {
-  const m = s.trim().match(/^([A-Za-z]{3})\w*\s+(\d{4})$/);
-  return m ? Number(m[2]) * 12 + MONTHS.indexOf(m[1].toLowerCase()) : NOW_M;
-}
-/** "Jun 2026 - Present" → [start, end) in months; an ongoing span ends at the present. */
-export function span(date: string): [number, number] {
-  const [a, b = "Present"] = date.split(/\s+-\s+/);
-  const end = month(b);
-  return [month(a), end === NOW_M ? NOW_M + today.getDate() / 31 : end + 1];
-}
-
-const SPANS = EXPERIENCES.map((e) => span(e.date));
-/** The months the axis covers, and where it lies along the crests (world x). */
-export const TIME = {
-  m0: Math.min(...SPANS.map((s) => s[0])),
-  m1: Math.max(...SPANS.map((s) => s[1])),
-  x0: -12,
-  x1: 1,
-};
-export const timeX = (m: number) => TIME.x0 + ((m - TIME.m0) / (TIME.m1 - TIME.m0)) * (TIME.x1 - TIME.x0);
-export const NOW_X = timeX(NOW_M + today.getDate() / 31);
-
-/** Each crest only stands where its company does: [x start, x end, promotions (x)], ongoing ones break at now. */
-export const TENURE = EXPERIENCES.map((e, k) => ({
-  x0: timeX(SPANS[k][0]),
-  x1: timeX(SPANS[k][1]),
-  ongoing: month(e.date.split(/\s+-\s+/)[1] ?? "Present") === NOW_M,
-  promos: e.roles.slice(0, -1).map((r) => timeX(span(r.date)[0])),
-}));
-/** Height of crest k left outside its span (a ghost of the swell, so the water still reads). */
-export const GHOST = 0.12;
-/** How sharply a crest rises at its start / falls at its end (world units). */
-export const EDGE = 0.9;
-
-/** Projects: the four featured projects as islands rising out of the water, in a row. */
+/** Projects: the four featured projects as a chain of islands in a gentle arc, each in its own
+ * accent; they form one at a time as you scroll. */
 export const ISLANDS: { c: Vec2; color: number; seed: number }[] = [
-  { c: [-24, -100], color: 1, seed: 1.3 },
-  { c: [-16, -100], color: 2, seed: 4.7 },
-  { c: [-8, -100], color: 3, seed: 8.1 },
-  { c: [0, -100], color: 1, seed: 11.9 },
+  { c: [-24, -98], color: 1, seed: 1.3 },
+  { c: [-16, -102], color: 2, seed: 4.7 },
+  { c: [-8, -102], color: 3, seed: 8.1 },
+  { c: [0, -98], color: 4, seed: 11.9 },
 ];
-/** Island radius, top height, terrace steps. */
-export const ISLE = { r: 3.3, height: 1.6 };
+/** Island radius and peak height (world units). */
+export const ISLE = { r: 3.0, height: 2.5 };
 
 /** Education: calm open water out to the horizon, a low sun ahead. */
 export const CALM = { c: [-50, -30] as Vec2, r: 45, sunYaw: -180, sunElev: 3.2 };
@@ -137,20 +98,21 @@ export const WHIRL = { c: [-44, -44] as Vec2, r: 13, depth: 7 };
 
 /* ── CPU mirrors (camera placement) ── */
 
-/** Crest k's share of its height at x: GHOST outside its span, 1 inside. */
-export function tenureAt(k: number, x: number): number {
-  const t = TENURE[k];
-  const m = smoothstep(t.x0 - EDGE, t.x0 + EDGE, x) * (1 - smoothstep(t.x1 - EDGE, t.x1 + EDGE, x));
-  return GHOST + (1 - GHOST) * m;
-}
+/** Swell height at (x, z), ignoring the breathing (|Δ| < 6%). */
+/** The swell's crest profile: a broad body with a sharp top (mirrors the shader). */
+export const crestProfile = (d: number) => 0.55 * Math.exp(-d * d) + 0.45 * Math.exp(-Math.abs(d) * 3.2);
 
-/** Swell height at (x, z), ignoring the breathing (|Δ| < 6%) and the promotion notches. */
-export function swellAt(x: number, z: number): number {
+/**
+ * Swell height at (x, z), mirroring the shader (minus the slight breathing). `build` is how
+ * formed each crest is (0..1, see route.ts crestBuild); fully formed by default. `smooth` uses a
+ * rounded crest (no sharp top), for lines laid over the water.
+ */
+export function swellAt(x: number, z: number, build: readonly number[] = [1, 1, 1], smooth = false): number {
   const lat = 1 - smoothstep(SWELL.reach * 0.6, SWELL.reach, Math.abs(x - SWELL.x));
   let h = 0;
   SWELL.crests.forEach((zc, k) => {
     const d = (z - zc - 0.7 * Math.sin(x * 0.13 + k * 1.7)) / SWELL.width;
-    h += SWELL.height * Math.exp(-d * d) * tenureAt(k, x);
+    h += SWELL.height * (smooth ? Math.exp(-d * d) : crestProfile(d)) * (0.8 + 0.2 * (build[k] ?? 1));
   });
   return h * lat;
 }
@@ -159,3 +121,6 @@ export function smoothstep(e0: number, e1: number, x: number): number {
   const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0)));
   return t * t * (3 - 2 * t);
 }
+
+/** Lane i's centre x (see CURRENTS). */
+export const laneX = (i: number) => CURRENTS.x + (i - 1) * CURRENTS.gap;

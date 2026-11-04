@@ -28,7 +28,7 @@ ocean/
 | 01 About | the camera dives; the field rises into waves | — |
 | 02 Experience | the swell, one crest per company | the crest's foam lights up in the company's colour |
 | 03 Skills | three currents streaming north | one lane per skill group, lime / orange / gold |
-| 04 Projects | four islands rise in a row (flat plateau, steep shore), sea calms around them | each island's shoreline |
+| 04 Projects | one turning eddy per featured project | the eddy's spiral arms |
 | 05 Education | calm water to the horizon | a low ASCII sun and its glitter path |
 | Contact | the maelstrom, from overhead | accent strips riding its spiral |
 | → | dive down the funnel, black out; the field forms the directory's boxes | each box's outline |

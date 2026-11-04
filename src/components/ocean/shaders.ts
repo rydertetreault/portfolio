@@ -25,10 +25,6 @@ import {
   QUIET,
   RAMP,
   SWELL,
-  TENURE,
-  EDGE,
-  GHOST,
-  NOW_X,
   WHIRL,
 } from "./world";
 
@@ -104,12 +100,13 @@ uniform vec2  uFlow;
 uniform float uAmp;      // plasma relief: 0 = flat (Origin) .. 1
 uniform float uSwellW;
 uniform vec3  uCrest;    // how lit each crest's foam is (the company you're at)
-uniform vec4  uIsle[${MAX_ISLE}];   // centre x, z, rise 0..1, seed
+uniform vec3  uCrestB;   // how formed each crest is (builds as you fly toward it)
+uniform vec4  uIsle[${MAX_ISLE}];   // centre x, z, formed 0..1, seed
 uniform float uCurW;
 uniform float uCalmW;
 uniform float uWhirlW;
 uniform float uWhirlPhase;  // accumulated spin (speeds up as you dive in)
-uniform float uIsleHi;      // hovered project's island (-1 = none): it rises, the others' coasts dim
+uniform float uIsleHi;      // hovered project's island (-1 = none): the others' contours dim
 uniform float uAmbient;     // ambient contour strips (0..1)
 
 const float PD = ${f(PLASMA_DIST)};
@@ -157,12 +154,10 @@ Ms maelstrom(vec2 p, inout vec2 pp, vec2 c, float R, float w, float depth, float
   // Funnel: broad dish with steep inner walls.
   float k = R * 0.32;
   float h = -depth * (k * k / (r * r + k * k)) - depth * 0.5 * exp(-r * r / (rc * rc));
-  // Foam filaments: wound and turned by exactly the same angle as the plasma above, so they
-  // ride the flow instead of sliding across it; broken up into streaks in the same frame.
-  float a = atan(d.y, d.x) + w * reach * wind;
-  float fil = sin(14.0 * a);
-  vec2 pr = pp - c;
-  float brk = smoothstep(-0.2, 0.6, snoise(vec3(pr * 0.35, uTime * 0.05)));
+  // Foam filaments: many thin arms, broken up so they read as streaks, not stripes.
+  float a = atan(d.y, d.x);
+  float fil = sin(14.0 * a - ang * 2.6 + 7.0 * log(r + 0.25));
+  float brk = smoothstep(-0.2, 0.6, snoise(vec3(d * 0.35, uTime * 0.12)));
   float streak = smoothstep(0.55, 0.95, fil) * brk;
   float band = 0.5 + 0.45 * streak;
   // The abyss: the walls get denser and denser toward the drain.
@@ -207,116 +202,123 @@ vec4 field(vec2 p, bool full) {
   }
   h += relief;
 
-  // Swell: one crest per company, and the timeline: time runs west → east, so each crest only
-  // stands over the months its company does (a low ghost elsewhere). Its foam is the company's
-  // colour (the one you're at lit, the others dim); a promotion is a notch in the crest; an
-  // ongoing job breaks at the "now" line, past which the water is still unwritten.
+  // Swell: three long crests, one per company. Each forms as you fly toward it; the field's own
+  // relief is smoothed out on the crests so they read as clean waves. The foam along each top
+  // (a contour accent, so it traces the crest's band edges) is that company's colour.
   if (uSwellW > 0.001) {
-    // The chart's water: the plasma relief settles across the swell so the crests read clean.
-    float zs = smoothstep(${f(SWELL.crests[2] - 8)}, ${f(SWELL.crests[2] - 4)}, p.y) * (1.0 - smoothstep(${f(SWELL.crests[0] + 14)}, ${f(SWELL.crests[0] + 22)}, p.y)) * uSwellW;
-    h -= relief * 0.7 * zs;
-    v = mix(v, 0.35 + (v - 0.5) * 0.5, 0.5 * zs);
-    float fo = 0.0;  // foam: dense glyphs along the top of each crest
     float lat = (1.0 - smoothstep(${f(SWELL.reach * 0.6)}, ${f(SWELL.reach)}, abs(p.x - ${f(SWELL.x)}))) * uSwellW;
     float s = 0.0;
+    float on = 0.0;
     ${SWELL.crests
-      .map((zc, k) => {
-        const t = TENURE[k];
-        const notch = t.promos.map((x) => `exp(-pow((p.x - ${f(x)}) / 0.22, 2.0))`).join(" + ") || "0.0";
-        return `{
+      .map(
+        (zc, k) => `{
       float d = (p.y - ${f(zc)} - 0.7 * sin(p.x * 0.13 + ${f(k * 1.7)})) / ${f(SWELL.width)};
-      float on = smoothstep(${f(t.x0 - EDGE)}, ${f(t.x0 + EDGE)}, p.x) * (1.0 - smoothstep(${f(t.x1 - EDGE)}, ${f(t.x1 + EDGE)}, p.x));
-      float notch = min(1.0, ${notch});
-      float c = exp(-d * d) * (0.95 + 0.05 * sin(uTime * 0.5 + ${f(k * 2.1)}));
-      s += c * (${f(GHOST)} + ${f(1 - GHOST)} * on) * (1.0 - 0.45 * notch);
-      float foam = exp(-d * d / 0.03) * on * (1.0 - notch);
-      ${t.ongoing ? `// Breaking at now: the foam spills forward and churns at the front.
-      float front = exp(-pow((p.x - ${f(t.x1)}) / 0.6, 2.0)) * exp(-d * d / 0.05);
-      foam = max(foam, front * (0.7 + 0.3 * sin(uTime * 3.0 + p.y * 9.0)));` : ""}
-      float lit = foam * lat * (0.55 + 0.45 * uCrest[${k}]);
-      fo = max(fo, lit);
-      accent(ac, ${f(SWELL.colors[k])}, lit);
-    }`;
-      })
+      // Peaked like a real swell: a broad body with a sharp top.
+      float g = 0.55 * exp(-d * d) + 0.45 * exp(-abs(d) * 3.2);
+      float b = 0.8 + 0.2 * uCrestB[${k}];   // keep in step with world.ts swellAt
+      s += g * b * (0.95 + 0.05 * sin(uTime * 0.5 + ${f(k * 2.1)}));
+      on = max(on, g);
+      accent(ct, ${f(SWELL.colors[k])}, (1.0 - smoothstep(0.12, 0.45, abs(d))) * lat * uCrest[${k}]);
+    }`,
+      )
       .join("\n    ")}
+    h -= 0.6 * relief * on * lat;
     h += ${f(SWELL.height)} * s * lat;
-    v = clamp(v + 0.2 * s * lat, 0.0, 1.0);
-    v = mix(v, 0.9, fo * 0.8);
-    // Now: a seam of dense glyphs across the swell; east of it the water hasn't been written yet.
-    float seam = exp(-pow((p.x - ${f(NOW_X)}) / 0.12, 2.0)) * zs * step(0.45, fract(p.y * 0.7));
-    float future = smoothstep(${f(NOW_X + 0.5)}, ${f(NOW_X + 6.0)}, p.x) * zs * (1.0 - smoothstep(${f(SWELL.x + 20)}, ${f(SWELL.x + 30)}, p.x));
-    v = mix(v, 0.3 + (v - 0.5) * 0.4, future * 0.6);
-    v = mix(v, 0.97, seam * 0.6);
+    // The crests brighten so each wave stands out; the water between them is left as it is.
+    v = clamp(v + 0.32 * s * lat, 0.0, 1.0);
   }
 
-  // Currents: three lanes of streaks flowing north, each in its skill group's colour;
-  // the water between them goes quiet.
+  // Currents: three lanes of long streaks flowing south, toward the camera, each in its skill
+  // group's colour and meandering slowly; the water around them goes quiet.
   if (uCurW > 0.001) {
-    float zm = smoothstep(${f(CURRENTS.z0)}, ${f(CURRENTS.z0 + 8)}, p.y) * (1.0 - smoothstep(${f(CURRENTS.z1 - 4)}, ${f(CURRENTS.z1)}, p.y));
+    float zm = smoothstep(${f(CURRENTS.z0)}, ${f(CURRENTS.z0 + 10)}, p.y) * (1.0 - smoothstep(${f(CURRENTS.z1 - 5)}, ${f(CURRENTS.z1)}, p.y));
     float rx = (p.x - ${f(CURRENTS.x)}) / ${f(CURRENTS.gap * 2.4)};
-    float region = exp(-rx * rx) * zm * uCurW;
-    v = mix(v, 0.1 + (v - 0.5) * 0.15, region);
+    float region = exp(-rx * rx) * smoothstep(${f(CURRENTS.z0)}, ${f(CURRENTS.z0 + 10)}, p.y) * uCurW;
+    // The open water beside the lanes is dragged along: faint streaks, slower and fading with
+    // distance from the nearest lane, so the strong currents visibly pull the sea around them.
+    float dl = min(min(abs(p.x - ${f(CURRENTS.x - CURRENTS.gap)}), abs(p.x - ${f(CURRENTS.x)})), abs(p.x - ${f(CURRENTS.x + CURRENTS.gap)}));
+    float drag = exp(-max(0.0, dl - ${f(CURRENTS.width)}) / 2.2) * smoothstep(${f(CURRENTS.z0)}, ${f(CURRENTS.z0 + 10)}, p.y) * uCurW;
+    vec2 qd = vec2(p.x * 1.3, (p.y - uTime * 1.6 * drag) * 0.2);
+    float nd = snoise(vec3(qd, uTime * 0.05));
+    v = mix(v, 0.1 + (v - 0.5) * 0.15, region * (1.0 - drag));
+    v = mix(v, clamp(0.3 + 0.4 * nd, 0.0, 1.0), 0.7 * drag);
     h *= 1.0 - 0.8 * region;
     ${CURRENTS.speeds
       .map(
         (spd, i) => `{
-      float lx = (p.x - ${f(CURRENTS.x + (i - 1) * CURRENTS.gap)}) / ${f(CURRENTS.width)};
-      float m = exp(-lx * lx) * zm * uCurW;
+      float xc = ${f(CURRENTS.x + (i - 1) * CURRENTS.gap)} + 0.6 * sin(p.y * 0.11 + ${f(i * 2.3)} - uTime * 0.25);
+      float lx = (p.x - xc) / ${f(CURRENTS.width)};
+      float m = exp(-lx * lx * lx * lx) * zm * uCurW;   // flat-topped: a defined lane, soft edges
       if (m > 0.01) {
-        float n = snoise(vec3(p.x * 1.6 + ${f(i * 7)}, (p.y + uTime * ${f(spd)}) * 0.22, uTime * 0.05));
-        v = mix(v, clamp(0.68 + 0.4 * n, 0.0, 1.0), m);
-        h += 0.12 * n * m;
-        accent(ac, ${f(CURRENTS.colors[i])}, m * (0.55 + 0.45 * smoothstep(-0.1, 0.5, n)));
+        // Streaks: stretched along the flow, thin across it, carried toward the camera.
+        vec2 q = vec2(p.x * 1.9 + ${f(i * 7)}, (p.y - uTime * ${f(spd)}) * 0.16);
+        float n = snoise(vec3(q, uTime * 0.04)) * 0.7 + snoise(vec3(q * vec2(1.7, 2.3), uTime * 0.06 + 3.0)) * 0.3;
+        v = mix(v, clamp(0.66 + 0.5 * n, 0.0, 1.0), m);
+        h += 0.08 * n * m;
+        accent(ac, ${f(CURRENTS.colors[i])}, m * (0.35 + 0.65 * smoothstep(-0.25, 0.4, n)));
       }
     }`,
       )
       .join("\n    ")}
   }
 
-  // Islands: each project rises out of the water as a terraced island with its own
-  // coastline. Terraces are the field's own elevation bands, stacked like a contour map.
-  // First the sea around them goes calm and low, so the land stands clear of the water.
-  float lull = 0.0;
-  for (int i = 0; i < ${MAX_ISLE}; i++) {
-    float r = length(p - uIsle[i].xy);
-    lull = max(lull, uIsle[i].z * (1.0 - smoothstep(${f(ISLE.r * 1.3)}, ${f(ISLE.r * 2.6)}, r)));
-  }
-  if (lull > 0.001) {
-    h *= 1.0 - 0.85 * lull;
-    v = mix(v, 0.12 + (v - 0.5) * 0.2, lull);
+
+
+  // Islands: each project's island forms out of the sea. Its peak breaks the surface first,
+  // then the land spreads out to the coast. The land's elevation bands are its contour lines
+  // (a topographic map, in the field's own bands), traced in the island's colour.
+  // Around the chain the waves are lower, so the islands stand clear of them. The water keeps
+  // its normal look; only the height settles, as the first island starts to form.
+  {
+    float formed = 0.0;
+    for (int i = 0; i < ${MAX_ISLE}; i++) formed = max(formed, uIsle[i].z);
+    if (formed > 0.001) h *= 1.0 - 0.6 * smoothstep(0.0, 0.35, formed);
   }
   for (int i = 0; i < ${MAX_ISLE}; i++) {
     float w = uIsle[i].z;
     if (w < 0.001) continue;
     vec2 d = p - uIsle[i].xy;
     float r = length(d);
-    if (r > ${f(ISLE.r * 1.6)}) continue;
-    float hi = abs(uIsleHi - float(i)) < 0.5 ? 1.0 : 0.0;
-    // Organic coastline: the radius wobbles with direction, unique per island.
-    float n = snoise(vec3(d / max(r, 1e-3) * 1.1 + uIsle[i].w, uIsle[i].w));
-    float lv = clamp(1.0 - r / (${f(ISLE.r)} * (1.0 + 0.24 * n)), 0.0, 1.0);   // 0 at the coast, 1 at the top
-    // A steep shore up to a broad flat plateau: reads as land, not another wave.
-    float cliff = smoothstep(0.06, 0.24, lv);
-    float land = smoothstep(0.0, 0.04, lv) * w;
-    h = mix(h, ${f(ISLE.height)} * (1.0 + 0.35 * hi) * w * (0.15 + 0.85 * cliff), land);
-    // Shore: a mid band; plateau: the densest bands with a faint plasma grain.
-    float top = clamp(0.9 + (v - 0.5) * 0.12, 0.0, 1.0);
-    v = mix(v, mix(0.5, top, cliff), land);
-    float dim = uIsleHi < -0.5 || hi > 0.5 ? 1.0 : 0.3;
-    // The coastline, in the project's colour (a contour accent, so it traces the shore).
-    float coast = 1.0 - smoothstep(0.0, 0.14, lv);
-    accent(ct, ISLE_COL[i], w * dim * coast * step(0.001, lv));
+    if (r > ${f(ISLE.r * 1.7)}) continue;
+    float sel = uIsleHi < -0.5 || abs(uIsleHi - float(i)) < 0.5 ? 1.0 : 0.3;
+    // Organic coastline: the radius wobbles with direction (two scales), unique per island.
+    vec2 dir = d / max(r, 1e-3);
+    float n = 0.7 * snoise(vec3(dir * 1.1 + uIsle[i].w, uIsle[i].w)) + 0.3 * snoise(vec3(dir * 2.7 + uIsle[i].w * 2.0, 3.0));
+    float lv0 = 1.0 - r / (${f(ISLE.r)} * (1.0 + 0.28 * n));            // 1 at the peak, 0 at the coast
+    // Forming: the sea line drops from above the peak to the coast as w goes 0 → 1.
+    float sea = 1.0 - w;
+    float lv = (lv0 - sea) / max(1e-3, 1.0 - sea);
+    // Shore waves: rings rolling in toward the beach and fading out to sea.
+    if (lv < 0.0) {
+      float off = -lv;
+      float ring = sin(off * 22.0 + uTime * 2.4);
+      float near = (1.0 - smoothstep(0.0, 0.55, off)) * w;
+      v = mix(v, 0.62, smoothstep(0.55, 1.0, ring) * near * 0.85);
+      // The breaker right at the waterline.
+      v = mix(v, 0.7, (1.0 - smoothstep(0.0, 0.05, off)) * w);
+      continue;
+    }
+    // Rugged terrain: ridges and more than one high point, not a smooth dome.
+    float rough = snoise(vec3(d * 0.95 + uIsle[i].w * 3.0, uIsle[i].w));
+    float elev = clamp(lv * (1.0 + 0.3 * rough), 0.0, 1.0);
+    float land = smoothstep(0.0, 0.02, lv);
+    // A steep shore up to the land, then the slopes.
+    h = mix(h, ${f(ISLE.height)} * w * (0.18 * smoothstep(0.0, 0.08, lv) + 0.82 * pow(elev, 0.8)), land);
+    // Beach: a pale band of sand at the waterline (no colour), then the coloured contours.
+    float beach = 1.0 - smoothstep(0.05, 0.11, lv);
+    v = mix(v, mix(clamp(0.48 + 0.5 * elev + 0.04 * (v - 0.5), 0.0, 1.0), 0.36, beach), land);
+    accent(ct, ISLE_COL[i], land * (1.0 - beach) * (0.85 + 0.15 * w) * sel);
   }
+
   h += ms.h;
   v = mix(v, max(v, ms.band), ms.blend);
   v = mix(v, 1.0, ms.dark * 0.85);
   // Strips riding the contours, as on the live homepage: where they show is decided in the
   // same flowing (and, in a vortex, twisted) coordinates as the plasma, so they move with it.
-  // Denser on the maelstrom's walls.
   {
     vec2 fc = pp + uFlow;
     float m = snoise(vec3(fc * 0.32, uTime * 0.07));
-    float thr = mix(0.62, 0.15, ms.acc);
+    float thr = 0.62;
     float amt = smoothstep(thr, thr + 0.12, m) * uAmbient;
     float pal = snoise(vec3(fc * 0.15 + 37.0, uTime * 0.03)) > 0.3 ? 2.0 : 1.0;
     accent(ct, pal, max(amt, 0.0));
@@ -379,7 +381,7 @@ uniform vec3  uCam;
 uniform vec3  uBg;
 uniform vec3  uLo;
 uniform vec3  uHi;
-uniform vec3  uAcc[3];           // accent palette (--ocean-a1..3)
+uniform vec3  uAcc[4];           // accent palette (--ocean-a1..4)
 uniform float uGain;
 uniform float uTime;
 uniform vec3  uSunDir;
@@ -444,8 +446,8 @@ vec4 glyph(int k, vec2 xz, vec2 gx, vec2 gy, float hpx) {
   float a = min(1.0, pow(band / L, ${f(LEVEL_GAMMA)}) * ${f(BRIGHTNESS)} * uGain);
   vec3 col = mix(uLo, uHi, smoothstep(${f(RAMP[0])}, ${f(RAMP[1])}, a));
   if (accA > 0.001) {
-    int ai = clamp(int(accI + 0.5) - 1, 0, 2);
-    vec3 ac = ai == 0 ? uAcc[0] : (ai == 1 ? uAcc[1] : uAcc[2]);
+    int ai = clamp(int(accI + 0.5) - 1, 0, 3);
+    vec3 ac = ai == 0 ? uAcc[0] : (ai == 1 ? uAcc[1] : (ai == 2 ? uAcc[2] : uAcc[3]));
     float t = min(1.0, accA * 1.3);
     col = mix(col, ac, t);
     a = mix(a, max(a, 0.85), t);
@@ -470,7 +472,9 @@ void main() {
   // On-screen size of a level-0 cell (px) along world x and z.
   float wpx = 1.0 / max(1e-5, length(vec2(gx.x, gy.x)));
   float hpx = 1.0 / max(1e-5, length(vec2(gx.y, gy.y)));
-  float rel = sqrt((wpx / uNative.x) * (hpx / uNative.y));
+  // Size by the larger on-screen dimension: at grazing angles a cell is wide but squashed, and
+  // sizing by the average would blow distant glyphs up wider than the near ones.
+  float rel = max(wpx / uNative.x, hpx / uNative.y);
 
   // Level k draws glyphs at rel * 2^k. Prefer the level that keeps glyphs at least ~uGlyph
   // (crisp, never shrunk into grey), blending only right at each switch.
@@ -687,4 +691,18 @@ void main() {
   vec3 fill = inside * smoothstep(0.5, 1.0, f) * mix(vec3(0.035), acc * 0.07, hi);
   vec3 c = mix(fill, col, a * cov);
   o = vec4(c * uBlack, uBlack);
+}`;
+
+export const MAX_PROBE = 512;
+
+/** Probe pass: the water's height at a list of world points (one texel each), for overlays. */
+export const PROBE_FS = `#version 300 es
+precision highp float;
+${NOISE}
+${FIELD}
+uniform sampler2D uPts;   // RG32F: world x, z per texel
+out vec4 o;
+void main() {
+  vec2 p = texelFetch(uPts, ivec2(gl_FragCoord.x, 0), 0).rg;
+  o = vec4(field(p, false).x, 0.0, 0.0, 1.0);
 }`;

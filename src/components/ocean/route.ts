@@ -5,7 +5,7 @@
  *
  * Pacing is in viewport heights of scroll: `travel` to get there, `hold` while you read.
  */
-import { CALM, CURRENTS, ISLANDS, SWELL, TIME, WHIRL, type Vec2 } from "./world";
+import { CALM, CURRENTS, ISLANDS, SWELL, WHIRL, swellAt, type Vec2 } from "./world";
 import type { Key, Shot, Vec3 } from "./timeline";
 
 export type Section = "origin" | "about" | "experience" | "skills" | "projects" | "education" | "contact" | "directory";
@@ -42,26 +42,36 @@ function aim(target: Vec2, yaw: number, dist: number, height: number, side: numb
 const ORIGIN: Shot = { pos: [0, 0, 0], yaw: 0, pitch: -90, roll: 0, fov: 30, span: 11, amp: 0, fog: 500, glyph: 0.75 };
 
 const DIVE: Shot = { pos: [0.8, 4.2, -1.2], yaw: 6, pitch: -52, roll: -5, fov: 44, amp: 0.55, fog: 120, glyph: 1.2 };
-/** About: low over open water. */
-const ABOUT: Shot = { ...SEA, pos: [1.4, 1.75, -4], yaw: 8, pitch: -11, fov: 55 };
+/**
+ * About: low over open water. Its glyphs are deliberately small (glyph 0.9, set here and only
+ * here, not inherited from SEA): Ryder has asked for the smaller ocean font in 01 repeatedly.
+ * Don't change this when tuning other stops.
+ */
+const ABOUT: Shot = { ...SEA, pos: [1.4, 1.75, -4], yaw: 8, pitch: -11, fov: 55, glyph: 0.9 };
 
-/** Skills: looking north up the three currents from their near end. */
-const SKILLS: Shot = { ...SEA, pos: [CURRENTS.x, 6.2, CURRENTS.z1 - 3.5], yaw: 0, pitch: -24, fov: 56, fog: 75 };
+/** Skills: looking up the three currents from just past their near ends, which end mid-screen. */
+const SKILLS: Shot = { ...SEA, pos: [CURRENTS.x, 6.2, CURRENTS.z1 + 9.5], yaw: 0, pitch: -21, fov: 56, fog: 75 };
 /** Swing out of the swell and round to the currents. */
-const TO_SKILLS: Shot = { ...SEA, pos: [CURRENTS.x - 8, 4.5, -66], yaw: 30, pitch: -16, roll: 4, fov: 60 };
+const TO_SKILLS: Shot = { ...SEA, pos: [CURRENTS.x - 8, 4.5, -64], yaw: 30, pitch: -16, roll: 4, fov: 60 };
 
-/** Experience: back off each crest far enough to read its whole span of the time axis, which
- * lies on the left of the screen (the text is on the right). */
-const EXP_X = TIME.x1 + 0.5;
-const EXP: Shot[] = SWELL.crests.map((zc) => ({ ...SEA, pos: [EXP_X, 12, zc + 10], yaw: 0, pitch: -40, fov: 60, fog: 90 }));
+export const EXP_X = [SWELL.x - 1, SWELL.x, SWELL.x - 1];
+/** How far back from its crest each Experience shot sits. */
+export const EXP_BACK = 6.5;
+export const EXP_YAW = [4, -3, 3];
+/** Low in the trough before each crest, the crest (and the timeline on it) across the view. */
+const EXP: Shot[] = SWELL.crests.map((zc, k) => {
+  const z = zc + EXP_BACK;
+  // Small ocean glyphs, set here explicitly (like ABOUT): Ryder wants the smaller font in 02 too.
+  return { ...SEA, pos: [EXP_X[k], swellAt(EXP_X[k], z) + 2.0, z], yaw: EXP_YAW[k], pitch: -10, fov: 58, glyph: 0.9 };
+});
 /** Down into the trough before each crest. */
 const trough = (k: number): Shot => {
-  const z = k === 0 ? SWELL.crests[0] + 16 : (SWELL.crests[k - 1] + SWELL.crests[k]) / 2 + 7;
-  return { ...SEA, pos: [EXP_X - 1.5 + 3 * (k % 2), 2.6, z], yaw: k % 2 ? -5 : 5, pitch: -7, fov: 62 };
+  const z = k === 0 ? SWELL.crests[0] + 10 : (SWELL.crests[k - 1] + SWELL.crests[k]) / 2 + 2;
+  return { ...SEA, pos: [EXP_X[k], 1.3, z], yaw: EXP_YAW[k], pitch: -6, fov: 60, glyph: 0.9 };
 };
 
-/** Projects: high enough to see the whole row of islands at once. */
-const PROJECTS: Shot = { ...SEA, pos: [-12, 8.5, -87], yaw: 0, pitch: -30, fov: 58, fog: 80 };
+/** Projects: from the south, high enough to see the whole chain of islands. */
+const PROJECTS: Shot = { ...SEA, pos: [-12, 13, -78], yaw: 0, pitch: -33, fov: 56, fog: 100, glyph: 1.05 };
 
 /** Education: low over calm water, the sun on the horizon to the right of the text. */
 const EDUCATION: Shot = { ...SEA, pos: [-50, 1.15, -64], yaw: CALM.sunYaw - 16, pitch: 1.5, fov: 50, fog: 400 };
@@ -96,8 +106,8 @@ export const BEATS: Beat[] = [
       side: "right",
     }),
   ),
-  { id: "skills", section: "skills", via: [TO_SKILLS], shot: SKILLS, travel: 1.6, hold: 1.2, side: "split" },
-  { id: "projects", section: "projects", shot: PROJECTS, travel: 1.5, hold: 1.6, side: "split" },
+  { id: "skills", section: "skills", via: [TO_SKILLS], shot: SKILLS, travel: 1.6, hold: 1.4, side: "left" },
+  { id: "projects", section: "projects", shot: PROJECTS, travel: 1.5, hold: 2.8, side: "left" },
   { id: "education", section: "education", shot: EDUCATION, travel: 1.4, hold: 1.1, side: "left" },
   { id: "contact", section: "contact", via: [WHIRL_APPROACH], shot: CONTACT, travel: 1.8, hold: 0.6, side: "center" },
   { id: "directory", section: "directory", shot: DIVE_IN, travel: 1.6, hold: 1.0, side: "center" },
@@ -167,7 +177,9 @@ export type Events = {
   currents: number;
   swell: number;
   crest: [number, number, number];
-  /** Each island's rise (staggered left to right). */
+  /** How formed each crest is: builds while you fly toward it, stays once you've passed. */
+  crestBuild: [number, number, number];
+  /** How formed each island is (0 = under the sea, 1 = fully risen); one at a time. */
   islands: number[];
   calm: number;
   whirl: number;
@@ -181,7 +193,6 @@ export type Events = {
 
 export function eventsAt(u: number): Events {
   const e0 = beatIndex("exp-0");
-  const pj = beatIndex("projects");
   const di = beatIndex("directory");
   const dw = WINDOWS[di];
   const dt = BEATS[di].travel;
@@ -189,13 +200,10 @@ export function eventsAt(u: number): Events {
     currents: eventWeight(u, beatIndex("skills"), beatIndex("skills")),
     swell: eventWeight(u, e0, e0 + 2),
     crest: [0, 1, 2].map((k) => textOpacity(u, e0 + k)) as [number, number, number],
-    islands: ISLANDS.map((_, k) => {
-      const w = WINDOWS[pj];
-      const t = BEATS[pj].travel;
-      const rise = smooth(ramp(u, w.start + t * (0.35 + 0.13 * k), w.start + t * (0.75 + 0.13 * k)));
-      const sink = u > w.leave ? eventWeight(u, pj, pj) : 1; // all sink together on the way out
-      return Math.min(rise, sink);
-    }),
+    crestBuild: [0, 1, 2].map((k) =>
+      smooth(ramp(u, WINDOWS[e0 + k].start, WINDOWS[e0 + k].arrive - 0.15)),
+    ) as [number, number, number],
+    islands: ISLANDS.map((_, k) => isleRise(u, k)),
     calm: eventWeight(u, beatIndex("education"), beatIndex("education")),
     whirl: eventWeight(u, beatIndex("contact"), beatIndex("contact"), true),
     dive: smooth(ramp(u, dw.start, dw.arrive)),
@@ -216,6 +224,15 @@ export function spanOpacity(u: number, i0: number, i1: number): number {
   const a = WINDOWS[i0];
   const b = WINDOWS[i1];
   return smooth(ramp(u, a.arrive - 0.3, a.arrive - 0.02)) * (1 - smooth(ramp(u, b.leave + 0.02, b.leave + 0.3)));
+}
+
+/** Island k's rise: one after another across the Projects stop, all sinking together on the way out. */
+export function isleRise(u: number, k: number): number {
+  const pj = beatIndex("projects");
+  const w = WINDOWS[pj];
+  const t0 = w.arrive - 0.35 + k * 0.62;
+  const rise = smooth(ramp(u, t0, t0 + 0.55));
+  return u > w.leave ? Math.min(rise, eventWeight(u, pj, pj)) : rise;
 }
 
 /** Opacity of a beat's text at u: in as the camera settles, out as it leaves. */

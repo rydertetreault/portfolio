@@ -9,9 +9,10 @@ import OceanCanvas from "./OceanCanvas";
 import Directory from "./directory";
 import { oceanNav } from "./nav";
 import { BEATS, SECTIONS, TRACK, eventsAt, textOpacity } from "./route";
-import { AboutText, EducationStop, SkillsHead, ExperienceStop, OriginStop, ProjectsHead, ProjectsRow, SkillGroup } from "./stops";
-import Timeline from "./timeline-bar";
-import { SKILLS } from "@/data/profile";
+import { AboutText, EducationStop, SkillsHead, ExperienceStop, OriginStop, ProjectsHead } from "./stops";
+import TimelineWire from "./timeline-wire";
+import SkillsLanes from "./skills-lanes";
+import ProjectIsles from "./project-isles";
 import { EXPERIENCES } from "@/data/profile";
 import type { GitHubRepo } from "@/lib/github";
 import { useTheme } from "@/components/ThemeProvider";
@@ -129,44 +130,19 @@ export default function Ocean({ projects, children }: { projects: GitHubRepo[]; 
       <Header u={camU} />
       {/* The scroll track: the camera flies as this scrolls. */}
       <div aria-hidden style={{ height: `calc(${TRACK} * 100lvh + 100lvh)` }} />
-      <Timeline u={camU} />
+      <TimelineWire u={camU} />
+      <SkillsLanes u={camU} />
+      <ProjectIsles u={camU} projects={projects} />
       {BEATS.map((b, i) => {
         const place = b.id === "origin" ? PLACE.origin : PLACE[b.side];
         let content: ReactNode = null;
         if (b.id === "origin") content = <OriginStop />;
         else if (b.id === "about") content = <AboutText />;
-        else if (b.id === "skills")
-          return (
-            <Stop key={b.id} u={camU} i={i} place={place} quiet={false}>
-              <div className="flex min-h-full flex-col gap-10 sm:h-full sm:justify-between">
-                <div data-ocean-quiet>
-                  <SkillsHead />
-                </div>
-                {/* One group per current, left to right in lane order. */}
-                <div className="grid gap-8 sm:grid-cols-3 sm:gap-[6vw]">
-                  {SKILLS.map((g, k) => (
-                    <div key={g.title} data-ocean-quiet>
-                      <SkillGroup i={k} />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </Stop>
-          );
+        else if (b.id === "skills") content = <SkillsHead />;
         else if (b.section === "experience") {
           const k = Number(b.id.split("-")[1]);
           content = <ExperienceStop exp={EXPERIENCES[k]} k={k} n={EXPERIENCES.length} />;
-        } else if (b.id === "projects")
-          return (
-            <Stop key={b.id} u={camU} i={i} place={place} quiet={false}>
-              <div className="flex min-h-full flex-col gap-10 sm:h-full sm:justify-between">
-                <div data-ocean-quiet>
-                  <ProjectsHead />
-                </div>
-                <ProjectsRow projects={projects} />
-              </div>
-            </Stop>
-          );
+        } else if (b.id === "projects") content = <ProjectsHead />;
         else if (b.id === "education") content = <EducationStop />;
         else if (b.id === "contact") return null; // the whirlpool speaks for itself
         else if (b.id === "directory")

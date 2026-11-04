@@ -1,12 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpRight, FileText, Github, Linkedin, Lock, Mail } from "lucide-react";
+import { ArrowUpRight, FileText, Github, Linkedin, Mail } from "lucide-react";
 import type { ReactNode } from "react";
-import { EDUCATION, EXPERIENCES, PROFILE, SKILLS, type Experience } from "@/data/profile";
-import { CURRENTS, ISLANDS, SWELL } from "./world";
-import type { GitHubRepo } from "@/lib/github";
-import { formatRepoName } from "@/lib/utils";
+import { EDUCATION, EXPERIENCES, PROFILE, type Experience } from "@/data/profile";
+import { SWELL } from "./world";
 
 /* ── shared type ── */
 
@@ -23,7 +21,7 @@ export function Kicker({ n, children, color = 1 }: { n: string; children: ReactN
   );
 }
 
-function Out({ href, children }: { href: string; children: ReactNode }) {
+export function Out({ href, children }: { href: string; children: ReactNode }) {
   const internal = href.startsWith("/");
   const cls =
     "inline-flex items-center gap-1.5 font-mono text-xs uppercase tracking-[0.18em] text-foreground underline decoration-accent/60 underline-offset-[6px] transition-colors hover:text-accent";
@@ -71,28 +69,11 @@ export function AboutText() {
   );
 }
 
-/** One skill group, shown at the foot of its current (same colour as the lane). */
 export function SkillsHead() {
   return (
     <div className="space-y-3">
       <Kicker n="03">Skills</Kicker>
       <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">Core competencies</h2>
-    </div>
-  );
-}
-
-export function SkillGroup({ i }: { i: number }) {
-  const g = SKILLS[i];
-  return (
-    <div className="space-y-3 text-center">
-      <p className="text-lg font-medium" style={{ color: accent(CURRENTS.colors[i]) }}>
-        {g.title}
-      </p>
-      <ul className="space-y-0.5 text-[14px] leading-relaxed text-text-muted">
-        {g.items.map((it) => (
-          <li key={it}>{it}</li>
-        ))}
-      </ul>
     </div>
   );
 }
@@ -121,55 +102,6 @@ export function ExperienceStop({ exp, k, n }: { exp: Experience; k: number; n: n
         ))}
       </div>
       <Out href={exp.url}>{host(exp.url)}</Out>
-    </div>
-  );
-}
-
-/** All four featured projects at once, one column under each island (same colour). */
-export function ProjectsRow({ projects }: { projects: GitHubRepo[] }) {
-  const hover = (k: number) => window.dispatchEvent(new CustomEvent("ocean:isle", { detail: k }));
-  return (
-    <div className="grid gap-10 sm:grid-cols-4 sm:gap-[2.5vw]">
-      {projects.map((repo, k) => {
-        const desc = repo.description ?? repo.longDescription ?? "";
-        const c = accent(ISLANDS[k].color);
-        return (
-          <article
-            key={repo.name}
-            data-ocean-quiet
-            onMouseEnter={() => hover(k)}
-            onMouseLeave={() => hover(-1)}
-            onFocus={() => hover(k)}
-            onBlur={() => hover(-1)}
-            className="space-y-3 text-center"
-          >
-            <div>
-              <h3 className="text-xl font-semibold tracking-tight">{formatRepoName(repo.name)}</h3>
-              {repo.subtitle && (
-                <p className="mt-0.5 text-[14px]" style={{ color: c }}>
-                  {repo.subtitle}
-                </p>
-              )}
-            </div>
-            <p className="line-clamp-4 text-[14px] leading-relaxed text-text-muted">{desc}</p>
-            <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-text-faint">
-              {[repo.language, repo.private ? "private" : null, new Date(repo.created_at).getFullYear()]
-                .filter(Boolean)
-                .join(" · ")}
-            </p>
-            <div className="flex flex-wrap justify-center gap-x-5 gap-y-2">
-              <Out href={`/projects#${repo.name}`}>Details</Out>
-              {repo.homepage && <Out href={repo.homepage}>Live</Out>}
-              {!repo.private && !repo.homepage && <Out href={repo.html_url}>Source</Out>}
-              {repo.private && !repo.homepage && (
-                <span className="inline-flex items-center gap-1.5 font-mono text-xs uppercase tracking-[0.18em] text-text-faint">
-                  <Lock size={12} /> Private
-                </span>
-              )}
-            </div>
-          </article>
-        );
-      })}
     </div>
   );
 }

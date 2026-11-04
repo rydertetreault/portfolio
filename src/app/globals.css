@@ -39,6 +39,7 @@
   --ocean-a1: #4d7c0f;
   --ocean-a2: #c2410c;
   --ocean-a3: #a16207;
+  --ocean-a4: #be123c;
   --ascii-lo: #6a6a6a;
   --ascii-hi: #111111;
   --ascii-gain: 1.55;
@@ -69,6 +70,7 @@
   --ocean-a1: #a3e635;
   --ocean-a2: #fb923c;
   --ocean-a3: #facc15;
+  --ocean-a4: #fb7185;
   --ascii-lo: #5c5c5c;
   --ascii-hi: #cfcfcf;
   --ascii-gain: 1;
@@ -96,6 +98,7 @@
     --ocean-a1: #a3e635;
     --ocean-a2: #fb923c;
     --ocean-a3: #facc15;
+    --ocean-a4: #fb7185;
     --ascii-lo: #5c5c5c;
     --ascii-hi: #cfcfcf;
     --ascii-gain: 1;

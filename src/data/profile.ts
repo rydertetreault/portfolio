@@ -8,7 +8,7 @@ export const PROFILE = {
   title: "Software Engineer · AI · Cyber Defense",
   tagline:
     "AI-native software, security-minded engineering. I build products where AI does real work, grounded in cybersecurity and infrastructure defense.",
-  location: "Auburn, Alabama",
+  location: "Augusta, GA",
   about:
     "I'm a Computer Science & Software Engineering graduate from Auburn University with a Cyber Defense certificate, focused on integrating AI into the products I build. Most of my recent work has been bringing language models, semantic search, and AI-driven automation into real applications, from media archives that transcribe and tag themselves to analytics platforms that surface insight instead of just metrics. I treat AI as a first-class part of the toolchain: a collaborator I use daily to design and ship, and a layer I integrate into systems so they get smarter as they're used. My cybersecurity background grounds how I design and reason about every system I touch.",
   links: {

@@ -56,12 +56,24 @@ export default function OceanCanvas({ camU }: { camU: MotionValue<number> }) {
     };
     window.addEventListener("resize", onResize);
 
-    engine.onFrame = (u) => camU.set(u);
     oceanView.project = (p) => engine.project(p);
+    oceanView.events = () => engine.ev;
+    oceanView.eye = () => engine.cam?.pos ?? null;
+    oceanView.probe = (xz) => engine.probe(xz);
+    oceanView.heights = () => engine.probeHeights;
+    engine.onFrame = (u) => {
+      camU.set(u);
+      oceanView.frame.forEach((f) => f());
+    };
     const hi = (e: Event) => {
       engine.isleHi = (e as CustomEvent<number>).detail;
     };
     window.addEventListener("ocean:isle", hi);
+    const focus = (e: Event) => {
+      const k = (e as CustomEvent<number>).detail;
+      engine.setFocus(k < 0 ? null : k);
+    };
+    window.addEventListener("ocean:focus", focus);
     const boxHi = (e: Event) => {
       engine.boxHi = (e as CustomEvent<number>).detail;
     };
@@ -74,9 +86,14 @@ export default function OceanCanvas({ camU }: { camU: MotionValue<number> }) {
     engine.quietSource = () => {
       const out: Quiet[] = [];
       document.querySelectorAll<HTMLElement>("[data-ocean-quiet]").forEach((el) => {
-        const stop = el.closest<HTMLElement>("[data-ocean-stop]");
-        const a =
-          parseFloat(getComputedStyle(stop ?? el).opacity) * (parseFloat(el.dataset.oceanQuiet || "1") || 1);
+        // The element's own effective opacity (every ancestor's, multiplied), so text that is
+        // hidden inside a visible stop doesn't leave a dark patch behind.
+        let a = parseFloat(el.dataset.oceanQuiet || "1") || 1;
+        for (let n: HTMLElement | null = el; n && n !== document.body && a >= 0.02; n = n.parentElement) {
+          const cs = getComputedStyle(n);
+          if (cs.visibility === "hidden" || cs.display === "none") a = 0;
+          a *= parseFloat(cs.opacity);
+        }
         if (a < 0.02) return;
         const r = el.getBoundingClientRect();
         if (r.bottom < 0 || r.top > window.innerHeight || r.width === 0) return;
@@ -92,13 +109,18 @@ export default function OceanCanvas({ camU }: { camU: MotionValue<number> }) {
     return () => {
       mo.disconnect();
       window.removeEventListener("ocean:isle", hi);
+      window.removeEventListener("ocean:focus", focus);
       window.removeEventListener("ocean:box", boxHi);
       window.removeEventListener("scroll", scroll);
       window.removeEventListener("resize", onResize);
       document.removeEventListener("visibilitychange", vis);
+      oceanView.project = null;
+      oceanView.events = null;
+      oceanView.eye = null;
+      oceanView.probe = null;
+      oceanView.heights = null;
       engine.dispose();
       engineRef.current = null;
-      oceanView.project = null;
     };
   }, [camU]);
 
