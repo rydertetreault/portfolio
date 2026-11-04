@@ -13,15 +13,6 @@ import { formatRepoName } from "@/lib/utils";
 /** Accent n (1..3): the colour shared by a stop's item in the water and its text. */
 export const accent = (n: number) => `var(--ocean-a${n})`;
 
-/** A short run of the item's glyphs, in its colour: the visual link to the water. */
-function Mark({ n, glyph = "≈" }: { n: number; glyph?: string }) {
-  return (
-    <span aria-hidden className="mr-2 font-mono tracking-[0.1em]" style={{ color: accent(n) }}>
-      {glyph.repeat(3)}
-    </span>
-  );
-}
-
 export function Kicker({ n, children, color = 1 }: { n: string; children: ReactNode; color?: number }) {
   return (
     <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-text-faint">
@@ -81,14 +72,27 @@ export function AboutText() {
 }
 
 /** One skill group, shown at the foot of its current (same colour as the lane). */
+export function SkillsHead() {
+  return (
+    <div className="space-y-3">
+      <Kicker n="03">Skills</Kicker>
+      <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">Three currents.</h2>
+    </div>
+  );
+}
+
 export function SkillGroup({ i }: { i: number }) {
   const g = SKILLS[i];
   return (
-    <div className="space-y-1.5">
-      <p className="text-[17px] font-medium" style={{ color: accent(CURRENTS.colors[i]) }}>
+    <div className="space-y-3 text-center">
+      <p className="text-lg font-medium" style={{ color: accent(CURRENTS.colors[i]) }}>
         {g.title}
       </p>
-      <p className="text-[14px] leading-relaxed text-text-muted">{g.items.join(" · ")}</p>
+      <ul className="space-y-0.5 text-[14px] leading-relaxed text-text-muted">
+        {g.items.map((it) => (
+          <li key={it}>{it}</li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -101,7 +105,6 @@ export function ExperienceStop({ exp, k, n }: { exp: Experience; k: number; n: n
       </Kicker>
       <div>
         <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-          <Mark n={SWELL.colors[k]} glyph="~" />
           {exp.company}
         </h2>
         <p className="mt-1 font-mono text-xs uppercase tracking-[0.18em] text-text-faint">{exp.date}</p>
@@ -122,45 +125,63 @@ export function ExperienceStop({ exp, k, n }: { exp: Experience; k: number; n: n
   );
 }
 
-export function ProjectStop({ repo, k, n }: { repo: GitHubRepo; k: number; n: number }) {
-  const desc = repo.longDescription ?? repo.description ?? "";
+/** All four featured projects at once, one column under each eddy (same colour). */
+export function ProjectsRow({ projects }: { projects: GitHubRepo[] }) {
+  const hover = (k: number) => window.dispatchEvent(new CustomEvent("ocean:eddy", { detail: k }));
   return (
-    <div className="space-y-5">
-      <Kicker n="03" color={EDDIES[k].color}>
-        Projects · {k + 1} of {n}
-      </Kicker>
-      <div>
-        <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-          <Mark n={EDDIES[k].color} glyph="@" />
-          {formatRepoName(repo.name)}
-        </h2>
-        {repo.subtitle && (
-          <p className="mt-1 text-[17px]" style={{ color: accent(EDDIES[k].color) }}>
-            {repo.subtitle}
-          </p>
-        )}
+    <div className="grid gap-10 sm:grid-cols-4 sm:gap-[2.5vw]">
+      {projects.map((repo, k) => {
+        const desc = repo.description ?? repo.longDescription ?? "";
+        const c = accent(EDDIES[k].color);
+        return (
+          <article
+            key={repo.name}
+            data-ocean-quiet
+            onMouseEnter={() => hover(k)}
+            onMouseLeave={() => hover(-1)}
+            onFocus={() => hover(k)}
+            onBlur={() => hover(-1)}
+            className="space-y-3 text-center"
+          >
+            <div>
+              <h3 className="text-xl font-semibold tracking-tight">{formatRepoName(repo.name)}</h3>
+              {repo.subtitle && (
+                <p className="mt-0.5 text-[14px]" style={{ color: c }}>
+                  {repo.subtitle}
+                </p>
+              )}
+            </div>
+            <p className="line-clamp-4 text-[14px] leading-relaxed text-text-muted">{desc}</p>
+            <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-text-faint">
+              {[repo.language, repo.private ? "private" : null, new Date(repo.created_at).getFullYear()]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
+            <div className="flex flex-wrap justify-center gap-x-5 gap-y-2">
+              <Out href={`/projects#${repo.name}`}>Details</Out>
+              {repo.homepage && <Out href={repo.homepage}>Live</Out>}
+              {!repo.private && !repo.homepage && <Out href={repo.html_url}>Source</Out>}
+              {repo.private && !repo.homepage && (
+                <span className="inline-flex items-center gap-1.5 font-mono text-xs uppercase tracking-[0.18em] text-text-faint">
+                  <Lock size={12} /> Private
+                </span>
+              )}
+            </div>
+          </article>
+        );
+      })}
+    </div>
+  );
+}
+
+export function ProjectsHead() {
+  return (
+    <div className="flex items-end justify-between gap-6">
+      <div className="space-y-3">
+        <Kicker n="04">Projects</Kicker>
+        <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">Four things I&apos;ve built.</h2>
       </div>
-      <p className="line-clamp-6 leading-relaxed text-text-muted">{desc}</p>
-      <p className="font-mono text-xs uppercase tracking-[0.18em] text-text-faint">
-        {[repo.language, repo.private ? "private" : null, new Date(repo.created_at).getFullYear()]
-          .filter(Boolean)
-          .join(" · ")}
-      </p>
-      <div className="flex flex-wrap gap-x-6 gap-y-3">
-        <Out href={`/projects#${repo.name}`}>Details</Out>
-        {repo.homepage && <Out href={repo.homepage}>{host(repo.homepage)}</Out>}
-        {!repo.private && !repo.homepage && <Out href={repo.html_url}>Source</Out>}
-        {repo.private && !repo.homepage && (
-          <span className="inline-flex items-center gap-1.5 font-mono text-xs uppercase tracking-[0.18em] text-text-faint">
-            <Lock size={12} /> Private repo
-          </span>
-        )}
-      </div>
-      {k === n - 1 && (
-        <div className="pt-2">
-          <Out href="/projects">All projects →</Out>
-        </div>
-      )}
+      <Out href="/projects">All projects →</Out>
     </div>
   );
 }
@@ -168,7 +189,7 @@ export function ProjectStop({ repo, k, n }: { repo: GitHubRepo; k: number; n: nu
 export function EducationStop() {
   return (
     <div className="space-y-6">
-      <Kicker n="04" color={2}>
+      <Kicker n="05" color={2}>
         Education
       </Kicker>
       <p className="max-w-md leading-relaxed text-text-muted">Calm water, a clear horizon: where it all started.</p>
@@ -176,7 +197,6 @@ export function EducationStop() {
         {EDUCATION.map((e) => (
           <div key={e.title}>
             <p className="text-2xl font-semibold tracking-tight sm:text-3xl">
-              <Mark n={2} glyph="*" />
               {e.title}
             </p>
             <p className="mt-1 text-text-muted">{e.detail}</p>
@@ -191,18 +211,6 @@ export function EducationStop() {
   );
 }
 
-export function ContactStop() {
-  return (
-    <div className="space-y-4 text-center">
-      <Kicker n="05">Contact</Kicker>
-      <h2 className="text-4xl font-semibold tracking-tight sm:text-5xl">
-        Let&apos;s <span style={{ color: accent(1) }}>talk</span>.
-      </h2>
-      <p className="text-text-muted">Scroll into the whirlpool ↓</p>
-    </div>
-  );
-}
-
 /** The /contact lightbox. */
 export function ContactDetails() {
   const l = PROFILE.links;
@@ -213,7 +221,7 @@ export function ContactDetails() {
         <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-text-faint">
           <span className="text-accent">$</span> cat ~/contact
         </p>
-        <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">Let&apos;s talk.</h1>
+        <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">Contact</h1>
         <p className="max-w-lg leading-relaxed text-text-muted">
           Open to roles and projects in AI integration, product engineering and security. Email is the fastest way to reach
           me.

@@ -5,10 +5,10 @@
  *
  * Pacing is in viewport heights of scroll: `travel` to get there, `hold` while you read.
  */
-import { CALM, EDDIES, SWELL, WHIRL, swellAt, type Vec2 } from "./world";
+import { CALM, CURRENTS, EDDIES, SWELL, WHIRL, swellAt, type Vec2 } from "./world";
 import type { Key, Shot, Vec3 } from "./timeline";
 
-export type Section = "origin" | "about" | "experience" | "projects" | "education" | "contact" | "directory";
+export type Section = "origin" | "about" | "experience" | "skills" | "projects" | "education" | "contact" | "directory";
 
 export type Beat = {
   id: string;
@@ -41,9 +41,14 @@ function aim(target: Vec2, yaw: number, dist: number, height: number, side: numb
 
 const ORIGIN: Shot = { pos: [0, 0, 0], yaw: 0, pitch: -90, roll: 0, fov: 30, span: 11, amp: 0, fog: 500, glyph: 0.75 };
 
-const DIVE: Shot = { pos: [0.4, 5.5, 2.2], yaw: 3, pitch: -55, roll: -4, fov: 46, amp: 0.55, fog: 120, glyph: 1.2 };
-/** About: looking north up the three currents. */
-const ABOUT: Shot = { ...SEA, pos: [0, 6.2, 8.5], yaw: 0, pitch: -24, fov: 56, fog: 75 };
+const DIVE: Shot = { pos: [0.8, 4.2, -1.2], yaw: 6, pitch: -52, roll: -5, fov: 44, amp: 0.55, fog: 120, glyph: 1.2 };
+/** About: low over open water. */
+const ABOUT: Shot = { ...SEA, pos: [1.4, 1.75, -4], yaw: 8, pitch: -11, fov: 55 };
+
+/** Skills: looking north up the three currents from their near end. */
+const SKILLS: Shot = { ...SEA, pos: [CURRENTS.x, 6.2, CURRENTS.z1 - 3.5], yaw: 0, pitch: -24, fov: 56, fog: 75 };
+/** Swing out of the swell and round to the currents. */
+const TO_SKILLS: Shot = { ...SEA, pos: [CURRENTS.x - 8, 4.5, -66], yaw: 30, pitch: -16, roll: 4, fov: 60 };
 
 const EXP_X = [SWELL.x - 1, SWELL.x + 2, SWELL.x - 2];
 const EXP_YAW = [4, -6, 6];
@@ -57,31 +62,31 @@ const trough = (k: number): Shot => {
   return { ...SEA, pos: [EXP_X[k], 1.3, z], yaw: EXP_YAW[k], pitch: -6, fov: 60 };
 };
 
-const PROJ_YAW = [-35, -75, -120, -160];
-const PROJ: Shot[] = EDDIES.map((e, k) => aim(e.c, PROJ_YAW[k], 6.5, 7.5, k % 2 ? -4.2 : 4.2, { fov: 54 }));
+/** Projects: high enough to see the whole row of eddies at once. */
+const PROJECTS: Shot = { ...SEA, pos: [-12, 11, -82], yaw: 0, pitch: -38, fov: 56, fog: 80 };
 
 /** Education: low over calm water, the sun on the horizon to the right of the text. */
-const EDUCATION: Shot = { ...SEA, pos: [-50, 1.15, -64], yaw: CALM.sunYaw - 16, pitch: 1.5, fov: 50, fog: 150 };
+const EDUCATION: Shot = { ...SEA, pos: [-50, 1.15, -64], yaw: CALM.sunYaw - 16, pitch: 1.5, fov: 50, fog: 400 };
 
 const WHIRL_YAW = -200;
-const WHIRL_APPROACH = aim(WHIRL.c, WHIRL_YAW, 14, 7.5, 0, { fov: 56, fog: 80 });
+const WHIRL_APPROACH = aim(WHIRL.c, WHIRL_YAW, 30, 15, 0, { fov: 56, fog: 120 });
 const CONTACT: Shot = {
   pos: [WHIRL.c[0], 0, WHIRL.c[1]],
   yaw: WHIRL_YAW,
   pitch: -90,
   roll: 0,
   fov: 34,
-  span: 19,
+  span: 44,
   amp: 1,
   fog: 500,
   glyph: 1.0,
 };
 /** Down the funnel, corkscrewing, into the dark. */
-const DIVE_IN: Shot = { ...CONTACT, span: undefined, pos: [WHIRL.c[0], 0.6, WHIRL.c[1]], yaw: WHIRL_YAW + 220, fov: 80, glyph: 1.3 };
+const DIVE_IN: Shot = { ...CONTACT, span: undefined, pos: [WHIRL.c[0], -WHIRL.depth * 0.75, WHIRL.c[1]], yaw: WHIRL_YAW + 260, fov: 80, glyph: 1.3 };
 
 export const BEATS: Beat[] = [
   { id: "origin", section: "origin", shot: ORIGIN, travel: 0, hold: 0.25, side: "left" },
-  { id: "about", section: "about", via: [DIVE], shot: ABOUT, travel: 1.6, hold: 1.2, side: "split" },
+  { id: "about", section: "about", via: [DIVE], shot: ABOUT, travel: 1.5, hold: 1.0, side: "left" },
   ...EXP.map(
     (s, k): Beat => ({
       id: `exp-${k}`,
@@ -93,19 +98,11 @@ export const BEATS: Beat[] = [
       side: "right",
     }),
   ),
-  ...PROJ.map(
-    (s, k): Beat => ({
-      id: `proj-${k}`,
-      section: "projects",
-      shot: s,
-      travel: k === 0 ? 1.3 : 1.0,
-      hold: 1.0,
-      side: k % 2 ? "left" : "right",
-    }),
-  ),
+  { id: "skills", section: "skills", via: [TO_SKILLS], shot: SKILLS, travel: 1.6, hold: 1.2, side: "split" },
+  { id: "projects", section: "projects", shot: PROJECTS, travel: 1.5, hold: 1.6, side: "split" },
   { id: "education", section: "education", shot: EDUCATION, travel: 1.4, hold: 1.1, side: "left" },
   { id: "contact", section: "contact", via: [WHIRL_APPROACH], shot: CONTACT, travel: 1.8, hold: 0.6, side: "center" },
-  { id: "directory", section: "directory", shot: DIVE_IN, travel: 1.6, hold: 0.4, side: "center" },
+  { id: "directory", section: "directory", shot: DIVE_IN, travel: 1.6, hold: 1.0, side: "center" },
 ];
 
 /* ── derived timing ── */
@@ -146,6 +143,7 @@ export const SECTIONS: { id: Section; label: string; u: number }[] = (
   [
     ["about", "About"],
     ["experience", "Experience"],
+    ["skills", "Skills"],
     ["projects", "Projects"],
     ["education", "Education"],
     ["contact", "Contact"],
@@ -178,23 +176,26 @@ export type Events = {
   dive: number;
   /** 0..1 the screen going black at the bottom. */
   blackout: number;
+  /** 0..1 the swirling field gathering into the directory's boxes. */
+  form: number;
 };
 
 export function eventsAt(u: number): Events {
   const e0 = beatIndex("exp-0");
-  const p0 = beatIndex("proj-0");
+  const pj = beatIndex("projects");
   const di = beatIndex("directory");
   const dw = WINDOWS[di];
   const dt = BEATS[di].travel;
   return {
-    currents: eventWeight(u, beatIndex("about"), beatIndex("about")),
+    currents: eventWeight(u, beatIndex("skills"), beatIndex("skills")),
     swell: eventWeight(u, e0, e0 + 2),
     crest: [0, 1, 2].map((k) => textOpacity(u, e0 + k)) as [number, number, number],
-    eddies: EDDIES.map((_, k) => eventWeight(u, p0 + k, p0 + k)),
+    eddies: EDDIES.map(() => eventWeight(u, pj, pj)),
     calm: eventWeight(u, beatIndex("education"), beatIndex("education")),
     whirl: eventWeight(u, beatIndex("contact"), beatIndex("contact"), true),
     dive: smooth(ramp(u, dw.start, dw.arrive)),
     blackout: smooth(ramp(u, dw.start + dt * 0.55, dw.arrive - dt * 0.05)),
+    form: smooth(ramp(u, dw.arrive - dt * 0.15, dw.arrive + 0.45)),
   };
 }
 
@@ -204,6 +205,13 @@ export const SUN_DIR: Vec3 = (() => {
   const e = rad(CALM.sunElev);
   return [Math.sin(y) * Math.cos(e), Math.sin(e), -Math.cos(y) * Math.cos(e)];
 })();
+
+/** Opacity of something shown across beats [i0, i1] (e.g. the experience timeline). */
+export function spanOpacity(u: number, i0: number, i1: number): number {
+  const a = WINDOWS[i0];
+  const b = WINDOWS[i1];
+  return smooth(ramp(u, a.arrive - 0.3, a.arrive - 0.02)) * (1 - smooth(ramp(u, b.leave + 0.02, b.leave + 0.3)));
+}
 
 /** Opacity of a beat's text at u: in as the camera settles, out as it leaves. */
 export function textOpacity(u: number, i: number): number {

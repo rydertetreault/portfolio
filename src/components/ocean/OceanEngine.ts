@@ -2,7 +2,7 @@
  * OceanEngine: WebGL2 renderer for the ocean (see shaders.ts for the two passes).
  * Framework-agnostic: OceanCanvas.tsx feeds it scroll, theme, quiet zones and size.
  */
-import { MAX_EDDY, MAX_QUIET, NLEV, FIELD_FS, QUAD_VS, SKY_FS, SURFACE_FS, SURFACE_VS } from "./shaders";
+import { FIELD_FS, FORM_FS, MAX_BOX, MAX_EDDY, MAX_QUIET, NLEV, QUAD_VS, SKY_FS, SURFACE_FS, SURFACE_VS } from "./shaders";
 import { EDDIES, FLOW_SPEED, FONT_SIZE, GLYPHS, LINE_HEIGHT, MORPH_SPEED, PHASE_SPEED, PLASMA_AMP, SPAN, swellAt } from "./world";
 import { sampleCamera, type Camera } from "./timeline";
 import { KEYS, SUN_DIR, eventsAt, type Events } from "./route";
@@ -82,6 +82,8 @@ export class OceanEngine {
   private fieldProg: WebGLProgram;
   private surfProg: WebGLProgram;
   private skyProg: WebGLProgram;
+  private formProg: WebGLProgram;
+  private mu: Uniforms;
   private fu: Uniforms;
   private su: Uniforms;
   private ku: Uniforms;
@@ -113,6 +115,8 @@ export class OceanEngine {
   private morph = 0;
   private flow: [number, number] = [0, 0];
   private whirlPhase = 0;
+  /** Hovered project's eddy (-1 = none). */
+  eddyHi = -1;
   private u = 0; // smoothed scroll (viewport heights)
   private uTarget = 0;
   private reduced = false;
@@ -128,6 +132,10 @@ export class OceanEngine {
   onFrame: ((u: number) => void) | null = null;
   /** Text rects to keep readable (CSS px), polled every frame. */
   quietSource: (() => Quiet[]) | null = null;
+  /** The directory's box rects (CSS px), polled while the field forms them. */
+  boxSource: (() => Quiet[]) | null = null;
+  /** Hovered directory box (-1 = none). */
+  boxHi = -1;
 
   /** Debug: fixed camera instead of the route. */
   debugCam: Camera | null = null;
@@ -146,6 +154,8 @@ export class OceanEngine {
     this.su = uniforms(gl, this.surfProg);
     this.skyProg = compile(gl, QUAD_VS, SKY_FS);
     this.ku = uniforms(gl, this.skyProg);
+    this.formProg = compile(gl, QUAD_VS, FORM_FS);
+    this.mu = uniforms(gl, this.formProg);
     this.fieldTex = gl.createTexture()!;
     this.fbo = gl.createFramebuffer()!;
     this.glyphS = gl.createTexture()!;
@@ -316,6 +326,7 @@ export class OceanEngine {
     gl.deleteProgram(this.fieldProg);
     gl.deleteProgram(this.surfProg);
     gl.deleteProgram(this.skyProg);
+    gl.deleteProgram(this.formProg);
     gl.deleteTexture(this.fieldTex);
     gl.deleteTexture(this.glyphS);
     gl.deleteTexture(this.glyphL);
@@ -429,7 +440,6 @@ export class OceanEngine {
     gl.uniform3fv(su.uHi, this.hi);
     gl.uniform1f(su.uGain, this.gain);
     gl.uniform3fv(su.uAcc, this.acc);
-    gl.uniform1f(su.uStrips, 1);
     gl.uniform3fv(su.uSunDir, SUN_DIR);
     gl.uniform1f(su.uSunAmt, ev.calm);
     gl.uniform2f(su.uFog, cam.fog * 0.45, cam.fog);
@@ -450,6 +460,39 @@ export class OceanEngine {
     gl.bindVertexArray(this.vao);
     gl.drawElements(gl.TRIANGLES, this.nIdx, gl.UNSIGNED_INT, 0);
     gl.bindVertexArray(null);
+
+    if (ev.blackout > 0.001) this.drawForm(ev);
+  }
+
+  /** The bottom of the maelstrom: black, then the field gathers into the directory's boxes. */
+  private drawForm(ev: Events): void {
+    const gl = this.gl;
+    const k = this.mu;
+    gl.disable(gl.DEPTH_TEST);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    gl.useProgram(this.formProg);
+    gl.uniform2f(k.uNative, this.cellW, this.cellH);
+    gl.uniform2f(k.uRes, this.w, this.h);
+    gl.uniform1f(k.uTime, this.time);
+    gl.uniform1f(k.uSpin, this.whirlPhase * 0.5);
+    gl.uniform1f(k.uBlack, ev.blackout);
+    gl.uniform1f(k.uForm, ev.form);
+    const boxes = this.boxSource?.() ?? [];
+    const b = new Float32Array(MAX_BOX * 4);
+    boxes.slice(0, MAX_BOX).forEach((r, i) =>
+      b.set([r.x0 * this.dpr, r.y0 * this.dpr, r.x1 * this.dpr, r.y1 * this.dpr], i * 4),
+    );
+    gl.uniform4fv(k.uBox, b);
+    gl.uniform1i(k.uBoxN, Math.min(MAX_BOX, boxes.length));
+    gl.uniform1f(k.uBoxHi, this.boxHi);
+    // Always the dark-theme accents: this happens on black.
+    gl.uniform3fv(k.uAcc, new Float32Array([0.64, 0.9, 0.21, 0.98, 0.57, 0.24, 0.98, 0.8, 0.08]));
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.glyphS);
+    gl.uniform1i(k.uGlyphS, 1);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.disable(gl.BLEND);
   }
 
   /** Debug: band values (r) of field level `lv` in a box around texel (cx, cy) as text rows. */
@@ -485,6 +528,8 @@ export class OceanEngine {
     gl.uniform1f(u.uCalmW, ev.calm);
     gl.uniform1f(u.uWhirlW, ev.whirl);
     gl.uniform1f(u.uWhirlPhase, this.whirlPhase);
+    gl.uniform1f(u.uEddyHi, this.eddyHi);
+    gl.uniform1f(u.uAmbient, 1);
   }
 
   private setQuietUniforms(u: Uniforms): void {
@@ -519,6 +564,7 @@ export class OceanEngine {
     gl.uniform1f(k.uTime, this.time);
     gl.uniform3fv(k.uBg, this.bg);
     gl.uniform3fv(k.uSunCol, this.acc.subarray(3, 6));
+    gl.uniform3fv(k.uSunCore, this.acc.subarray(6, 9));
     gl.uniform3fv(k.uLo, this.lo);
     this.setQuietUniforms(k);
     gl.activeTexture(gl.TEXTURE1);

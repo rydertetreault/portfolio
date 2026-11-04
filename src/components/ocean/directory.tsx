@@ -1,49 +1,89 @@
 "use client";
 
 import Link from "next/link";
-import { WaveFrame } from "./WaveBox";
+import { motion, useTransform, type MotionValue } from "framer-motion";
+import { ArrowUp, ArrowUpRight, Github, Linkedin, Mail } from "lucide-react";
+import { PROFILE } from "@/data/profile";
+import { eventsAt } from "./route";
 
 const ENTRIES = [
-  { href: "/contact", perm: "drwxr-xr-x", name: "contact/", note: "how to reach me" },
-  { href: "/projects", perm: "drwxr-xr-x", name: "projects/", note: "everything I've built" },
-  { href: "/resume", perm: "-rw-r--r--", name: "resume", note: "one page, printable" },
+  { href: "/contact", title: "Contact", note: "Email, GitHub, LinkedIn and where I'm based.", color: "#a3e635" },
+  { href: "/projects", title: "Projects", note: "Everything I've built, professional and personal.", color: "#fb923c" },
+  { href: "/resume", title: "Resume", note: "The one-page version, ready to print.", color: "#facc15" },
 ];
 
+const hover = (k: number) => window.dispatchEvent(new CustomEvent("ocean:box", { detail: k }));
+
 /**
- * The bottom of the whirlpool: everything has gone black and a directory listing
- * points the way out. Always light-on-black, whatever the theme.
+ * The bottom of the maelstrom. The boxes themselves are drawn by the ocean: the swirling
+ * field gathers into their outlines and settles behind them (shaders.ts FORM_FS, located
+ * via `data-ocean-box`). This places them and fades the text in once they've formed.
  */
-export default function Directory() {
+export default function Directory({ u }: { u: MotionValue<number> }) {
+  const form = useTransform(u, (v) => eventsAt(v).form);
+  const text = useTransform(form, [0.65, 1], [0, 1]);
+  const lift = useTransform(text, (t) => (1 - t) * 10);
+  const l = PROFILE.links;
+  const foot = "inline-flex items-center gap-2 transition-colors hover:text-neutral-100";
   return (
-    <div className="relative mx-auto w-full max-w-2xl overflow-hidden border border-neutral-800 bg-black px-8 py-16 font-mono text-[14px] sm:text-[15px] text-neutral-300 sm:px-14 sm:py-16">
-      <WaveFrame band={4} dark />
-      <div className="relative space-y-1 bg-black">
-        <p>
-          <span className="text-[#a3e635]">ryder@ocean</span>:<span className="text-[#fb923c]">~</span>$ ls -l
-        </p>
-        {ENTRIES.map((e) => (
+    <div className="mx-auto w-full max-w-6xl text-neutral-200">
+      <motion.header style={{ opacity: text, y: lift }} className="mb-10 text-center sm:mb-14">
+        <p className="font-mono text-[11px] uppercase tracking-[0.35em] text-neutral-500">Directory</p>
+        <h2 className="mt-3 text-3xl font-semibold tracking-tight text-neutral-100 sm:text-5xl">{PROFILE.name}</h2>
+      </motion.header>
+
+      <nav className="grid gap-5 sm:grid-cols-3 sm:gap-8">
+        {ENTRIES.map((e, k) => (
           <Link
             key={e.href}
             href={e.href}
             scroll={false}
-            className="group flex gap-4 py-1 transition-colors hover:text-white"
+            data-ocean-box
+            onMouseEnter={() => hover(k)}
+            onMouseLeave={() => hover(-1)}
+            onFocus={() => hover(k)}
+            onBlur={() => hover(-1)}
+            className="group relative block min-h-[11rem] p-7 outline-none sm:min-h-[16rem] sm:p-9"
           >
-            <span className="hidden text-neutral-600 sm:inline">{e.perm}</span>
-            <span className="w-28 text-[#a3e635] group-hover:underline">{e.name}</span>
-            <span className="text-neutral-500">{e.note}</span>
+            <motion.div style={{ opacity: text, y: lift }} className="flex h-full flex-col">
+              <span className="font-mono text-[11px] tracking-[0.3em]" style={{ color: e.color }}>
+                {String(k + 1).padStart(2, "0")}
+              </span>
+              <span className="mt-auto block pt-10 text-3xl font-semibold tracking-tight text-neutral-100 sm:text-4xl">
+                {e.title}
+              </span>
+              <span className="mt-3 block min-h-[2.75rem] text-sm leading-relaxed text-neutral-400 transition-colors group-hover:text-neutral-200">
+                {e.note}
+              </span>
+              <ArrowUpRight
+                size={20}
+                className="absolute right-7 top-7 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 sm:right-9 sm:top-9"
+                style={{ color: e.color }}
+              />
+            </motion.div>
           </Link>
         ))}
-        <p className="pt-2">
-          <span className="text-[#a3e635]">ryder@ocean</span>:<span className="text-[#fb923c]">~</span>${" "}
-          <button
-            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-            className="text-neutral-500 transition-colors hover:text-white"
-          >
-            cd / <span className="text-neutral-600"># back to the surface</span>
-          </button>
-          <span className="ml-1 inline-block h-4 w-2 translate-y-0.5 animate-pulse bg-neutral-300" />
-        </p>
-      </div>
+      </nav>
+
+      <motion.footer
+        style={{ opacity: text }}
+        className="mt-10 flex flex-col items-center justify-between gap-5 border-t border-neutral-800 pt-6 font-mono text-[11px] uppercase tracking-[0.22em] text-neutral-500 sm:mt-14 sm:flex-row"
+      >
+        <div className="flex flex-wrap justify-center gap-x-7 gap-y-3">
+          <a href={`mailto:${l.email}`} className={`${foot} normal-case tracking-[0.08em]`}>
+            <Mail size={13} /> {l.email}
+          </a>
+          <a href={l.github} target="_blank" rel="noopener noreferrer" className={foot}>
+            <Github size={13} /> GitHub
+          </a>
+          <a href={l.linkedin} target="_blank" rel="noopener noreferrer" className={foot}>
+            <Linkedin size={13} /> LinkedIn
+          </a>
+        </div>
+        <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} className={foot}>
+          <ArrowUp size={13} /> Back to the surface
+        </button>
+      </motion.footer>
     </div>
   );
 }

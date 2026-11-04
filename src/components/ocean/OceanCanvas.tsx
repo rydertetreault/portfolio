@@ -56,6 +56,19 @@ export default function OceanCanvas({ camU }: { camU: MotionValue<number> }) {
     window.addEventListener("resize", onResize);
 
     engine.onFrame = (u) => camU.set(u);
+    const hi = (e: Event) => {
+      engine.eddyHi = (e as CustomEvent<number>).detail;
+    };
+    window.addEventListener("ocean:eddy", hi);
+    const boxHi = (e: Event) => {
+      engine.boxHi = (e as CustomEvent<number>).detail;
+    };
+    window.addEventListener("ocean:box", boxHi);
+    engine.boxSource = () =>
+      Array.from(document.querySelectorAll<HTMLElement>("[data-ocean-box]")).map((el) => {
+        const r = el.getBoundingClientRect();
+        return { x0: r.left, y0: r.top, x1: r.right, y1: r.bottom, a: 1 };
+      });
     engine.quietSource = () => {
       const out: Quiet[] = [];
       document.querySelectorAll<HTMLElement>("[data-ocean-quiet]").forEach((el) => {
@@ -76,6 +89,8 @@ export default function OceanCanvas({ camU }: { camU: MotionValue<number> }) {
 
     return () => {
       mo.disconnect();
+      window.removeEventListener("ocean:eddy", hi);
+      window.removeEventListener("ocean:box", boxHi);
       window.removeEventListener("scroll", scroll);
       window.removeEventListener("resize", onResize);
       document.removeEventListener("visibilitychange", vis);

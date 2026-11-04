@@ -106,6 +106,8 @@ uniform float uCurW;
 uniform float uCalmW;
 uniform float uWhirlW;
 uniform float uWhirlPhase;  // accumulated spin (speeds up as you dive in)
+uniform float uEddyHi;      // hovered project's eddy (-1 = none): the others dim
+uniform float uAmbient;     // ambient contour strips (0..1)
 
 const float PD = ${f(PLASMA_DIST)};
 const float NORM = ${f(PLASMA_NORM)};
@@ -157,6 +159,36 @@ Vx vortex(vec2 p, inout vec2 pp, vec2 c, float R, float arms, float w, float dep
   return Vx(h * w, band, blend, acc);
 }
 
+// The maelstrom: the plasma itself is wound into a log spiral around a deep funnel (so
+// the bands become hurricane streaks), fine foam filaments race around it, and the
+// centre drops away into a dark drain.
+struct Ms { float h; float band; float blend; float acc; float dark; };
+Ms maelstrom(vec2 p, inout vec2 pp, vec2 c, float R, float w, float depth, float ang) {
+  vec2 d = p - c;
+  float r = length(d);
+  if (w < 0.001 || r > R * 2.6) return Ms(0.0, 0.0, 0.0, 0.0, 0.0);
+  float reach = 1.0 - smoothstep(R * 0.9, R * 2.6, r);
+  float rc = R * 0.16;
+  // Winding: tight near the drain, loosening outward; the whole thing turns.
+  float wind = 2.4 * log(1.0 + R / (r + 0.35)) + ang * (1.0 + 1.5 * rc / (r + rc));
+  pp = c + rot(pp - c, w * reach * wind);
+  // Funnel: broad dish with steep inner walls.
+  float k = R * 0.32;
+  float h = -depth * (k * k / (r * r + k * k)) - depth * 0.5 * exp(-r * r / (rc * rc));
+  // Foam filaments: wound and turned by exactly the same angle as the plasma above, so they
+  // ride the flow instead of sliding across it; broken up into streaks in the same frame.
+  float a = atan(d.y, d.x) + w * reach * wind;
+  float fil = sin(14.0 * a);
+  vec2 pr = pp - c;
+  float brk = smoothstep(-0.2, 0.6, snoise(vec3(pr * 0.35, uTime * 0.05)));
+  float streak = smoothstep(0.55, 0.95, fil) * brk;
+  float band = 0.5 + 0.45 * streak;
+  // The abyss: the walls get denser and denser toward the drain.
+  float dark = w * (1.0 - smoothstep(rc * 0.4, R * 0.75, r));
+  float wall = 1.0 - smoothstep(rc * 1.5, R * 1.6, r);  // filaments strongest on the walls
+  return Ms(h * w * reach, band, w * 0.6 * wall, wall * w, dark);
+}
+
 void accent(inout vec2 ac, float idx, float amt) {
   if (amt > ac.y) ac = vec2(idx, amt);
 }
@@ -165,15 +197,15 @@ vec4 field(vec2 p, bool full) {
   vec2 pp = p;
   float h = 0.0;
   float v = 0.0;
-  vec2 ac = vec2(0.0);
+  vec2 ac = vec2(0.0);   // area accents (current lanes, crest foam)
+  vec2 ct = vec2(0.0);   // contour accents: only drawn on band edges (the live site's strips)
 
   // Vortices first: they bend the plasma that gets sampled below.
-  Vx vt[${MAX_EDDY + 1}];
+  Vx vt[${MAX_EDDY}];
   for (int i = 0; i < ${MAX_EDDY}; i++) {
     vt[i] = vortex(p, pp, uEddy[i].xy, ${f(EDDY_R)}, uEddy[i].w, uEddy[i].z, ${f(EDDY_DEPTH)}, 0.6, 0.35 * uTime, 0.0, 7.0);
   }
-  vt[${MAX_EDDY}] = vortex(p, pp, vec2(${f(WHIRL.c[0])}, ${f(WHIRL.c[1])}), ${f(WHIRL.r)}, ${f(WHIRL.arms)}, uWhirlW,
-                       ${f(WHIRL.depth)}, ${f(WHIRL.eye)}, uWhirlPhase, 2.0, ${f(WHIRL.tight)});
+  Ms ms = maelstrom(p, pp, vec2(${f(WHIRL.c[0])}, ${f(WHIRL.c[1])}), ${f(WHIRL.r)}, uWhirlW, ${f(WHIRL.depth)}, uWhirlPhase);
 
   vec2 fl = pp + uFlow;
   vec2 q = warpQ(fl);
@@ -241,12 +273,25 @@ vec4 field(vec2 p, bool full) {
   for (int i = 0; i < ${MAX_EDDY}; i++) {
     h += vt[i].h;
     v = mix(v, vt[i].band, vt[i].blend);
-    accent(ac, EDDY_COL[i], vt[i].acc);
+    float hiK = uEddyHi < -0.5 || abs(uEddyHi - float(i)) < 0.5 ? 1.0 : 0.25;
+    accent(ct, EDDY_COL[i], vt[i].acc * hiK);
   }
-  h += vt[${MAX_EDDY}].h;
-  v = mix(v, vt[${MAX_EDDY}].band, vt[${MAX_EDDY}].blend);
-  accent(ac, 1.0, vt[${MAX_EDDY}].acc * 0.85);
-  return vec4(h, clamp(v, 0.0, 1.0), ac);
+  h += ms.h;
+  v = mix(v, max(v, ms.band), ms.blend);
+  v = mix(v, 1.0, ms.dark * 0.85);
+  // Strips riding the contours, as on the live homepage: where they show is decided in the
+  // same flowing (and, in a vortex, twisted) coordinates as the plasma, so they move with it.
+  // Denser on the maelstrom's walls.
+  {
+    vec2 fc = pp + uFlow;
+    float m = snoise(vec3(fc * 0.32, uTime * 0.07));
+    float thr = mix(0.62, 0.15, ms.acc);
+    float amt = smoothstep(thr, thr + 0.12, m) * uAmbient;
+    float pal = snoise(vec3(fc * 0.15 + 37.0, uTime * 0.03)) > 0.3 ? 2.0 : 1.0;
+    accent(ct, pal, max(amt, 0.0));
+  }
+  vec2 outA = ac.y >= ct.y ? ac : vec2(ct.x, -ct.y);
+  return vec4(h, clamp(v, 0.0, 1.0), outA);
 }`;
 
 /** Full-screen triangle. */
@@ -306,7 +351,6 @@ uniform vec3  uHi;
 uniform vec3  uAcc[3];           // accent palette (--ocean-a1..3)
 uniform float uGain;
 uniform float uTime;
-uniform float uStrips;           // ambient accent strips (as on the live homepage)
 uniform vec3  uSunDir;
 uniform float uSunAmt;           // glitter path toward the sun
 uniform vec2  uFog;              // fade start, end (world distance)
@@ -341,16 +385,16 @@ vec4 glyph(int k, vec2 xz, vec2 gx, vec2 gy, float hpx) {
   float accI = fv.b;
   float accA = fv.a;
 
-  // Ambient accents: short lime / orange runs riding a contour, fading in and out.
-  if (uStrips > 0.0 && band >= 3.0 && accA < 0.3 && bandOf(id - ivec2(0, 1), k) != band) {
-    float row = float(id.y) + float(k) * 977.0;
-    float seg = floor((float(id.x) + hash12(vec2(row, 3.7)) * 40.0) / 11.0);
-    float hs = hash12(vec2(seg, row));
-    float cyc = uTime / 6.5 + hs * 13.0;
-    float on = step(hash12(vec2(seg + floor(cyc) * 1.7, row)), 0.06);
-    float ph = fract(cyc);
-    float env = on * smoothstep(0.0, 0.1, ph) * (1.0 - smoothstep(0.32, 0.45, ph)) * uStrips;
-    if (env > accA) { accA = env; accI = hs < 0.7 ? 1.0 : 2.0; }
+  // Contour accents (negative amount): only on cells at the high side of a band edge, upper
+  // bands only, so they trace the waveform's contours like the live site's strips.
+  if (accA < 0.0) {
+    float amt = -accA;
+    accA = 0.0;
+    if (band >= 3.0) {
+      float lo = min(min(bandOf(id + ivec2(1, 0), k), bandOf(id - ivec2(1, 0), k)),
+                     min(bandOf(id + ivec2(0, 1), k), bandOf(id - ivec2(0, 1), k)));
+      if (lo < band) accA = amt;
+    }
   }
 
   // Glitter path toward a low sun.
@@ -430,7 +474,7 @@ void main() {
   o = vec4(mix(uBg, mix(a, b, tk), fade), 1.0);
 }`;
 
-/** Sky: a low sun drawn in glyphs (screen-locked cells), only when uSunAmt > 0. */
+/** Sky: a setting sun and the horizon, drawn in glyphs (screen-locked cells), only when uSunAmt > 0. */
 export const SKY_FS = `#version 300 es
 precision highp float;
 precision highp sampler2DArray;
@@ -445,36 +489,171 @@ uniform vec3  uSunDir;
 uniform float uSunAmt;
 uniform float uTime;
 uniform vec3  uBg;
-uniform vec3  uSunCol;
+uniform vec3  uSunCol;   // rim / glow (orange)
+uniform vec3  uSunCore;  // core (gold)
 uniform vec3  uLo;
 uniform vec4  uQuiet[${MAX_QUIET}];
 uniform float uQuietA[${MAX_QUIET}];
 uniform int   uQuietN;
 uniform float uFeather;
 out vec4 o;
+
+float hash12(vec2 p) {
+  vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+  p3 += dot(p3, p3.yzx + 33.33);
+  return fract((p3.x + p3.y) * p3.z);
+}
+
 void main() {
   vec2 cell = floor(gl_FragCoord.xy / uNative);
   vec2 cc = (cell + 0.5) * uNative;
   vec2 ndc = cc / uRes * 2.0 - 1.0;
   vec3 dir = normalize(uCamF + ndc.x * uTanHalf * (uRes.x / uRes.y) * uCamR + ndc.y * uTanHalf * uCamU);
-  float ang = acos(clamp(dot(dir, uSunDir), -1.0, 1.0));
-  const float R = 0.05;
+
+  // Sun-relative angles: az (along the horizon), el (above the horizon).
+  float el = asin(clamp(dir.y, -1.0, 1.0));
+  float sunEl = asin(uSunDir.y);
+  float az = atan(dir.x, -dir.z) - atan(uSunDir.x, -uSunDir.z);
+  az = mod(az + 3.14159265, 6.2831853) - 3.14159265;
+  const float R = 0.1;                 // disc radius (rad)
+  vec2 d = vec2(az, el - sunEl) / R;   // disc units
+  float r = length(d);
+
   float band = 0.0;
+  float a = 0.0;
   vec3 col = uSunCol;
-  if (ang < R) band = ang < R * 0.6 ? 7.0 : 6.0;
-  else if (ang < R * 1.7) band = mod(cell.x + cell.y, 2.0) < 1.0 && sin(ang * 140.0 - uTime * 2.0) > 0.0 ? 4.0 : 0.0;
-  // A thin horizon line.
-  if (band < 1.0 && abs(dir.y + 0.006) < 0.0035) { band = 3.0; col = mix(uLo, uSunCol, 0.35); }
-  float a = band > 0.0 ? (band >= 6.0 ? 0.95 : 0.55) * uSunAmt : 0.0;
+
+  if (r < 1.0) {
+    // The disc: dense gold core shading out to an orange rim.
+    band = r < 0.55 ? 7.0 : (r < 0.82 ? 6.0 : 5.0);
+    col = mix(uSunCore, uSunCol, smoothstep(0.2, 1.0, r));
+    a = 0.95 - 0.25 * smoothstep(0.6, 1.0, r);
+    // Sunset stripes: whole glyph rows below the sun's centre, closer together toward the water.
+    float sunRow = (dot(uSunDir, uCamU) / (dot(uSunDir, uCamF) * uTanHalf) * 0.5 + 0.5) * uRes.y / uNative.y;
+    float k = floor(sunRow) - cell.y;   // rows below the centre
+    if (k >= 1.0 && fract(sqrt(k) * 1.7) < 0.3) { band = 0.0; a = 0.0; }
+  } else {
+    // Halo: quantised into soft bands (like the field's elevation bands), wide along the horizon.
+    vec2 hd = vec2(d.x * 0.4, d.y);
+    float g = exp(-(length(hd) - 1.0) * 3.2) * step(0.0, el);
+    float gb = floor(g * 4.0) / 4.0;
+    if (gb > 0.0) {
+      band = gb >= 0.75 ? 3.0 : (gb >= 0.5 ? 2.0 : 1.0);
+      col = uSunCol;
+      a = 0.2 + 0.4 * gb;
+    }
+  }
+
+  // Haze: the sky thickens toward the horizon, warm near the sun, grey away from it.
+  float rows = el / (2.0 * uTanHalf / uRes.y * uNative.y);   // cell rows above the horizon
+  if (band < 1.0 && rows > -0.5 && rows < 6.0) {
+    float warm = exp(-abs(az) / 0.5);
+    float dens = 1.0 - rows / 6.0;
+    float hb = floor(dens * dens * 3.0 + hash12(cell) * 0.6);
+    if (hb > 0.0) {
+      band = min(hb, 3.0) + (rows < 0.5 && warm > 0.4 ? 1.0 : 0.0);
+      col = mix(uLo, uSunCol, warm);
+      a = (0.18 + 0.3 * dens) * (0.6 + 0.4 * warm);
+    }
+  }
+
+  a *= uSunAmt;
   vec2 px = vec2(gl_FragCoord.x, uRes.y - gl_FragCoord.y);
   for (int i = 0; i < ${MAX_QUIET}; i++) {
     if (i >= uQuietN) break;
-    vec4 r = uQuiet[i];
-    vec2 dd = max(max(r.xy - px, px - r.zw), 0.0);
+    vec4 q = uQuiet[i];
+    vec2 dd = max(max(q.xy - px, px - q.zw), 0.0);
     a *= 1.0 - (1.0 - smoothstep(0.0, uFeather, length(dd))) * uQuietA[i];
   }
   vec2 uv = (gl_FragCoord.xy - cell * uNative) / uNative;
   uv.y = 1.0 - uv.y;
   float cov = band > 0.0 ? textureLod(uGlyphS, vec3(uv, band - 1.0), 0.0).r : 0.0;
   o = vec4(mix(uBg, col, a * cov), 1.0);
+}`;
+
+export const MAX_BOX = 3;
+
+/**
+ * The bottom of the maelstrom: the screen goes black and the swirling field (screen-locked
+ * glyph cells) gathers into the outlines of the directory's boxes.
+ */
+export const FORM_FS = `#version 300 es
+precision highp float;
+precision highp sampler2DArray;
+uniform sampler2DArray uGlyphS;
+uniform vec2  uNative;
+uniform vec2  uRes;
+uniform float uTime;
+uniform float uSpin;
+uniform float uBlack;
+uniform float uForm;
+uniform vec4  uBox[${MAX_BOX}];   // device px, top-left origin: x0, y0, x1, y1
+uniform int   uBoxN;
+uniform float uBoxHi;             // hovered box (-1 = none)
+uniform vec3  uAcc[3];
+out vec4 o;
+
+float hash12(vec2 p) {
+  vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+  p3 += dot(p3, p3.yzx + 33.33);
+  return fract((p3.x + p3.y) * p3.z);
+}
+vec2 rot(vec2 d, float a) { float c = cos(a), s = sin(a); return vec2(c * d.x - s * d.y, s * d.x + c * d.y); }
+float sdBox(vec2 p, vec4 b) {
+  vec2 c = (b.xy + b.zw) * 0.5;
+  vec2 h = (b.zw - b.xy) * 0.5;
+  vec2 d = abs(p - c) - h;
+  return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
+}
+
+void main() {
+  vec2 cell = floor(gl_FragCoord.xy / uNative);
+  vec2 cc = (cell + 0.5) * uNative;
+  vec2 px = vec2(cc.x, uRes.y - cc.y);
+  float f = uForm;
+
+  // The free field: the plasma, still wound into the spiral you fell down.
+  vec2 q = (px - uRes * 0.5) / uNative.y * 0.09;
+  float r = length(q);
+  q = rot(q, 3.0 * log(1.0 + 5.0 / (r + 0.3)) + uSpin);
+  float pt = uTime * 0.45;
+  float v = sin(q.x + pt) + sin(q.y + 0.7 * pt) + sin(0.5 * (q.x + q.y + pt)) + sin(sqrt(dot(q, q) + 1.0) + pt);
+  v = 0.5 + 0.5 * v * 0.37;
+  v *= smoothstep(0.2, 2.5, r);                     // the drain stays dark
+
+  // Distance (in cell rows) to the nearest box outline.
+  float dB = 1e5;
+  float inside = 0.0;
+  int bi = 0;
+  for (int i = 0; i < ${MAX_BOX}; i++) {
+    if (i >= uBoxN) break;
+    float sd = sdBox(px, uBox[i]) / uNative.y;
+    if (abs(sd) < dB) { dB = abs(sd); bi = i; }
+    if (sd < 0.0) inside = 1.0;
+  }
+  // Early on the outlines are loose and wide, then they tighten onto the edges.
+  float jitter = (hash12(cell + floor(uTime * 6.0)) - 0.5) * 3.0 * (1.0 - f);
+  float ring = exp(-max(0.0, dB - 0.55 + jitter) / mix(9.0, 0.4, f));
+  float hi = abs(uBoxHi - float(bi)) < 0.5 ? 1.0 : 0.0;
+  // Once formed, the field settles into a dim, slow background (the deep), and the boxes'
+  // insides clear so their text reads.
+  // Calmer toward the middle where the content sits, full waveform out at the edges.
+  float edgeV = smoothstep(0.22, 0.6, length((px / uRes - 0.5) * vec2(1.0, 1.35)));
+  float bg = v * mix(1.0, mix(0.4, 0.9, edgeV), f) * (1.0 - inside * smoothstep(0.3, 0.8, f));
+  float val = max(bg, ring * smoothstep(0.0, 0.55, f) * (0.72 + 0.28 * hi));
+  float band = floor(clamp(val, 0.0, 1.0) * 7.0 + 0.5);
+
+  vec3 grey = mix(vec3(0.3), vec3(0.75), smoothstep(0.1, 0.95, val));
+  vec3 acc = bi == 0 ? uAcc[0] : (bi == 1 ? uAcc[1] : uAcc[2]);
+  float edge = smoothstep(0.35, 0.95, f) * exp(-dB / 1.4);
+  vec3 col = mix(grey, acc, clamp(edge * (1.0 + hi), 0.0, 1.0));
+  float a = band > 0.0 ? pow(band / 7.0, 0.75) * (0.75 + 0.25 * edge) : 0.0;
+
+  vec2 uv = (gl_FragCoord.xy - cell * uNative) / uNative;
+  uv.y = 1.0 - uv.y;
+  float cov = band > 0.0 ? textureLod(uGlyphS, vec3(uv, band - 1.0), 0.0).r : 0.0;
+  // Box panels: a faint fill, a touch of the box's colour when hovered.
+  vec3 fill = inside * smoothstep(0.5, 1.0, f) * mix(vec3(0.035), acc * 0.07, hi);
+  vec3 c = mix(fill, col, a * cov);
+  o = vec4(c * uBlack, uBlack);
 }`;

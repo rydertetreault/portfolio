@@ -9,7 +9,8 @@ import OceanCanvas from "./OceanCanvas";
 import Directory from "./directory";
 import { oceanNav } from "./nav";
 import { BEATS, SECTIONS, TRACK, eventsAt, textOpacity } from "./route";
-import { AboutText, ContactStop, EducationStop, ExperienceStop, OriginStop, ProjectStop, SkillGroup } from "./stops";
+import { AboutText, EducationStop, SkillsHead, ExperienceStop, OriginStop, ProjectsHead, ProjectsRow, SkillGroup } from "./stops";
+import Timeline from "./timeline-bar";
 import { SKILLS } from "@/data/profile";
 import { EXPERIENCES } from "@/data/profile";
 import type { GitHubRepo } from "@/lib/github";
@@ -103,15 +104,6 @@ function Header({ u }: { u: MotionValue<number> }) {
   );
 }
 
-/** The bottom of the whirlpool: the screen goes black, then the directory. */
-function Blackout({ u }: { u: MotionValue<number> }) {
-  const black = useTransform(u, (v) => eventsAt(v).blackout);
-  const [on, setOn] = useState(false);
-  useMotionValueEvent(black, "change", (b) => setOn(b > 0.01));
-  if (!on) return null;
-  return <motion.div aria-hidden style={{ opacity: black }} className="pointer-events-none fixed inset-0 z-[15] bg-black" />;
-}
-
 /**
  * The whole site: one ocean, flown through by scrolling. Every other page of the site
  * (`children`) opens as a waveform lightbox over it, so the ocean never reloads.
@@ -131,28 +123,27 @@ export default function Ocean({ projects, children }: { projects: GitHubRepo[]; 
     if (s) window.scrollTo({ top: s.u * window.innerHeight });
   }, []);
 
-  let pi = 0;
-  const nProj = BEATS.filter((x) => x.section === "projects").length;
   return (
     <main className="relative text-foreground">
       <OceanCanvas camU={camU} />
       <Header u={camU} />
       {/* The scroll track: the camera flies as this scrolls. */}
       <div aria-hidden style={{ height: `calc(${TRACK} * 100lvh + 100lvh)` }} />
-      <Blackout u={camU} />
+      <Timeline u={camU} />
       {BEATS.map((b, i) => {
         const place = b.id === "origin" ? PLACE.origin : PLACE[b.side];
         let content: ReactNode = null;
         if (b.id === "origin") content = <OriginStop />;
-        else if (b.id === "about")
+        else if (b.id === "about") content = <AboutText />;
+        else if (b.id === "skills")
           return (
             <Stop key={b.id} u={camU} i={i} place={place} quiet={false}>
               <div className="flex min-h-full flex-col gap-10 sm:h-full sm:justify-between">
-                <div data-ocean-quiet className="sm:w-[min(40rem,46vw)]">
-                  <AboutText />
+                <div data-ocean-quiet>
+                  <SkillsHead />
                 </div>
                 {/* One group per current, left to right in lane order. */}
-                <div className="grid gap-8 sm:grid-cols-3 sm:gap-[4vw]">
+                <div className="grid gap-8 sm:grid-cols-3 sm:gap-[6vw]">
                   {SKILLS.map((g, k) => (
                     <div key={g.title} data-ocean-quiet>
                       <SkillGroup i={k} />
@@ -165,16 +156,23 @@ export default function Ocean({ projects, children }: { projects: GitHubRepo[]; 
         else if (b.section === "experience") {
           const k = Number(b.id.split("-")[1]);
           content = <ExperienceStop exp={EXPERIENCES[k]} k={k} n={EXPERIENCES.length} />;
-        } else if (b.section === "projects") {
-          const repo = projects[pi++];
-          if (!repo) return null;
-          content = <ProjectStop repo={repo} k={pi - 1} n={nProj} />;
-        } else if (b.id === "education") content = <EducationStop />;
-        else if (b.id === "contact") content = <ContactStop />;
+        } else if (b.id === "projects")
+          return (
+            <Stop key={b.id} u={camU} i={i} place={place} quiet={false}>
+              <div className="flex min-h-full flex-col gap-10 sm:h-full sm:justify-between">
+                <div data-ocean-quiet>
+                  <ProjectsHead />
+                </div>
+                <ProjectsRow projects={projects} />
+              </div>
+            </Stop>
+          );
+        else if (b.id === "education") content = <EducationStop />;
+        else if (b.id === "contact") return null; // the whirlpool speaks for itself
         else if (b.id === "directory")
           return (
-            <Stop key={b.id} u={camU} i={i} place="inset-x-4 top-1/2 z-[16] -translate-y-1/2" quiet={false}>
-              <Directory />
+            <Stop key={b.id} u={camU} i={i} place="inset-x-6 top-1/2 z-[16] -translate-y-1/2" quiet={false}>
+              <Directory u={camU} />
             </Stop>
           );
         return (

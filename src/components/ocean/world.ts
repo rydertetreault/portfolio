@@ -8,10 +8,11 @@
  *
  * Top view (north up):
  *
- *        E1      E0           swell 3 (z -74)
+ *    E0  E1  E2  E3           eddies (z -100)
+ *                             swell 3 (z -74)      currents (x 24, z -116 .. -56)
  *     E2                      swell 2 (z -62)
  *       E3                    swell 1 (z -50)
- *    whirlpool                currents (z -42 .. 12)
+ *    maelstrom
  *    calm water, sun ↓
  *                             origin (0, 0)
  */
@@ -50,14 +51,14 @@ export const FLOW_SPEED: Vec2 = [-0.15, -0.02];
 /** Accent palette indices (CSS vars --ocean-a1..3, read by the engine and used by the text). */
 export const ACCENTS = ["--ocean-a1", "--ocean-a2", "--ocean-a3"] as const;
 
-/** About: three currents flowing north from under the dive, one per skill group. */
+/** Skills: three currents flowing north, side by side, one per skill group (after the swell). */
 export const CURRENTS = {
-  x: 0,
+  x: 24,
   gap: 6.0,
   width: 1.6,
   /** Far end (north) and near end of the lanes. */
-  z0: -42,
-  z1: 12,
+  z0: -116,
+  z1: -56,
   speeds: [2.2, 3.1, 2.6],
   /** Accent per lane (1-based palette index), matching the skill group headings. */
   colors: [1, 2, 3],
@@ -74,21 +75,22 @@ export const SWELL = {
   colors: [1, 2, 3],
 };
 
-/** Projects: one eddy per featured project. arms < 0 turns the other way. */
+/** Projects: the four featured projects as a row of eddies, all seen at once. arms < 0 turns the other way. */
 export const EDDIES: { c: Vec2; arms: number; color: number }[] = [
-  { c: [-6, -90], arms: 3, color: 1 },
-  { c: [-21, -98], arms: -2, color: 2 },
-  { c: [-36, -93], arms: 4, color: 3 },
-  { c: [-46, -80], arms: -3, color: 1 },
+  { c: [-24, -100], arms: 3, color: 1 },
+  { c: [-16, -100], arms: -2, color: 2 },
+  { c: [-8, -100], arms: 4, color: 3 },
+  { c: [0, -100], arms: -3, color: 1 },
 ];
-export const EDDY_R = 4.2;
-export const EDDY_DEPTH = 0.9;
+export const EDDY_R = 3.0;
+export const EDDY_DEPTH = 0.8;
 
 /** Education: calm open water out to the horizon, a low sun ahead. */
-export const CALM = { c: [-50, -30] as Vec2, r: 45, sunYaw: -180, sunElev: 2.2 };
+export const CALM = { c: [-50, -30] as Vec2, r: 45, sunYaw: -180, sunElev: 3.2 };
 
 /** Contact: the whirlpool. */
-export const WHIRL = { c: [-44, -44] as Vec2, r: 6.5, depth: 3.2, eye: 2.2, arms: 5, tight: 11 };
+/** Contact: the maelstrom. */
+export const WHIRL = { c: [-44, -44] as Vec2, r: 13, depth: 7 };
 
 /* ── CPU mirrors (camera placement) ── */
 
