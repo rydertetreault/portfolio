@@ -34,6 +34,25 @@ export default function ProjectsList({ repos }: { repos: GitHubRepo[] }) {
   // "All" groups Professional work ahead of Personal, with PINNED repos leading
   // their group; the sort is stable, so everything else keeps the incoming
   // most-recent-activity order.
+  // Deep links from the journey (/projects#Pria): land on that row once the page
+  // (decode-in, transitions) has settled, and flash it so it's easy to spot.
+  useEffect(() => {
+    const id = decodeURIComponent(window.location.hash.slice(1));
+    if (!id) return;
+    const timers = [250, 700, 1300].map((ms, i) =>
+      window.setTimeout(() => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (Math.abs(el.getBoundingClientRect().top - 112) > 8) el.scrollIntoView({ block: "start" });
+        if (i === 0) {
+          el.classList.add("ring-1", "ring-accent/60");
+          window.setTimeout(() => el.classList.remove("ring-1", "ring-accent/60"), 2200);
+        }
+      }, ms),
+    );
+    return () => timers.forEach(window.clearTimeout);
+  }, []);
+
   const filtered =
     active === "All"
       ? [...repos].sort((a, b) => categoryRank(a) - categoryRank(b) || pinRank(a) - pinRank(b))
@@ -100,7 +119,7 @@ function Row({ repo, n }: { repo: GitHubRepo; n: number }) {
     "inline-flex cursor-pointer items-center gap-1.5 text-text-muted underline decoration-accent decoration-[1.5px] underline-offset-[5px] transition-colors hover:text-accent";
 
   return (
-    <li className="group border-b border-border-theme/50 py-7 last:border-b-0 sm:py-8">
+    <li id={repo.name} className="group scroll-mt-28 border-b border-border-theme/50 py-7 last:border-b-0 sm:py-8">
       <div className="grid gap-x-8 gap-y-3 sm:grid-cols-[3.5rem_1fr]">
         {/* index */}
         <span className="text-accent/90 sm:pt-1">{String(n).padStart(2, "0")}</span>

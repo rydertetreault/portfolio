@@ -62,8 +62,8 @@ export default function NavBar() {
     window.setTimeout(() => document.documentElement.classList.remove("ascii-deeplink"), 4000);
   };
 
-  // The /sea prototype brings its own HUD.
-  if (pathname.startsWith("/sea")) return null;
+  // The homepage (the sea) brings its own HUD.
+  if (isHome) return null;
 
   return (
     <nav

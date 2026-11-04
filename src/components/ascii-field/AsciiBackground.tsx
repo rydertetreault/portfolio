@@ -47,8 +47,8 @@ function resolveMonoFamily(): string {
 // for the overview. Keeping "/" in the map means the field never unmounts when
 // navigating between routes.
 const DEFAULT_ROUTE_PRESETS: Record<string, PresetName> = {
-  "/": "hero",
-  "/projects": "hero", // same field as home: the projects transition never touches the background
+  // "/" is the sea (components/sea), which renders its own field.
+  "/projects": "hero",
   "/resume": "resume",
 };
 

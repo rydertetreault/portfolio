@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { SeaEngine } from "./SeaEngine";
 import { isReducedMotion, subscribeReducedMotion } from "@/lib/motion";
+import { BEATS, WINDOWS } from "./journey";
 
 /* Tiny store: the HUD reads live telemetry from the running engine. */
 let current: SeaEngine | null = null;
@@ -50,6 +51,10 @@ export default function SeaCanvas({ quietSelector = "[data-sea-quiet]" }: { quie
     }
     seaStore.set(engine);
     (window as unknown as { __sea?: SeaEngine }).__sea = engine;
+    if (process.env.NODE_ENV !== "production") {
+      // Dev: beat arrival points for tuning / tests (scrollTo(arrive * innerHeight)).
+      (window as unknown as { __seaBeats?: unknown }).__seaBeats = BEATS.map((b, i) => ({ id: b.id, ...WINDOWS[i] }));
+    }
 
     const applyColors = () =>
       engine.setColors(

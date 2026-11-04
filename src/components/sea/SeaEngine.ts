@@ -4,16 +4,18 @@
  *
  *  Per frame:
  *    1. Advance time / plasma phase / flow (same rates as the old field).
- *    2. Ease the scroll position, sample the camera timeline, add
- *       hand-held sway, swell riding and cursor parallax.
- *    3. Scene pass → cols×rows RGBA8 target (one texel per glyph).
- *    4. ASCII pass → canvas (glyph atlas lookup + colour).
+ *    2. Ease the scroll position, sample the journey's camera keys,
+ *       add hand-held sway, swell riding and cursor parallax.
+ *    3. Scene pass → two cols×rows RGBA8 targets (one texel per glyph).
+ *    4. Trace pass → the cursor's contour path (2N+1 texels).
+ *    5. ASCII pass → canvas (glyph atlas lookup + colour).
  * ─────────────────────────────────────────────────────────────
  */
 
-import { ASCII_FS, MAX_QUIET, MAX_RIPPLES, SCENE_FS, VS } from "./shaders";
-import { KEYS, newCamera, nearestRestU, sampleCamera, type Camera, type Vec3 } from "./timeline";
-import { FLOW_SPEED, MORPH_SPEED, PHASE_SPEED, swellHeight, swellWeight } from "./world";
+import { GLYPH_FS, MAX_QUIET, MAX_RIPPLES, RESOLVE_FS, TRACE_FS, TRACE_N, VS, sceneFS, type SeaMode } from "./shaders";
+import { newCamera, nearestRestU, sampleCamera, type Camera, type Vec3 } from "./timeline";
+import { BEATS, KEYS, STOPS } from "./journey";
+import { FLOW_SPEED, MORPH_SPEED, PHASE_SPEED, REGIONS, swellAt } from "./world";
 
 const GLYPHS = " .:-=+*#%@" + "/\\|_<>^~";
 
@@ -30,6 +32,10 @@ export const SEA_CONFIG = {
   palette: ["#a3e635", "#d8fb74", "#bad366", "#d3b75b", "#a77a4b"],
   pointerRadius: 220,
   pointerGlow: 0.14,
+  /** Seconds after the last move before the cursor effects fade (ascii-field idleFade). */
+  pointerIdle: 2.5,
+  /** Map scanner lens radius (CSS px). */
+  lensRadius: 250,
   /** Scroll easing rate (per second): higher = camera follows the scrollbar more tightly. */
   scrollFollow: 4.2,
   steps: 110,
@@ -45,7 +51,13 @@ export type Telemetry = {
   roll: number;
   fov: number;
   speed: number;
+  /** Last beat the camera rested at (index into BEATS). */
+  beat: number;
+  /** Stop index (STOPS) of that beat. */
   stop: number;
+  /** True while the camera is at rest (reading), false while travelling. */
+  resting: boolean;
+  underwater: boolean;
 };
 
 type Uniforms = Record<string, WebGLUniformLocation | null>;
@@ -95,6 +107,15 @@ function uniforms(gl: WebGL2RenderingContext, p: WebGLProgram): Uniforms {
   return out;
 }
 
+function makeTex(gl: WebGL2RenderingContext, tex: WebGLTexture, w: number, h: number): void {
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+}
+
 export type SeaEngineOptions = {
   fontFamily?: string;
   reducedMotion?: boolean;
@@ -105,13 +126,24 @@ export type SeaEngineOptions = {
 export class SeaEngine {
   private canvas: HTMLCanvasElement;
   private gl: WebGL2RenderingContext;
-  private sceneProg!: WebGLProgram;
-  private asciiProg!: WebGLProgram;
-  private su!: Uniforms;
+  /** Scene pass variants (see sceneFS): compiled on demand, 0 (generic) always present. */
+  private scene: Partial<Record<SeaMode, { prog: WebGLProgram; u: Uniforms }>> = {};
+  private traceProg!: WebGLProgram;
+  private resolveProg!: WebGLProgram;
+  private glyphProg!: WebGLProgram;
+  private tu!: Uniforms;
   private au!: Uniforms;
+  private gu!: Uniforms;
+  private cellTex!: WebGLTexture;
+  private glyphTex!: WebGLTexture;
+  private cellFbo!: WebGLFramebuffer;
+  private variantTimer = 0;
   private vao!: WebGLVertexArrayObject;
   private sceneTex!: WebGLTexture;
+  private sceneTex2!: WebGLTexture;
   private fbo!: WebGLFramebuffer;
+  private traceTex!: WebGLTexture;
+  private traceFbo!: WebGLFramebuffer;
   private atlasTex!: WebGLTexture;
 
   private fontFamily: string;
@@ -160,15 +192,19 @@ export class SeaEngine {
   private up: Vec3 = [0, 0, -1];
   private fwd: Vec3 = [0, -1, 0];
   private tanHalf = 0.27;
-  private lastStop = 0;
+  private lastBeat = 0;
+  private wasUnder = false;
 
   // pointer
   private px = -1;
   private py = -1;
   private pStrength = 0;
-  private pTarget = 0;
+  private pInside = false;
+  private pLastMove = -Infinity;
   private pnx = 0; // smoothed, -1..1
   private pny = 0;
+  private lensX = 0;
+  private lensY = 0;
 
   // ripples [x, z, t0, strength] ×N
   private rip = new Float32Array(MAX_RIPPLES * 4);
@@ -180,7 +216,19 @@ export class SeaEngine {
   private quietS = new Float32Array(MAX_QUIET);
   private quietN = 0;
 
-  readonly telemetry: Telemetry = { u: 0, pos: [0, 0, 0], yaw: 0, pitch: -90, roll: 0, fov: 30, speed: 0, stop: 0 };
+  readonly telemetry: Telemetry = {
+    u: 0,
+    pos: [0, 0, 0],
+    yaw: 0,
+    pitch: -90,
+    roll: 0,
+    fov: 30,
+    speed: 0,
+    beat: 0,
+    stop: 0,
+    resting: true,
+    underwater: false,
+  };
 
   constructor(canvas: HTMLCanvasElement, opts: SeaEngineOptions = {}) {
     this.canvas = canvas;
@@ -209,14 +257,47 @@ export class SeaEngine {
   /** (Re)create every GL resource: on construction and after a context restore. */
   private initGL(): void {
     const gl = this.gl;
-    this.sceneProg = compile(gl, VS, SCENE_FS);
-    this.asciiProg = compile(gl, VS, ASCII_FS);
-    this.su = uniforms(gl, this.sceneProg);
-    this.au = uniforms(gl, this.asciiProg);
+    this.scene = {};
+    this.buildVariant(0);
+    this.buildVariant(1);
+    this.traceProg = compile(gl, VS, TRACE_FS);
+    this.resolveProg = compile(gl, VS, RESOLVE_FS);
+    this.glyphProg = compile(gl, VS, GLYPH_FS);
+    this.tu = uniforms(gl, this.traceProg);
+    this.au = uniforms(gl, this.resolveProg);
+    this.gu = uniforms(gl, this.glyphProg);
+    this.cellTex = gl.createTexture()!;
+    this.glyphTex = gl.createTexture()!;
+    this.cellFbo = gl.createFramebuffer()!;
+    // The specialised ocean / underwater variants compile just after the first frames.
+    window.clearTimeout(this.variantTimer);
+    this.variantTimer = window.setTimeout(() => {
+      this.buildVariant(2);
+      this.variantTimer = window.setTimeout(() => this.buildVariant(3), 120);
+    }, 300);
     this.vao = gl.createVertexArray()!;
     this.sceneTex = gl.createTexture()!;
+    this.sceneTex2 = gl.createTexture()!;
     this.fbo = gl.createFramebuffer()!;
     this.atlasTex = gl.createTexture()!;
+    this.traceTex = gl.createTexture()!;
+    this.traceFbo = gl.createFramebuffer()!;
+    makeTex(gl, this.traceTex, TRACE_N * 2 + 1, 1);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.traceFbo);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.traceTex, 0);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  }
+
+  private buildVariant(mode: SeaMode): void {
+    if (this.disposed || this.scene[mode] || this.gl.isContextLost()) return;
+    const prog = compile(this.gl, VS, sceneFS(mode));
+    this.scene[mode] = { prog, u: uniforms(this.gl, prog) };
+  }
+
+  /** The cheapest compiled scene variant for the current shot. */
+  private pickVariant(ocean: number, under: boolean): { prog: WebGLProgram; u: Uniforms } {
+    const want: SeaMode = under ? 3 : ocean >= 0.999 ? 2 : ocean <= 0.001 ? 1 : 0;
+    return this.scene[want] ?? this.scene[0]!;
   }
 
   private onLost = (e: Event): void => {
@@ -243,15 +324,18 @@ export class SeaEngine {
   }
 
   dispose(): void {
+    this.disposed = true;
     this.stop();
     this.canvas.removeEventListener("webglcontextlost", this.onLost);
     this.canvas.removeEventListener("webglcontextrestored", this.onRestored);
     const gl = this.gl;
-    gl.deleteProgram(this.sceneProg);
-    gl.deleteProgram(this.asciiProg);
-    gl.deleteTexture(this.sceneTex);
-    gl.deleteTexture(this.atlasTex);
+    window.clearTimeout(this.variantTimer);
+    for (const v of Object.values(this.scene)) if (v) gl.deleteProgram(v.prog);
+    for (const p of [this.traceProg, this.resolveProg, this.glyphProg]) gl.deleteProgram(p);
+    for (const t of [this.sceneTex, this.sceneTex2, this.traceTex, this.atlasTex, this.cellTex, this.glyphTex]) gl.deleteTexture(t);
     gl.deleteFramebuffer(this.fbo);
+    gl.deleteFramebuffer(this.traceFbo);
+    gl.deleteFramebuffer(this.cellFbo);
     gl.deleteVertexArray(this.vao);
   }
 
@@ -284,14 +368,22 @@ export class SeaEngine {
     this.requestStatic();
   }
 
+  /** Cut straight to the current scroll position on the next frame (deep links): no flight. */
+  snap(): void {
+    this.first = true;
+    this.requestStatic();
+  }
+
   setPointer(x: number, y: number): void {
     this.px = x;
     this.py = y;
-    this.pTarget = 1;
+    this.pInside = true;
+    this.pLastMove = this.time;
+    this.requestStatic();
   }
 
   clearPointer(): void {
-    this.pTarget = 0;
+    this.pInside = false;
   }
 
   /** Drop a ripple where the screen point (CSS px) meets the sea. */
@@ -313,68 +405,31 @@ export class SeaEngine {
     return [((nx + 1) / 2) * (this.w / this.dpr), ((1 - ny) / 2) * (this.h / this.dpr)];
   }
 
+  /** Signed view-space direction to a world point: [x, y] in -1..1-ish and whether it's ahead. */
+  direction(p: Vec3): { x: number; y: number; ahead: boolean } {
+    const v: Vec3 = [p[0] - this.camPos[0], p[1] - this.camPos[1], p[2] - this.camPos[2]];
+    const z = v[0] * this.fwd[0] + v[1] * this.fwd[1] + v[2] * this.fwd[2];
+    const x = v[0] * this.right[0] + v[1] * this.right[1] + v[2] * this.right[2];
+    const y = v[0] * this.up[0] + v[1] * this.up[1] + v[2] * this.up[2];
+    return { x, y, ahead: z > 0.01 };
+  }
+
+  /** Where a screen point (CSS px) meets the sea plane → world [x, z], or null. */
+  seaAtScreen(x: number, y: number): [number, number] | null {
+    return this.screenToSea(x, y);
+  }
+
+  get cameraPos(): Vec3 {
+    return this.camPos;
+  }
+
   /** Camera sample at an arbitrary scroll position (for drawing the flight path). */
   cameraAt(u: number): Camera {
-    return sampleCamera(u, this.w / Math.max(1, this.h), newCamera());
+    return sampleCamera(KEYS, u, this.w / Math.max(1, this.h), newCamera());
   }
 
   get backend(): string {
     return "webgl2";
-  }
-
-  /**
-   * Debug: read the scene target back as text, one char per sampled cell —
-   * band glyph from the ramp, "~" sky (or "-" horizon glow), "L"/"O" lime/orange
-   * accent patches on band edges, "@" specular. Plus a histogram.
-   */
-  debugDump(stepX = 4, stepY = 2, mode: "band" | "alpha" = "band"): { text: string; stats: Record<string, number> } {
-    const gl = this.gl;
-    const px = new Uint8Array(this.cols * this.rows * 4);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
-    gl.readPixels(0, 0, this.cols, this.rows, gl.RGBA, gl.UNSIGNED_BYTE, px);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    const ramp = " .:-=+*#";
-    const stats: Record<string, number> = { sky: 0, lime: 0, orange: 0, spec: 0, inten: 0, n: 0 };
-    const band = (c: number, r: number) => {
-      const i = ((this.rows - 1 - r) * this.cols + c) * 4;
-      return px[i + 1] === 255 ? -1 : Math.round((px[i] / 255) * 7);
-    };
-    let text = "";
-    for (let r = 0; r < this.rows; r += stepY) {
-      let line = "";
-      for (let c = 0; c < this.cols; c += stepX) {
-        const i = ((this.rows - 1 - r) * this.cols + c) * 4;
-        const g = px[i + 1];
-        stats.n++;
-        if (g === 255) {
-          stats.sky++;
-          line += px[i + 2] > 10 ? "-" : "~";
-          continue;
-        }
-        const b = band(c, r);
-        stats["b" + b] = (stats["b" + b] ?? 0) + 1;
-        stats.inten += px[i + 3] / 255;
-        const edge = b > 0 && (band(c, Math.max(0, r - 1)) !== b || band(c, Math.min(this.rows - 1, r + 1)) !== b);
-        const lime = (g >> 4) / 14;
-        const orng = (g & 15) / 15;
-        if (px[i + 2] > 127) {
-          stats.spec++;
-          line += "@";
-        } else if (edge && lime > 0.35 && b >= 5) {
-          stats.lime++;
-          line += "L";
-        } else if (edge && orng > 0.35 && b >= 2 && b <= 5) {
-          stats.orange++;
-          line += "O";
-        } else if (mode === "alpha") {
-          const a = b <= 0 ? 0 : Math.pow(b / 7, SEA_CONFIG.gamma) * SEA_CONFIG.brightness * (px[i + 3] / 255);
-          line += " .,:;-=+*#%@"[Math.min(11, Math.round(a * 11 / 0.75))] ?? "@";
-        } else line += ramp[b];
-      }
-      text += line + "\n";
-    }
-    stats.inten = +(stats.inten / Math.max(1, stats.n - stats.sky)).toFixed(3);
-    return { text, stats };
   }
 
   resize(): void {
@@ -395,14 +450,18 @@ export class SeaEngine {
     this.rows = Math.ceil(this.h / this.cellH);
 
     const gl = this.gl;
-    gl.bindTexture(gl.TEXTURE_2D, this.sceneTex);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, this.cols, this.rows, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    makeTex(gl, this.sceneTex, this.cols, this.rows);
+    makeTex(gl, this.sceneTex2, this.cols, this.rows);
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.sceneTex, 0);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT1, gl.TEXTURE_2D, this.sceneTex2, 0);
+    gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1]);
+    makeTex(gl, this.cellTex, this.cols, this.rows);
+    makeTex(gl, this.glyphTex, this.cols, this.rows);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.cellFbo);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.cellTex, 0);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT1, gl.TEXTURE_2D, this.glyphTex, 0);
+    gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1]);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
     this.buildAtlas();
@@ -456,20 +515,30 @@ export class SeaEngine {
       this.right[1] * a + this.up[1] * b + this.fwd[1],
       this.right[2] * a + this.up[2] * b + this.fwd[2],
     ];
-    if (d[1] >= -1e-4) return null;
+    const below = this.camPos[1] < 0;
+    if (below ? d[1] <= 1e-4 : d[1] >= -1e-4) return null;
     const t = this.camPos[1] / -d[1];
     if (t > 200) return null;
     return [this.camPos[0] + d[0] * t, this.camPos[2] + d[2] * t];
   }
 
+  /** Debug: when set, render() syncs after each pass and records its time (ms). */
+  profile: { scene: number; trace: number; ascii: number } | null = null;
+  private syncPx = new Uint8Array(4);
+  private sync(): number {
+    this.gl.readPixels(0, 0, 1, 1, this.gl.RGBA, this.gl.UNSIGNED_BYTE, this.syncPx);
+    return performance.now();
+  }
+
   private staticQueued = false;
+  private disposed = false;
   /** Reduced motion: re-render once on demand instead of running the loop. */
   private requestStatic(): void {
     if (!this.reduced || this.staticQueued) return;
     this.staticQueued = true;
     requestAnimationFrame(() => {
       this.staticQueued = false;
-      this.render(0);
+      if (!this.disposed) this.render(0);
     });
   }
 
@@ -498,8 +567,8 @@ export class SeaEngine {
     if (this.dprCap > 1 && this.dpr > 1) {
       this.dprCap = 1;
       this.resize();
-    } else if (this.steps > 60) {
-      this.steps = 60;
+    } else if (this.steps > 64) {
+      this.steps = 64;
     }
   }
 
@@ -507,14 +576,14 @@ export class SeaEngine {
     const aspect = this.w / Math.max(1, this.h);
     let u: number;
     if (this.reduced) {
-      u = nearestRestU(this.uTarget);
+      u = nearestRestU(KEYS, this.uTarget);
       this.uSmooth = u;
     } else {
       if (this.first) this.uSmooth = this.uTarget;
       else this.uSmooth += (this.uTarget - this.uSmooth) * (1 - Math.exp(-dt * SEA_CONFIG.scrollFollow));
       u = this.uSmooth;
     }
-    const c = sampleCamera(u, aspect, this.cam);
+    const c = sampleCamera(KEYS, u, aspect, this.cam);
     const t = this.time;
     const pos: Vec3 = [c.pos[0], c.pos[1], c.pos[2]];
     let yaw = c.yaw;
@@ -532,18 +601,19 @@ export class SeaEngine {
     }
     // Ride the swell: bob up/down and pitch with the wave beneath.
     if (c.ride > 0) {
-      const sw = swellWeight(pos[0], pos[2]) * c.ride;
-      if (sw > 0) {
-        const hNow = swellHeight(pos[0], pos[2], t);
-        const hAhead = swellHeight(pos[0], pos[2] - 1.5, t);
-        pos[1] += sw * hNow * 0.75;
-        pitch += sw * (hAhead - hNow) * 6;
-        roll += sw * 2.5 * Math.sin(t * 0.6);
+      const hNow = swellAt(pos[0], pos[2], t);
+      if (hNow !== 0) {
+        const hAhead = swellAt(pos[0], pos[2] - 1.5, t);
+        pos[1] += c.ride * hNow * 0.75;
+        pitch += c.ride * (hAhead - hNow) * 6;
+        roll += c.ride * 2.5 * Math.sin(t * 0.6);
       }
     }
     // Cursor parallax: look slightly toward the pointer.
-    this.pnx += ((this.pStrength > 0 ? (this.px / (this.w / this.dpr)) * 2 - 1 : 0) - this.pnx) * Math.min(1, dt * 3);
-    this.pny += ((this.pStrength > 0 ? (this.py / (this.h / this.dpr)) * 2 - 1 : 0) - this.pny) * Math.min(1, dt * 3);
+    const on = this.pStrength > 0.01;
+    const k = Math.min(1, dt * 3);
+    this.pnx += ((on ? (this.px / (this.w / this.dpr)) * 2 - 1 : 0) - this.pnx) * k;
+    this.pny += ((on ? (this.py / (this.h / this.dpr)) * 2 - 1 : 0) - this.pny) * k;
 
     const d2r = Math.PI / 180;
     const cy = Math.cos(yaw * d2r);
@@ -561,7 +631,7 @@ export class SeaEngine {
     this.fwd = f;
 
     // Parallax as a small sideways shift in the view plane (scaled with altitude).
-    const par = Math.min(0.35, pos[1] * 0.02);
+    const par = Math.min(0.35, Math.abs(pos[1]) * 0.02);
     for (let i = 0; i < 3; i++) pos[i] += (this.right[i] * this.pnx - this.up[i] * this.pny) * par;
 
     this.tanHalf = Math.tan((c.fov * d2r) / 2);
@@ -581,16 +651,24 @@ export class SeaEngine {
     tel.pitch = pitch;
     tel.roll = roll;
     tel.fov = c.fov;
+    tel.resting = c.beat >= 0;
+    tel.underwater = pos[1] < -0.35;
 
-    // Stop arrival: a ripple + a glitch "cut", like a mission card landing.
-    const stop = c.stop;
-    tel.stop = stop >= 0 ? stop : tel.stop;
-    if (stop >= 0 && stop !== this.lastStop && !this.first) {
-      const hit = this.screenToSea((this.w / this.dpr) / 2, (this.h / this.dpr) * 0.62);
-      if (hit && !this.reduced) this.addRipple(hit[0], hit[1], 1.1);
-      if (!this.reduced) this.glitchBurst = 1;
+    // Arrival at a beat: a ripple + a glitch "cut", like a mission card landing.
+    const beat = c.beat;
+    if (beat >= 0) {
+      tel.beat = beat;
+      tel.stop = STOPS.findIndex((s) => s.id === BEATS[beat].stop);
     }
-    if (stop >= 0) this.lastStop = stop;
+    if (beat >= 0 && beat !== this.lastBeat && !this.first && !this.reduced) {
+      const hit = this.screenToSea((this.w / this.dpr) / 2, (this.h / this.dpr) * 0.62);
+      if (hit && !tel.underwater) this.addRipple(hit[0], hit[1], 1.1);
+      this.glitchBurst = 1;
+    }
+    if (beat >= 0) this.lastBeat = beat;
+    // Breaking the surface on the dive: a hard glitch cut.
+    if (tel.underwater !== this.wasUnder && !this.first && !this.reduced) this.glitchBurst = 1.4;
+    this.wasUnder = tel.underwater;
   }
 
   private measureQuiet(): void {
@@ -616,7 +694,7 @@ export class SeaEngine {
 
   private render(dt: number): void {
     const gl = this.gl;
-    if (gl.isContextLost()) return;
+    if (this.disposed || gl.isContextLost()) return;
 
     if (!this.reduced) {
       this.time += dt;
@@ -625,7 +703,9 @@ export class SeaEngine {
       this.flow[0] += dt * FLOW_SPEED[0];
       this.flow[1] += dt * FLOW_SPEED[1];
     }
-    this.pStrength += (this.pTarget - this.pStrength) * Math.min(1, dt * 5);
+    // Cursor influence: on while the pointer is in the window and moved recently.
+    const want = this.pInside && this.time - this.pLastMove < SEA_CONFIG.pointerIdle ? 1 : 0;
+    this.pStrength = this.reduced ? 0 : this.pStrength + (want - this.pStrength) * (1 - Math.exp(-dt * 3));
     this.updateCamera(dt);
     this.measureQuiet();
     this.first = false;
@@ -640,15 +720,34 @@ export class SeaEngine {
     }
 
     const c = this.cam;
+    const under = this.telemetry.underwater;
     const rot = new Float32Array([...this.right, ...this.up, ...this.fwd]);
 
-    // ── scene pass ──
+    // Map scanner lens: follows the cursor; wanders by itself on touch screens.
+    const cssW = this.w / this.dpr;
+    const cssH = this.h / this.dpr;
+    let lensStr = 0;
+    if (c.chart > 0.001) {
+      if (this.pStrength > 0.05) {
+        this.lensX = this.px;
+        this.lensY = this.py;
+        lensStr = this.pStrength;
+      } else if (!this.reduced && !window.matchMedia("(hover: hover)").matches) {
+        this.lensX = cssW * (0.5 + 0.3 * Math.sin(this.time * 0.21));
+        this.lensY = cssH * (0.55 + 0.22 * Math.sin(this.time * 0.33 + 1.1));
+        lensStr = 1;
+      }
+    }
+
     gl.bindVertexArray(this.vao);
+
+    // ── scene pass (two targets) ──
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
     gl.viewport(0, 0, this.cols, this.rows);
     gl.disable(gl.BLEND);
-    gl.useProgram(this.sceneProg);
-    const su = this.su;
+    const variant = this.pickVariant(c.ocean, under);
+    gl.useProgram(variant.prog);
+    const su = variant.u;
     gl.uniform2f(su.uRes, this.w, this.h);
     gl.uniform2f(su.uCell, this.cellW, this.cellH);
     gl.uniform2f(su.uGrid, this.cols, this.rows);
@@ -658,30 +757,66 @@ export class SeaEngine {
     gl.uniform1f(su.uPixAngle, (2 * this.tanHalf) / this.rows);
     gl.uniform1f(su.uShade, c.shade);
     gl.uniform1f(su.uChop, c.shade);
-    gl.uniform1f(su.uAccent, 1 - c.contour * 0.7);
     gl.uniform1f(su.uFog, c.fog);
+    gl.uniform1f(su.uOcean, c.ocean);
+    gl.uniform1f(su.uLit, c.lit);
+    gl.uniform1f(su.uChart, c.chart);
+    gl.uniform1f(su.uUnder, under ? 1 : 0);
+    gl.uniform1f(su.uAccent, 1);
+    gl.uniform4f(su.uLens, this.lensX * this.dpr, this.lensY * this.dpr, SEA_CONFIG.lensRadius * this.dpr, lensStr);
     gl.uniform1i(su.uSteps, this.steps);
+    const farT = c.fog > 0.0005 ? Math.min(320, 3.2 / c.fog) : 320;
+    gl.uniform1f(su.uFarT, farT);
+    // Only regions the camera can actually see get evaluated per height sample.
+    const reach = under ? 45 : Math.min(farT, 60 + Math.abs(this.camPos[1]) * 3);
+    let mask = 0;
+    REGIONS.forEach((r, i) => {
+      const d = Math.hypot(this.camPos[0] - r.center[0], this.camPos[2] - r.center[1]);
+      if (d - r.outer < reach || c.chart > 0.001) mask |= 1 << i;
+    });
+    gl.uniform1i(su.uRegMask, mask);
     gl.uniform1f(su.uTime, this.time);
     gl.uniform1f(su.uPhase, this.phase);
     gl.uniform1f(su.uMorph, this.morph);
     gl.uniform2f(su.uFlow, this.flow[0], this.flow[1]);
     gl.uniform4fv(su.uRip, this.rip);
     gl.uniform1i(su.uRipN, this.ripN);
+    const p0 = this.profile ? this.sync() : 0;
     gl.drawArrays(gl.TRIANGLES, 0, 3);
+    const p1 = this.profile ? this.sync() : 0;
 
-    // ── ASCII pass ──
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.viewport(0, 0, this.w, this.h);
-    gl.clearColor(0, 0, 0, 0);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-    gl.useProgram(this.asciiProg);
+    // ── trace pass: the contour under the cursor ──
+    const traceOn = this.pStrength > 0.02 && !under;
+    const tcol = Math.floor((this.px * this.dpr) / this.cellW);
+    const trow = Math.floor((this.py * this.dpr) / this.cellH);
+    if (traceOn) {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this.traceFbo);
+      gl.viewport(0, 0, TRACE_N * 2 + 1, 1);
+      gl.useProgram(this.traceProg);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, this.sceneTex);
+      gl.uniform1i(this.tu.uScene, 0);
+      gl.uniform2f(this.tu.uGrid, this.cols, this.rows);
+      gl.uniform2i(this.tu.uPtrCell, tcol, trow);
+      gl.uniform1i(this.tu.uN, TRACE_N);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+    }
+    const p2 = this.profile ? this.sync() : 0;
+
+    // ── resolve pass (per cell): glyph, colour, alpha ──
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.cellFbo);
+    gl.viewport(0, 0, this.cols, this.rows);
+    gl.useProgram(this.resolveProg);
     const au = this.au;
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.sceneTex);
     gl.uniform1i(au.uScene, 0);
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, this.atlasTex);
-    gl.uniform1i(au.uAtlas, 1);
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, this.sceneTex2);
+    gl.uniform1i(au.uScene2, 2);
+    gl.activeTexture(gl.TEXTURE3);
+    gl.bindTexture(gl.TEXTURE_2D, this.traceTex);
+    gl.uniform1i(au.uTrace, 3);
     gl.uniform2f(au.uRes, this.w, this.h);
     gl.uniform2f(au.uCell, this.cellW, this.cellH);
     gl.uniform2f(au.uGrid, this.cols, this.rows);
@@ -692,25 +827,135 @@ export class SeaEngine {
     gl.uniform1f(au.uBright, SEA_CONFIG.brightness);
     gl.uniform1f(au.uGamma, SEA_CONFIG.gamma);
     gl.uniform1f(au.uGain, this.gain);
-    gl.uniform3f(au.uPointer, this.px * this.dpr, this.py * this.dpr, this.reduced ? 0 : this.pStrength);
+    gl.uniform3f(au.uPointer, this.px * this.dpr, this.py * this.dpr, this.pStrength);
     gl.uniform1f(au.uPointerR, SEA_CONFIG.pointerRadius * this.dpr);
     gl.uniform1f(au.uGlow, SEA_CONFIG.pointerGlow);
+    gl.uniform2i(au.uTraceSeed, traceOn ? tcol : -1, trow);
+    gl.uniform1f(au.uTraceStr, traceOn ? this.pStrength : 0);
+    gl.uniform1i(au.uTraceN, TRACE_N);
     gl.uniform1f(au.uGlitch, glitch);
     gl.uniform1f(au.uSeed, this.seed);
     gl.uniform1f(au.uStars, c.stars);
-    gl.uniform1f(au.uContour, c.contour);
+    gl.uniform1f(au.uSnow, under ? Math.max(0.6, c.snow) : c.snow * 0.3);
+    gl.uniform1f(au.uTopDown, c.pitch < -60 ? 1 : 0);
     gl.uniform1f(au.uTime, this.time);
     gl.uniform4fv(au.uQuiet, this.quiet);
     gl.uniform1fv(au.uQuietS, this.quietS);
     gl.uniform1i(au.uQuietN, this.quietN);
     gl.uniform1f(au.uQuietFeather, SEA_CONFIG.quietFeather * this.dpr);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+    // ── glyph pass (per pixel): stamp the atlas ──
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, this.w, this.h);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.useProgram(this.glyphProg);
+    const gu = this.gu;
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this.cellTex);
+    gl.uniform1i(gu.uCells, 0);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, this.glyphTex);
+    gl.uniform1i(gu.uGlyphs, 1);
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, this.atlasTex);
+    gl.uniform1i(gu.uAtlas, 2);
+    gl.uniform2f(gu.uRes, this.w, this.h);
+    gl.uniform2f(gu.uCell, this.cellW, this.cellH);
+    gl.uniform2f(gu.uGrid, this.cols, this.rows);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    if (this.profile) {
+      const p3 = this.sync();
+      const k = 0.2;
+      this.profile.scene += (p1 - p0 - this.profile.scene) * k;
+      this.profile.trace += (p2 - p1 - this.profile.trace) * k;
+      this.profile.ascii += (p3 - p2 - this.profile.ascii) * k;
+    }
     gl.bindVertexArray(null);
+  }
+
+  /** Debug: the cursor contour trace path (row per column offset, -1 = none). */
+  debugTrace(): number[] {
+    const gl = this.gl;
+    const n = TRACE_N * 2 + 1;
+    const px = new Uint8Array(n * 4);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.traceFbo);
+    gl.readPixels(0, 0, n, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    const out: number[] = [];
+    for (let i = 0; i < n; i++) out.push(px[i * 4 + 2] > 127 ? px[i * 4] * 256 + px[i * 4 + 1] : -1);
+    return out;
+  }
+
+  /**
+   * Debug: read the scene target back as text, one char per sampled cell —
+   * band glyph from the ramp, "~" sky (or "-" horizon glow), "L"/"O" lime/orange
+   * accent patches on band edges, "@" specular, "|" beacon. Plus a histogram.
+   * mode "alpha" shows final brightness instead of the band.
+   */
+  debugDump(stepX = 4, stepY = 2, mode: "band" | "alpha" = "band"): { text: string; stats: Record<string, number> } {
+    const gl = this.gl;
+    const px = new Uint8Array(this.cols * this.rows * 4);
+    const px2 = new Uint8Array(this.cols * this.rows * 4);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
+    gl.readBuffer(gl.COLOR_ATTACHMENT0);
+    gl.readPixels(0, 0, this.cols, this.rows, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    gl.readBuffer(gl.COLOR_ATTACHMENT1);
+    gl.readPixels(0, 0, this.cols, this.rows, gl.RGBA, gl.UNSIGNED_BYTE, px2);
+    gl.readBuffer(gl.COLOR_ATTACHMENT0);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    const ramp = " .:-=+*#";
+    const stats: Record<string, number> = { sky: 0, lime: 0, orange: 0, spec: 0, beacon: 0, region: 0, grid: 0, inten: 0, n: 0 };
+    const band = (c: number, r: number) => {
+      const i = ((this.rows - 1 - r) * this.cols + c) * 4;
+      return px[i + 1] === 255 ? -1 : Math.round((px[i] / 255) * 7);
+    };
+    let text = "";
+    for (let r = 0; r < this.rows; r += stepY) {
+      let line = "";
+      for (let c = 0; c < this.cols; c += stepX) {
+        const i = ((this.rows - 1 - r) * this.cols + c) * 4;
+        const g = px[i + 1];
+        stats.n++;
+        if (px2[i] > 140) {
+          stats.beacon++;
+          line += "|";
+          continue;
+        }
+        if (g === 255) {
+          stats.sky++;
+          line += px[i + 2] > 10 ? "-" : "~";
+          continue;
+        }
+        const b = band(c, r);
+        stats["b" + b] = (stats["b" + b] ?? 0) + 1;
+        stats.inten += px[i + 3] / 255;
+        if (px2[i + 2] > 0) stats.region++;
+        if (px2[i + 3] > 127) stats.grid++;
+        const edge = b > 0 && (band(c, Math.max(0, r - 1)) !== b || band(c, Math.min(this.rows - 1, r + 1)) !== b);
+        const lime = (g >> 4) / 14;
+        const orng = (g & 15) / 15;
+        if (px[i + 2] > 127) {
+          stats.spec++;
+          line += "@";
+        } else if (edge && lime > 0.35 && b >= 5) {
+          stats.lime++;
+          line += "L";
+        } else if (edge && orng > 0.35 && b >= 2 && b <= 5) {
+          stats.orange++;
+          line += "O";
+        } else if (mode === "alpha") {
+          const a = b <= 0 ? 0 : Math.pow(b / 7, SEA_CONFIG.gamma) * SEA_CONFIG.brightness * (px[i + 3] / 255);
+          line += " .,:;-=+*#%@"[Math.min(11, Math.round((a * 11) / 0.75))] ?? "@";
+        } else line += ramp[b];
+      }
+      text += line + "\n";
+    }
+    stats.inten = +(stats.inten / Math.max(1, stats.n - stats.sky)).toFixed(3);
+    return { text, stats };
   }
 }
 
-/** Where each stop's rest window begins, in viewport heights (for HUD jump links). */
-export function stopStartU(stop: number): number {
-  const k = KEYS.find((k) => k.stop === stop);
-  return k ? k.at : 0;
-}
+/** Where a beat's rest begins (vh); used by HUD jump links. */
+export { stopArriveU } from "./journey";
