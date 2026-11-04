@@ -9,7 +9,8 @@ import OceanCanvas from "./OceanCanvas";
 import Directory from "./directory";
 import { oceanNav } from "./nav";
 import { BEATS, SECTIONS, TRACK, eventsAt, textOpacity } from "./route";
-import { AboutText, ContactStop, EducationStop, ExperienceStop, OriginStop, ProjectStop, SkillsText } from "./stops";
+import { AboutText, ContactStop, EducationStop, ExperienceStop, OriginStop, ProjectStop, SkillGroup } from "./stops";
+import { SKILLS } from "@/data/profile";
 import { EXPERIENCES } from "@/data/profile";
 import type { GitHubRepo } from "@/lib/github";
 import { useTheme } from "@/components/ThemeProvider";
@@ -19,7 +20,7 @@ const PLACE = {
   left: `left-6 right-6 top-24 sm:right-auto sm:left-[7vw] sm:top-[15vh] ${W}`,
   right: `left-6 right-6 top-24 sm:left-auto sm:right-[7vw] sm:top-[15vh] ${W}`,
   center: "left-6 right-6 top-1/2 -translate-y-1/2 sm:left-1/2 sm:right-auto sm:w-[30rem] sm:-translate-x-1/2",
-  split: "inset-x-6 top-20 bottom-6 overflow-y-auto sm:overflow-visible sm:bottom-auto sm:inset-x-[5vw] sm:top-[13vh]",
+  split: "inset-x-6 top-20 bottom-6 overflow-y-auto sm:overflow-visible sm:inset-x-[6vw] sm:top-[13vh] sm:bottom-[5vh]",
   origin: "left-6 right-6 top-1/2 -translate-y-1/2 sm:right-auto sm:left-[7vw] sm:w-[36rem]",
 };
 
@@ -146,12 +147,17 @@ export default function Ocean({ projects, children }: { projects: GitHubRepo[]; 
         else if (b.id === "about")
           return (
             <Stop key={b.id} u={camU} i={i} place={place} quiet={false}>
-              <div className="flex flex-col gap-10 sm:flex-row sm:justify-between">
-                <div data-ocean-quiet className="sm:w-[min(34rem,38vw)]">
+              <div className="flex min-h-full flex-col gap-10 sm:h-full sm:justify-between">
+                <div data-ocean-quiet className="sm:w-[min(40rem,46vw)]">
                   <AboutText />
                 </div>
-                <div data-ocean-quiet className="sm:w-[min(26rem,30vw)]">
-                  <SkillsText />
+                {/* One group per current, left to right in lane order. */}
+                <div className="grid gap-8 sm:grid-cols-3 sm:gap-[4vw]">
+                  {SKILLS.map((g, k) => (
+                    <div key={g.title} data-ocean-quiet>
+                      <SkillGroup i={k} />
+                    </div>
+                  ))}
                 </div>
               </div>
             </Stop>

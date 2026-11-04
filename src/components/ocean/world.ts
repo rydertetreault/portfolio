@@ -53,8 +53,8 @@ export const ACCENTS = ["--ocean-a1", "--ocean-a2", "--ocean-a3"] as const;
 /** About: three currents flowing north from under the dive, one per skill group. */
 export const CURRENTS = {
   x: 0,
-  gap: 2.9,
-  width: 0.95,
+  gap: 6.0,
+  width: 1.6,
   /** Far end (north) and near end of the lanes. */
   z0: -42,
   z1: 12,

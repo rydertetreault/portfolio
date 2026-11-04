@@ -80,19 +80,15 @@ export function AboutText() {
   );
 }
 
-export function SkillsText() {
+/** One skill group, shown at the foot of its current (same colour as the lane). */
+export function SkillGroup({ i }: { i: number }) {
+  const g = SKILLS[i];
   return (
-    <div className="space-y-5">
-      <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-text-faint">Three currents</p>
-      {SKILLS.map((g, i) => (
-        <div key={g.title} className="space-y-1">
-          <p className="text-[17px] font-medium" style={{ color: accent(CURRENTS.colors[i]) }}>
-            <Mark n={CURRENTS.colors[i]} />
-            {g.title}
-          </p>
-          <p className="text-[15px] leading-relaxed text-text-muted">{g.items.join(" · ")}</p>
-        </div>
-      ))}
+    <div className="space-y-1.5">
+      <p className="text-[17px] font-medium" style={{ color: accent(CURRENTS.colors[i]) }}>
+        {g.title}
+      </p>
+      <p className="text-[14px] leading-relaxed text-text-muted">{g.items.join(" · ")}</p>
     </div>
   );
 }
