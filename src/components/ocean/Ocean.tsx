@@ -1,18 +1,19 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, useMotionValue, useMotionValueEvent, useTransform, type MotionValue } from "framer-motion";
 import { Moon, Sun } from "lucide-react";
 import OceanCanvas from "./OceanCanvas";
-import Directory from "./directory";
+import { jumpTo } from "./jump";
 import { oceanNav } from "./nav";
 import { BEATS, SECTIONS, TRACK, eventsAt, textOpacity } from "./route";
-import { AboutText, EducationStop, SkillsHead, ExperienceStop, OriginStop, ProjectsHead } from "./stops";
+import { AboutText, DeepStop, EducationStop, SkillsHead, ExperienceStop, OriginStop, ProjectsHead } from "./stops";
 import TimelineWire from "./timeline-wire";
 import SkillsLanes from "./skills-lanes";
-import ProjectIsles from "./project-isles";
+import ProjectIsles, { splitChains } from "./project-isles";
+import { useGlide } from "./glide";
 import { EXPERIENCES } from "@/data/profile";
 import type { GitHubRepo } from "@/lib/github";
 import { useTheme } from "@/components/ThemeProvider";
@@ -23,6 +24,7 @@ const PLACE = {
   right: `left-6 right-6 top-24 sm:left-auto sm:right-[7vw] sm:top-[15vh] ${W}`,
   center: "left-6 right-6 top-1/2 -translate-y-1/2 sm:left-1/2 sm:right-auto sm:w-[30rem] sm:-translate-x-1/2",
   split: "inset-x-6 top-20 bottom-6 overflow-y-auto sm:overflow-visible sm:inset-x-[6vw] sm:top-[13vh] sm:bottom-[5vh]",
+  full: "pointer-events-none inset-x-6 top-20 bottom-6 sm:inset-x-[7vw] sm:top-[13vh] sm:bottom-[6vh]",
   origin: "left-6 right-6 top-1/2 -translate-y-1/2 sm:right-auto sm:left-[7vw] sm:w-[36rem]",
 };
 
@@ -76,7 +78,7 @@ function Header({ u }: { u: MotionValue<number> }) {
       className="fixed inset-x-0 top-0 z-20 flex items-center justify-between px-6 py-5 sm:px-[7vw]"
     >
       <button
-        onClick={() => goTo(0)}
+        onClick={() => (u.get() > 3 ? jumpTo(0) : goTo(0))}
         className="whitespace-nowrap font-mono text-[11px] uppercase tracking-[0.22em] text-foreground sm:text-xs sm:tracking-[0.25em]"
       >
         <span className="sm:hidden">RT</span>
@@ -109,9 +111,11 @@ function Header({ u }: { u: MotionValue<number> }) {
  * The whole site: one ocean, flown through by scrolling. Every other page of the site
  * (`children`) opens as a waveform lightbox over it, so the ocean never reloads.
  */
-export default function Ocean({ projects, children }: { projects: GitHubRepo[]; children: ReactNode }) {
+export default function Ocean({ projects, all, children }: { projects: GitHubRepo[]; all: GitHubRepo[]; children: ReactNode }) {
+  const chains = useMemo(() => splitChains(all), [all]);
   const camU = useMotionValue(0);
   const pathname = usePathname();
+  useGlide();
 
   useEffect(() => {
     oceanNav.depth++;
@@ -126,13 +130,13 @@ export default function Ocean({ projects, children }: { projects: GitHubRepo[]; 
 
   return (
     <main className="relative text-foreground">
-      <OceanCanvas camU={camU} />
+      <OceanCanvas camU={camU} chains={chains.map((c) => c.length)} />
       <Header u={camU} />
       {/* The scroll track: the camera flies as this scrolls. */}
       <div aria-hidden style={{ height: `calc(${TRACK} * 100lvh + 100lvh)` }} />
       <TimelineWire u={camU} />
       <SkillsLanes u={camU} />
-      <ProjectIsles u={camU} projects={projects} />
+      <ProjectIsles u={camU} projects={projects} chains={chains} />
       {BEATS.map((b, i) => {
         const place = b.id === "origin" ? PLACE.origin : PLACE[b.side];
         let content: ReactNode = null;
@@ -144,15 +148,11 @@ export default function Ocean({ projects, children }: { projects: GitHubRepo[]; 
           content = <ExperienceStop exp={EXPERIENCES[k]} k={k} n={EXPERIENCES.length} />;
         } else if (b.id === "projects") content = <ProjectsHead />;
         else if (b.id === "education") content = <EducationStop />;
-        else if (b.id === "contact") return null; // the whirlpool speaks for itself
-        else if (b.id === "directory")
-          return (
-            <Stop key={b.id} u={camU} i={i} place="inset-x-6 top-1/2 z-[16] -translate-y-1/2" quiet={false}>
-              <Directory u={camU} />
-            </Stop>
-          );
+        else if (b.id === "deep") content = <DeepStop />;
+        // The whirlpool speaks for itself.
+        else if (b.section === "whirlpool") return null;
         return (
-          <Stop key={b.id} u={camU} i={i} place={place}>
+          <Stop key={b.id} u={camU} i={i} place={place} quiet={b.side !== "full"}>
             {content}
           </Stop>
         );

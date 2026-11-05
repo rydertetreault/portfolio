@@ -18,25 +18,33 @@ import { useReducedMotionPref } from "@/lib/motion";
  * - The moment AsciiFace enters its "done" phase it fires onIntroDone; we flip
  *   the flag and HomeContent fades in over 500ms while the overlay fades out
  *   over 600ms, so the crossover feels seamless.
+ * - `skipIntro` (the classic site, /classic) renders the content straight away:
+ *   no hands/face intro, no field build, the field stays visible throughout.
  */
-export default function HomeShell({ repos }: { repos: GitHubRepo[] }) {
+export default function HomeShell({
+  repos,
+  skipIntro = false,
+}: {
+  repos: GitHubRepo[];
+  skipIntro?: boolean;
+}) {
   const [introDone, setIntroDone] = useState(false);
   // Deep links to a section (/#experience from another page) skip the intro entirely
   // and land on the section; HomeContent handles the actual scrolling.
-  const [skipIntro, setSkipIntro] = useState(false);
+  const [deepLinked, setDeepLinked] = useState(false);
   useEffect(() => {
     if (!/^#(about|experience|projects|skills|education|resume|contact)$/.test(window.location.hash)) return;
-    const id = requestAnimationFrame(() => setSkipIntro(true));
+    const id = requestAnimationFrame(() => setDeepLinked(true));
     return () => cancelAnimationFrame(id);
   }, []);
   // No-motion mode skips the intro too (AsciiFace renders nothing under it).
   const reduceMotion = useReducedMotionPref();
-  const noIntro = skipIntro || reduceMotion;
+  const noIntro = skipIntro || deepLinked || reduceMotion;
   // Once skipped for no-motion, turning motion back on must not replay the intro
   // over the page the visitor is already reading.
   useEffect(() => {
     if (!reduceMotion) return;
-    const id = requestAnimationFrame(() => setSkipIntro(true));
+    const id = requestAnimationFrame(() => setDeepLinked(true));
     return () => cancelAnimationFrame(id);
   }, [reduceMotion]);
   const showContent = introDone || noIntro;

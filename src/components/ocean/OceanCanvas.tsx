@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import type { MotionValue } from "framer-motion";
 import { OceanEngine, type Quiet } from "./OceanEngine";
 import { BEATS, TRACK, WINDOWS, eventsAt } from "./route";
-import { ACCENTS } from "./world";
+import { ACCENTS, isleCentre } from "./world";
 import { oceanView } from "./nav";
 import { useReducedMotionPref } from "@/lib/motion";
 
@@ -17,7 +17,7 @@ function cssVar(name: string): string {
  * smoothed position is published to `camU` so the text follows the flight, not the wheel.
  * Elements tagged `data-ocean-quiet` keep the water calm behind them (scaled by their opacity).
  */
-export default function OceanCanvas({ camU }: { camU: MotionValue<number> }) {
+export default function OceanCanvas({ camU, chains }: { camU: MotionValue<number>; chains: number[] }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<OceanEngine | null>(null);
   const reduced = useReducedMotionPref();
@@ -74,15 +74,16 @@ export default function OceanCanvas({ camU }: { camU: MotionValue<number> }) {
       engine.setFocus(k < 0 ? null : k);
     };
     window.addEventListener("ocean:focus", focus);
-    const boxHi = (e: Event) => {
-      engine.boxHi = (e as CustomEvent<number>).detail;
+    const all = (e: Event) => engine.setAll((e as CustomEvent<boolean>).detail);
+    window.addEventListener("ocean:all", all);
+    oceanView.isles = () => ({ centre: (k) => isleCentre(k, engine.chainN), rise: engine.isleRise, all: engine.allAmt });
+    // Jump to a stop (Back to the surface, the header name): a cut, not a flight back along the route.
+    const jump = (e: Event) => {
+      const u = (e as CustomEvent<number>).detail ?? 0;
+      engine.jumpTo(u);
+      window.scrollTo({ top: u * window.innerHeight, behavior: "auto" });
     };
-    window.addEventListener("ocean:box", boxHi);
-    engine.boxSource = () =>
-      Array.from(document.querySelectorAll<HTMLElement>("[data-ocean-box]")).map((el) => {
-        const r = el.getBoundingClientRect();
-        return { x0: r.left, y0: r.top, x1: r.right, y1: r.bottom, a: 1 };
-      });
+    window.addEventListener("ocean:jump", jump);
     engine.quietSource = () => {
       const out: Quiet[] = [];
       document.querySelectorAll<HTMLElement>("[data-ocean-quiet]").forEach((el) => {
@@ -110,7 +111,9 @@ export default function OceanCanvas({ camU }: { camU: MotionValue<number> }) {
       mo.disconnect();
       window.removeEventListener("ocean:isle", hi);
       window.removeEventListener("ocean:focus", focus);
-      window.removeEventListener("ocean:box", boxHi);
+      window.removeEventListener("ocean:all", all);
+      oceanView.isles = null;
+      window.removeEventListener("ocean:jump", jump);
       window.removeEventListener("scroll", scroll);
       window.removeEventListener("resize", onResize);
       document.removeEventListener("visibilitychange", vis);
@@ -127,6 +130,11 @@ export default function OceanCanvas({ camU }: { camU: MotionValue<number> }) {
   useEffect(() => {
     engineRef.current?.setReducedMotion(reduced);
   }, [reduced]);
+
+  const [pro, per] = chains;
+  useEffect(() => {
+    if (engineRef.current) engineRef.current.chainN = [pro, per];
+  }, [pro, per]);
 
   return <canvas ref={ref} aria-hidden className="fixed inset-0 h-full w-full" style={{ zIndex: 0 }} />;
 }

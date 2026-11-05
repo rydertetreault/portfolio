@@ -56,3 +56,5 @@ next-env.d.ts
 
 # baked README waveform output
 scripts/out/
+rainmeter/RyderWave/@Resources/Slack.inc
+rainmeter/RyderWave/@Resources/slack_feed.txt

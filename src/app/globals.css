@@ -40,6 +40,15 @@
   --ocean-a2: #c2410c;
   --ocean-a3: #a16207;
   --ocean-a4: #be123c;
+  /* All projects: Professional greens (a5..a8), Personal warm and purple (a9..a12). */
+  --ocean-a5: #047857;
+  --ocean-a6: #15803d;
+  --ocean-a7: #0f766e;
+  --ocean-a8: #3f6212;
+  --ocean-a9: #b91c1c;
+  --ocean-a10: #7e22ce;
+  --ocean-a11: #a21caf;
+  --ocean-a12: #be185d;
   --ascii-lo: #6a6a6a;
   --ascii-hi: #111111;
   --ascii-gain: 1.55;
@@ -71,6 +80,14 @@
   --ocean-a2: #fb923c;
   --ocean-a3: #facc15;
   --ocean-a4: #fb7185;
+  --ocean-a5: #34d399;
+  --ocean-a6: #4ade80;
+  --ocean-a7: #2dd4bf;
+  --ocean-a8: #bef264;
+  --ocean-a9: #f87171;
+  --ocean-a10: #c084fc;
+  --ocean-a11: #e879f9;
+  --ocean-a12: #f472b6;
   --ascii-lo: #5c5c5c;
   --ascii-hi: #cfcfcf;
   --ascii-gain: 1;
@@ -99,6 +116,14 @@
     --ocean-a2: #fb923c;
     --ocean-a3: #facc15;
     --ocean-a4: #fb7185;
+    --ocean-a5: #34d399;
+    --ocean-a6: #4ade80;
+    --ocean-a7: #2dd4bf;
+    --ocean-a8: #bef264;
+    --ocean-a9: #f87171;
+    --ocean-a10: #c084fc;
+    --ocean-a11: #e879f9;
+    --ocean-a12: #f472b6;
     --ascii-lo: #5c5c5c;
     --ascii-hi: #cfcfcf;
     --ascii-gain: 1;
@@ -294,3 +319,11 @@ html.reduce-motion [data-home-content] {
 html.reduce-motion body[data-intro-active] canvas.ascii-field-canvas {
   opacity: 1 !important;
 }
+
+/* 03: the glyphs where each current pours into its skills */
+@keyframes ocean-stream {
+  0%, 100% { opacity: 0.3; transform: translateY(-3px); }
+  50% { opacity: 1; transform: translateY(3px); }
+}
+.ocean-stream { animation: ocean-stream 1.8s ease-in-out infinite; }
+.reduce-motion .ocean-stream { animation: none; }

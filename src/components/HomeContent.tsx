@@ -24,6 +24,7 @@ import type { GitHubRepo } from "@/lib/github";
 import { formatRepoName, formatDateRange } from "@/lib/utils";
 import AppleIcon from "@/components/icons/AppleIcon";
 import { revealSection } from "@/components/ascii-ui/corrupt";
+import { useSiteHref } from "@/lib/use-site-href";
 
 
 /* ═══════════════════════════════════════════
@@ -174,6 +175,8 @@ export default function HomeContent({ repos }: { repos: GitHubRepo[] }) {
   );
 
   const [activeId, setActiveId] = useState<SectionId>("about");
+  // Live hrefs; mapped onto /classic/... when rendered inside the classic site.
+  const siteHref = useSiteHref();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -516,7 +519,7 @@ export default function HomeContent({ repos }: { repos: GitHubRepo[] }) {
                 ))}
               </div>
               <Link
-                href="/projects"
+                href={siteHref("/projects")}
                 className="inline-flex items-center gap-2 text-sm text-text-muted hover:text-accent transition-colors mt-6 group"
               >
                 View all projects
@@ -591,7 +594,7 @@ export default function HomeContent({ repos }: { repos: GitHubRepo[] }) {
                 technical skills.
               </p>
               <Link
-                href="/resume"
+                href={siteHref("/resume")}
                 className="inline-flex items-center gap-3 border border-border-theme hover:border-accent bg-surface-alt hover:bg-accent-subtle px-5 py-3 rounded-xl transition-all duration-300 group"
               >
                 <FileText size={16} className="text-text-faint group-hover:text-accent transition-colors" />

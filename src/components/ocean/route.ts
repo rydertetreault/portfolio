@@ -5,10 +5,10 @@
  *
  * Pacing is in viewport heights of scroll: `travel` to get there, `hold` while you read.
  */
-import { CALM, CURRENTS, ISLANDS, SWELL, WHIRL, swellAt, type Vec2 } from "./world";
+import { CALM, CHAIN, CHAINS, CURRENTS, ISLANDS, SWELL, WHIRL, swellAt, whirlH, type Vec2 } from "./world";
 import type { Key, Shot, Vec3 } from "./timeline";
 
-export type Section = "origin" | "about" | "experience" | "skills" | "projects" | "education" | "contact" | "directory";
+export type Section = "origin" | "about" | "experience" | "skills" | "projects" | "education" | "whirlpool" | "contact";
 
 export type Beat = {
   id: string;
@@ -19,7 +19,7 @@ export type Beat = {
   travel: number;
   hold: number;
   /** Where the text sits; the camera frames the event on the other side. */
-  side: "left" | "right" | "center" | "split";
+  side: "left" | "right" | "center" | "split" | "full";
 };
 
 const SEA: Omit<Shot, "pos" | "yaw" | "pitch" | "fov"> = { roll: 0, amp: 1, fog: 60, glyph: 1.7 };
@@ -73,24 +73,69 @@ const trough = (k: number): Shot => {
 /** Projects: from the south, high enough to see the whole chain of islands. */
 const PROJECTS: Shot = { ...SEA, pos: [-12, 13, -78], yaw: 0, pitch: -33, fov: 56, fog: 100, glyph: 1.05 };
 
+/**
+ * All projects (off the route, from the "All projects" button): to the right of the featured
+ * chain and higher, looking down on both chains, Professional in front, Personal behind.
+ */
+export const ALL_PROJECTS: Shot = aim([CHAIN.x, (CHAINS[0].z + CHAINS[1].z) / 2 + 2.5], 0, 18, 33, 0, { fov: 52, fog: 140, glyph: 1.05 });
+
 /** Education: low over calm water, the sun on the horizon to the right of the text. */
 const EDUCATION: Shot = { ...SEA, pos: [-50, 1.15, -64], yaw: CALM.sunYaw - 16, pitch: 1.5, fov: 50, fog: 400 };
 
-const WHIRL_YAW = -200;
-const WHIRL_APPROACH = aim(WHIRL.c, WHIRL_YAW, 30, 15, 0, { fov: 56, fog: 120 });
-const CONTACT: Shot = {
-  pos: [WHIRL.c[0], 0, WHIRL.c[1]],
-  yaw: WHIRL_YAW,
-  pitch: -90,
+/** Contact: up off the water, looking down into the whirlpool as it forms; the sun beyond it. */
+const WHIRL_YAW = -192;
+const CONTACT: Shot = aim(WHIRL.c, WHIRL_YAW, 25, 11, 0, { fov: 58, fog: 160, glyph: 1.2 });
+
+/**
+ * Pulled in: the camera is caught by the water and carried round with it (+θ, as the shader's
+ * flow), spiralling down the funnel wall, banking into the turn and looking ever more steeply
+ * down toward the throat, then straight down it.
+ */
+const HELIX: Shot[] = (() => {
+  const [cx, cz] = WHIRL.c;
+  const p0 = CONTACT.pos;
+  const th0 = Math.atan2(p0[2] - cz, p0[0] - cx);
+  //            r     above   Δθ (deg)  look in   pitch  roll  fov
+  const legs = [
+    [17, 7.5, 55, 0.5, -32, -8, 60],
+    [11.5, 6.5, 125, 0.6, -42, -14, 64],
+    [8, 5.6, 195, 0.7, -54, -18, 68],
+    [5.5, 4.8, 260, 0.8, -66, -18, 72],
+    [3.5, 4.0, 320, 0.9, -78, -12, 76],
+  ];
+  let prevYaw = CONTACT.yaw;
+  return legs.map(([r, above, dth, inw, pitch, roll, fov]) => {
+    const th = th0 + rad(dth);
+    const x = cx + r * Math.cos(th);
+    const z = cz + r * Math.sin(th);
+    // Look along the flow (tangent, +θ) and in toward the centre.
+    const vx = -Math.sin(th) * (1 - inw) - Math.cos(th) * inw;
+    const vz = Math.cos(th) * (1 - inw) - Math.sin(th) * inw;
+    let yaw = (Math.atan2(vx, -vz) * 180) / Math.PI;
+    while (yaw - prevYaw > 180) yaw -= 360;
+    while (yaw - prevYaw < -180) yaw += 360;
+    prevYaw = yaw;
+    return { ...SEA, pos: [x, whirlH(x, z) + above, z] as Vec3, yaw, pitch, roll, fov, fog: 120, glyph: 1.2 };
+  });
+})();
+/** Down the throat, into the dark. */
+const DIVE_IN: Shot = {
+  ...HELIX[HELIX.length - 1],
+  pos: [WHIRL.c[0], -WHIRL.depth - 0.6, WHIRL.c[1]],
+  yaw: HELIX[HELIX.length - 1].yaw + 70,
+  pitch: -89,
   roll: 0,
-  fov: 34,
-  span: 44,
-  amp: 1,
-  fog: 500,
-  glyph: 1.0,
+  fov: 84,
 };
-/** Down the funnel, corkscrewing, into the dark. */
-const DIVE_IN: Shot = { ...CONTACT, span: undefined, pos: [WHIRL.c[0], -WHIRL.depth * 0.75, WHIRL.c[1]], yaw: WHIRL_YAW + 260, fov: 80, glyph: 1.3 };
+
+/**
+ * 06: under the sea. Out of the bottom of the throat into deep water, sinking away from it:
+ * the surface is a ceiling overhead with the funnel hanging down out of it (right of the text),
+ * light shafts and bubbles (the deep pass) all around.
+ */
+const DEEP: Shot = { ...SEA, pos: [WHIRL.c[0] - 9, -20, WHIRL.c[1] + 22], yaw: 2, pitch: 30, roll: 0, fov: 62, amp: 0.8, fog: 75, glyph: 1.1 };
+/** Just below the throat, looking straight up the funnel, still turning with it. */
+const DEEP_IN: Shot = { ...DEEP, pos: [WHIRL.c[0], -13, WHIRL.c[1] + 1], yaw: -300, pitch: 84, fov: 70 };
 
 export const BEATS: Beat[] = [
   { id: "origin", section: "origin", shot: ORIGIN, travel: 0, hold: 0.25, side: "left" },
@@ -109,8 +154,10 @@ export const BEATS: Beat[] = [
   { id: "skills", section: "skills", via: [TO_SKILLS], shot: SKILLS, travel: 1.6, hold: 1.4, side: "left" },
   { id: "projects", section: "projects", shot: PROJECTS, travel: 1.5, hold: 2.8, side: "left" },
   { id: "education", section: "education", shot: EDUCATION, travel: 1.4, hold: 1.1, side: "left" },
-  { id: "contact", section: "contact", via: [WHIRL_APPROACH], shot: CONTACT, travel: 1.8, hold: 0.6, side: "center" },
-  { id: "directory", section: "directory", shot: DIVE_IN, travel: 1.6, hold: 1.0, side: "center" },
+  { id: "whirlpool", section: "whirlpool", shot: CONTACT, travel: 1.6, hold: 0.7, side: "center" },
+  { id: "dive", section: "whirlpool", via: HELIX, shot: DIVE_IN, travel: 3.0, hold: 0, side: "center" },
+  // Out of the black, high over the whirlpool.
+  { id: "deep", section: "contact", via: [DEEP_IN], shot: DEEP, travel: 1.4, hold: 1.2, side: "full" },
 ];
 
 /* ── derived timing ── */
@@ -181,21 +228,28 @@ export type Events = {
   crestBuild: [number, number, number];
   /** How formed each island is (0 = under the sea, 1 = fully risen); one at a time. */
   islands: number[];
+  /** The low rolling sea around the islands. */
+  isleSea: number;
   calm: number;
   whirl: number;
   /** 0..1 down the whirlpool. */
   dive: number;
-  /** 0..1 the screen going black at the bottom. */
+  /** 0..1 the screen going black at the bottom (and lifting again, high above the whirlpool). */
   blackout: number;
-  /** 0..1 the swirling field gathering into the directory's boxes. */
-  form: number;
+  /** 0..1 under the sea (switches while it's black). */
+  deep: number;
 };
 
 export function eventsAt(u: number): Events {
   const e0 = beatIndex("exp-0");
-  const di = beatIndex("directory");
+  const di = beatIndex("dive");
   const dw = WINDOWS[di];
   const dt = BEATS[di].travel;
+  const ci = beatIndex("deep");
+  const cw = WINDOWS[ci];
+  const ct = BEATS[ci].travel;
+  // The black lifts as the camera sinks away from the throat (DEEP_IN is the key part of the way).
+  const lift = smooth(ramp(u, cw.start + ct * 0.34, cw.start + ct * 0.52));
   return {
     currents: eventWeight(u, beatIndex("skills"), beatIndex("skills")),
     swell: eventWeight(u, e0, e0 + 2),
@@ -204,11 +258,13 @@ export function eventsAt(u: number): Events {
       smooth(ramp(u, WINDOWS[e0 + k].start, WINDOWS[e0 + k].arrive - 0.15)),
     ) as [number, number, number],
     islands: ISLANDS.map((_, k) => isleRise(u, k)),
-    calm: eventWeight(u, beatIndex("education"), beatIndex("education")),
-    whirl: eventWeight(u, beatIndex("contact"), beatIndex("contact"), true),
-    dive: smooth(ramp(u, dw.start, dw.arrive)),
-    blackout: smooth(ramp(u, dw.start + dt * 0.55, dw.arrive - dt * 0.05)),
-    form: smooth(ramp(u, dw.arrive - dt * 0.15, dw.arrive + 0.45)),
+    isleSea: eventWeight(u, beatIndex("projects"), beatIndex("projects")),
+    calm: eventWeight(u, beatIndex("education"), beatIndex("whirlpool")),
+    whirl: eventWeight(u, beatIndex("whirlpool"), beatIndex("whirlpool"), true),
+    // Back to 0 while it's black, so from above the whirlpool is lit like the rest of the sea.
+    dive: smooth(ramp(u, dw.start, dw.arrive)) * (1 - smooth(ramp(u, cw.start, cw.start + ct * 0.25))),
+    blackout: smooth(ramp(u, dw.start + dt * 0.8, dw.arrive - dt * 0.02)) * (1 - lift),
+    deep: smooth(ramp(u, cw.start + ct * 0.1, cw.start + ct * 0.25)),
   };
 }
 

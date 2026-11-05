@@ -2,14 +2,19 @@
  * OceanEngine: WebGL2 renderer for the ocean (see shaders.ts for the two passes).
  * Framework-agnostic: OceanCanvas.tsx feeds it scroll, theme, quiet zones and size.
  */
-import { FIELD_FS, FORM_FS, MAX_PROBE, PROBE_FS, MAX_BOX, MAX_ISLE, MAX_QUIET, NLEV, QUAD_VS, SKY_FS, SURFACE_FS, SURFACE_VS } from "./shaders";
-import { ISLANDS, FLOW_SPEED, FONT_SIZE, GLYPHS, LINE_HEIGHT, MORPH_SPEED, PHASE_SPEED, PLASMA_AMP, SPAN, swellAt } from "./world";
+import { BUBBLES, BUBBLE_FS, BUBBLE_VS, DEEP_FS, FADE_FS, MAX_PROBE, PROBE_FS, MAX_ISLE, MAX_QUIET, NLEV, QUAD_VS, SKY_FS, SURFACE_FS, fieldFS, surfaceVS } from "./shaders";
+import { CHAIN, ISLANDS, ISLE_COUNT, FLOW_SPEED, isleCentre, isleSeed, BUBBLE_GLYPHS, RAY_GLYPHS, FONT_SIZE, GLYPHS, LINE_HEIGHT, MORPH_SPEED, PHASE_SPEED, PLASMA_AMP, SUN_GLYPHS, SPAN, swellAt, whirlH } from "./world";
 import { sampleCamera, type Camera } from "./timeline";
-import { KEYS, SUN_DIR, eventsAt, type Events } from "./route";
+import { ALL_PROJECTS, KEYS, SUN_DIR, eventsAt, type Events } from "./route";
 
 type Uniforms = Record<string, WebGLUniformLocation | null>;
 
-function compile(gl: WebGL2RenderingContext, vs: string, fs: string): WebGLProgram {
+/**
+ * Compile + link without asking how it went: asking blocks until the driver is done, and on some
+ * (ANGLE / D3D) the big field shader takes seconds. With KHR_parallel_shader_compile it then
+ * compiles off the main thread; `ready` polls it, `finish` checks the result.
+ */
+function startCompile(gl: WebGL2RenderingContext, vs: string, fs: string): WebGLProgram {
   const p = gl.createProgram()!;
   for (const [type, src] of [
     [gl.VERTEX_SHADER, vs],
@@ -18,14 +23,50 @@ function compile(gl: WebGL2RenderingContext, vs: string, fs: string): WebGLProgr
     const s = gl.createShader(type)!;
     gl.shaderSource(s, src);
     gl.compileShader(s);
-    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s) ?? "shader");
     gl.attachShader(p, s);
   }
   gl.bindAttribLocation(p, 0, "aGrid");
   gl.linkProgram(p);
-  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p) ?? "link");
   return p;
 }
+
+const COMPLETION_STATUS_KHR = 0x91b1;
+
+type FullPrograms = {
+  field: WebGLProgram;
+  surf: WebGLProgram;
+  sky: WebGLProgram;
+  form: WebGLProgram;
+  probe: WebGLProgram;
+  deep: WebGLProgram;
+  bubble: WebGLProgram;
+};
+
+/**
+ * Programs per GL context. The canvas (and its context) outlives an engine: React StrictMode
+ * (dev) and hot reloads mount a second engine on it straight away. Without this each one
+ * compiled the ocean again, and the second compile queued behind the first, stalling the
+ * opening field for seconds. Programs are never deleted; they live as long as the context.
+ */
+const PROGRAMS = new WeakMap<
+  WebGL2RenderingContext,
+  { lite?: [WebGLProgram, WebGLProgram]; full?: FullPrograms; done?: boolean; failed?: boolean }
+>();
+
+function finish(gl: WebGL2RenderingContext, p: WebGLProgram): WebGLProgram {
+  const shaders = gl.getAttachedShaders(p) ?? [];
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) {
+    const bad = shaders.find((s) => !gl.getShaderParameter(s, gl.COMPILE_STATUS));
+    throw new Error((bad ? gl.getShaderInfoLog(bad) : gl.getProgramInfoLog(p)) ?? "shader");
+  }
+  shaders.forEach((s) => {
+    gl.detachShader(p, s);
+    gl.deleteShader(s);
+  });
+  return p;
+}
+
+const compile = (gl: WebGL2RenderingContext, vs: string, fs: string) => finish(gl, startCompile(gl, vs, fs));
 
 function uniforms(gl: WebGL2RenderingContext, p: WebGLProgram): Uniforms {
   const u: Uniforms = {};
@@ -81,10 +122,23 @@ export class OceanEngine {
   private gl: WebGL2RenderingContext;
   private fieldProg: WebGLProgram;
   private surfProg: WebGLProgram;
-  private skyProg: WebGLProgram;
-  private formProg: WebGLProgram;
-  private probeProg: WebGLProgram;
-  private pu: Uniforms;
+  /** Compiled after the first frame (see `full`); null until then. */
+  private skyProg: WebGLProgram | null = null;
+  private deepProg: WebGLProgram | null = null;
+  private bubbleProg: WebGLProgram | null = null;
+  private du: Uniforms = {};
+  private bu: Uniforms = {};
+  private emptyVao: WebGLVertexArrayObject;
+  private formProg: WebGLProgram | null = null;
+  private probeProg: WebGLProgram | null = null;
+  /** The full programs, compiling in the background while the lite field shows the Origin. */
+  private full: FullPrograms | null = null;
+  private programs: NonNullable<ReturnType<typeof PROGRAMS.get>>;
+  private fullReady = false;
+  private parallel = false;
+  private frames = 0;
+  private t0 = performance.now();
+  private pu: Uniforms = {};
   private probePts: WebGLTexture;
   private probeTex: WebGLTexture;
   private probeFbo: WebGLFramebuffer;
@@ -97,10 +151,10 @@ export class OceanEngine {
   private probeOut = new Float32Array(MAX_PROBE * 4);
   /** Water heights at the last requested probe points (one frame behind), or null. */
   probeHeights: Float32Array | null = null;
-  private mu: Uniforms;
-  private fu: Uniforms;
-  private su: Uniforms;
-  private ku: Uniforms;
+  private mu: Uniforms = {};
+  private fu: Uniforms = {};
+  private su: Uniforms = {};
+  private ku: Uniforms = {};
   private fieldTex: WebGLTexture;
   private fbo: WebGLFramebuffer;
   private glyphS: WebGLTexture;
@@ -138,7 +192,7 @@ export class OceanEngine {
   private bg: [number, number, number] = [0.92, 0.92, 0.92];
   private lo: [number, number, number] = [0.4, 0.4, 0.4];
   private hi: [number, number, number] = [0.07, 0.07, 0.07];
-  private acc = new Float32Array([0.3, 0.49, 0.06, 0.76, 0.33, 0.05, 0.63, 0.38, 0.03, 0.75, 0.07, 0.24]);
+  private acc = new Float32Array(12 * 3).fill(0.5);
   private gain = 1;
   private quiet: Quiet[] = [];
 
@@ -146,10 +200,6 @@ export class OceanEngine {
   onFrame: ((u: number) => void) | null = null;
   /** Text rects to keep readable (CSS px), polled every frame. */
   quietSource: (() => Quiet[]) | null = null;
-  /** The directory's box rects (CSS px), polled while the field forms them. */
-  boxSource: (() => Quiet[]) | null = null;
-  /** Hovered directory box (-1 = none). */
-  boxHi = -1;
 
   /** Ask for the water's height at these world points (x, z pairs); read probeHeights later. */
   probe(xz: Float32Array | null): void {
@@ -175,7 +225,7 @@ export class OceanEngine {
     }
     const req = this.probeReq;
     const slot = this.probeNext;
-    if (!req || req.length < 2 || this.probeFence[slot]) return; // nothing asked, or both in flight
+    if (!this.probeProg || !req || req.length < 2 || this.probeFence[slot]) return; // not compiled yet, nothing asked, or both in flight
     const n = Math.min(MAX_PROBE, req.length >> 1);
     gl.bindTexture(gl.TEXTURE_2D, this.probePts);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
@@ -204,13 +254,28 @@ export class OceanEngine {
   private focusAmt = 0;
   private focusOn = false;
 
-  /** Fly to island k's close-up, or back to the route (null). */
+  /** All projects: the camera leaves the route for an aerial view of both chains, which rise. */
+  private allOn = false;
+  /** 0..1 how far the camera has gone to the all-projects view (eased). */
+  allAmt = 0;
+  /** Seconds into the chains' rise (runs back down, faster, on the way out). */
+  private allT = 0;
+  /** Projects in each chain (Professional, Personal). */
+  chainN: number[] = [0, 0];
+  /** Each island's rise this frame (0 = under the sea, 1 = formed), in isleCentre order. */
+  isleRise = new Float32Array(ISLE_COUNT);
+
+  setAll(on: boolean): void {
+    this.allOn = on;
+  }
+
+  /** Fly to island k's close-up, or back (null). */
   setFocus(k: number | null): void {
     if (k === null) {
       this.focusOn = false;
       return;
     }
-    const c = ISLANDS[k].c;
+    const c = isleCentre(k, this.chainN);
     // From the south-east, turned so the whole island sits left of centre; its details are on the right.
     this.focusShot = { pos: [c[0] + 5.5, 7, c[1] + 12], yaw: -8, pitch: -26, roll: 0, fov: 50, amp: 1, fog: 80, glyph: 1.05 };
     this.focusOn = true;
@@ -241,16 +306,26 @@ export class OceanEngine {
     if (!gl) throw new Error("WebGL2 unavailable");
     if (!gl.getExtension("EXT_color_buffer_float")) throw new Error("float render targets unavailable");
     this.gl = gl;
-    this.fieldProg = compile(gl, QUAD_VS, FIELD_FS);
-    this.surfProg = compile(gl, SURFACE_VS, SURFACE_FS);
-    this.fu = uniforms(gl, this.fieldProg);
-    this.su = uniforms(gl, this.surfProg);
-    this.skyProg = compile(gl, QUAD_VS, SKY_FS);
-    this.ku = uniforms(gl, this.skyProg);
-    this.formProg = compile(gl, QUAD_VS, FORM_FS);
-    this.mu = uniforms(gl, this.formProg);
-    this.probeProg = compile(gl, QUAD_VS, PROBE_FS);
-    this.pu = uniforms(gl, this.probeProg);
+    // The Origin has no water events, so the first frames use a lite field (just the plasma),
+    // which compiles fast; the full ocean compiles in the background (startFull / pollFull).
+    const programs = PROGRAMS.get(gl) ?? {};
+    PROGRAMS.set(gl, programs);
+    this.programs = programs;
+    this.parallel = !!gl.getExtension("KHR_parallel_shader_compile");
+    if (programs.done && programs.full) {
+      // A remount: the full ocean is already compiled.
+      this.full = programs.full;
+      this.fieldProg = programs.full.field;
+      this.surfProg = programs.full.surf;
+      this.adoptFull();
+    } else {
+      programs.lite ??= [compile(gl, QUAD_VS, fieldFS(true)), compile(gl, surfaceVS(true), SURFACE_FS)];
+      [this.fieldProg, this.surfProg] = programs.lite;
+      this.fu = uniforms(gl, this.fieldProg);
+      this.su = uniforms(gl, this.surfProg);
+      if (programs.failed) this.fullReady = true;
+      else if (this.parallel) this.startFull();
+    }
     this.probePts = gl.createTexture()!;
     gl.bindTexture(gl.TEXTURE_2D, this.probePts);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RG32F, MAX_PROBE, 1, 0, gl.RG, gl.FLOAT, null);
@@ -277,6 +352,7 @@ export class OceanEngine {
     this.glyphS = gl.createTexture()!;
     this.glyphL = gl.createTexture()!;
     this.vao = this.buildMesh(220);
+    this.emptyVao = gl.createVertexArray()!;
   }
 
   /* ── setup ── */
@@ -312,7 +388,7 @@ export class OceanEngine {
     return vao;
   }
 
-  /** Glyph atlas (one layer per band) at `cw × ch` px. */
+  /** Glyph atlas (one layer per band, then the sun's brightest glyphs) at `cw × ch` px. */
   private buildGlyphs(tex: WebGLTexture, cw: number, ch: number): void {
     const gl = this.gl;
     const c = document.createElement("canvas");
@@ -320,10 +396,11 @@ export class OceanEngine {
     c.height = ch;
     const ctx = c.getContext("2d")!;
     gl.bindTexture(gl.TEXTURE_2D_ARRAY, tex);
-    gl.texImage3D(gl.TEXTURE_2D_ARRAY, 0, gl.R8, cw, ch, GLYPHS.length, 0, gl.RED, gl.UNSIGNED_BYTE, null);
+    const all = [...GLYPHS, ...SUN_GLYPHS, ...BUBBLE_GLYPHS, ...RAY_GLYPHS];
+    gl.texImage3D(gl.TEXTURE_2D_ARRAY, 0, gl.R8, cw, ch, all.length, 0, gl.RED, gl.UNSIGNED_BYTE, null);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
     const data = new Uint8Array(cw * ch);
-    GLYPHS.forEach((g, i) => {
+    all.forEach((g, i) => {
       ctx.clearRect(0, 0, cw, ch);
       ctx.fillStyle = "#fff";
       ctx.font = `${(ch / LINE_HEIGHT).toFixed(2)}px ${this.font}`;
@@ -358,6 +435,16 @@ export class OceanEngine {
 
   setReducedMotion(r: boolean): void {
     this.reduced = r;
+  }
+
+  /** 0..1 a cut through black (Back to the surface). */
+  private flash = 0;
+
+  /** To a stop without flying the route in between: cut through black. */
+  jumpTo(u: number): void {
+    this.uTarget = u;
+    this.u = u;
+    this.flash = 1;
   }
 
   setScroll(u: number): void {
@@ -434,16 +521,76 @@ export class OceanEngine {
     cancelAnimationFrame(this.raf);
   }
 
+  private startFull(): void {
+    const gl = this.gl;
+    this.full = this.programs.full ??= {
+      field: startCompile(gl, QUAD_VS, fieldFS()),
+      surf: startCompile(gl, surfaceVS(), SURFACE_FS),
+      sky: startCompile(gl, QUAD_VS, SKY_FS),
+      form: startCompile(gl, QUAD_VS, FADE_FS),
+      probe: startCompile(gl, QUAD_VS, PROBE_FS),
+      deep: startCompile(gl, QUAD_VS, DEEP_FS),
+      bubble: startCompile(gl, BUBBLE_VS, BUBBLE_FS),
+    };
+  }
+
+  /** Swap the full programs in once they're compiled (without the extension: after frame 2, blocking once). */
+  private pollFull(): void {
+    if (this.fullReady) return;
+    const gl = this.gl;
+    if (!this.full) {
+      if (this.frames < 2) return;
+      this.startFull();
+    }
+    const f = this.full!;
+    const all = Object.values(f);
+    if (this.parallel && !all.every((p) => gl.getProgramParameter(p, COMPLETION_STATUS_KHR))) return;
+    try {
+      all.forEach((p) => finish(gl, p));
+    } catch (e) {
+      console.warn("[ocean] full shaders failed; staying on the lite field", e);
+      this.fullReady = true;
+      this.programs.failed = true;
+      return;
+    }
+    this.programs.done = true;
+    this.programs.lite?.forEach((p) => gl.deleteProgram(p));
+    this.programs.lite = undefined;
+    this.adoptFull();
+    if (process.env.NODE_ENV !== "production") {
+      console.info(`[ocean] full shaders ready ${Math.round(performance.now() - this.t0)} ms after start (parallel compile: ${this.parallel})`);
+    }
+  }
+
+  /** Switch to the (compiled) full programs. */
+  private adoptFull(): void {
+    const gl = this.gl;
+    const f = this.full!;
+    this.fieldProg = f.field;
+    this.surfProg = f.surf;
+    this.skyProg = f.sky;
+    this.formProg = f.form;
+    this.probeProg = f.probe;
+    this.deepProg = f.deep;
+    this.bubbleProg = f.bubble;
+    this.du = uniforms(gl, f.deep);
+    this.bu = uniforms(gl, f.bubble);
+    this.fu = uniforms(gl, f.field);
+    this.su = uniforms(gl, f.surf);
+    this.ku = uniforms(gl, f.sky);
+    this.mu = uniforms(gl, f.form);
+    this.pu = uniforms(gl, f.probe);
+    this.fullReady = true;
+    this.full = null;
+  }
+
   dispose(): void {
     this.stop();
     this.dead = true;
     // Free resources but keep the context: React (StrictMode / remounts) may reuse this canvas.
+    // The programs stay (PROGRAMS): the next engine on this context picks them up.
     const gl = this.gl;
-    gl.deleteProgram(this.fieldProg);
-    gl.deleteProgram(this.surfProg);
-    gl.deleteProgram(this.skyProg);
-    gl.deleteProgram(this.formProg);
-    gl.deleteProgram(this.probeProg);
+    gl.deleteVertexArray(this.emptyVao);
     this.probeFence.forEach((f) => f && gl.deleteSync(f));
     this.probePbo.forEach((b) => gl.deleteBuffer(b));
     gl.deleteTexture(this.probePts);
@@ -468,7 +615,10 @@ export class OceanEngine {
     this.u += (this.uTarget - this.u) * k;
     if (Math.abs(this.uTarget - this.u) < 1e-4) this.u = this.uTarget;
 
+    this.pollFull();
+    this.frames++;
     const ev = eventsAt(this.u);
+    this.flash = Math.max(0, this.flash - dt * (this.reduced ? 10 : 1.3));
     if (!this.reduced) {
       this.time += dt;
       const slow = 1 - 0.4 * ev.calm;
@@ -476,13 +626,48 @@ export class OceanEngine {
       this.morph += dt * MORPH_SPEED * slow;
       this.flow[0] += dt * FLOW_SPEED[0] * slow;
       this.flow[1] += dt * FLOW_SPEED[1] * slow;
-      // The whirlpool spins up as you go down it.
-      this.whirlPhase += dt * (0.45 + 5 * ev.dive * ev.dive);
+      // The whirlpool spins up as it forms, and faster as you're pulled down it.
+      this.whirlPhase += dt * (0.25 + 0.5 * ev.whirl + 4 * ev.dive * ev.dive);
     }
 
     const aspect = this.w / this.h;
     const cam = this.debugCam ? { ...this.debugCam, pos: [...this.debugCam.pos] as [number, number, number] } : sampleCamera(KEYS, this.u, aspect);
-    // Island close-up: ease away from the route camera and back (reduced motion: cut).
+    // All projects: a slower flight out to the right and up, then the chains rise one by one.
+    const ak = this.reduced ? 1 : 1 - Math.exp(-dt * 1.7);
+    this.allAmt += ((this.allOn ? 1 : 0) - this.allAmt) * ak;
+    if (Math.abs((this.allOn ? 1 : 0) - this.allAmt) < 1e-3) this.allAmt = this.allOn ? 1 : 0;
+    this.allT = this.reduced ? (this.allOn ? 9 : 0) : Math.min(9, Math.max(0, this.allT + (this.allOn ? dt : -2 * dt)));
+    for (let k = 0; k < ISLE_COUNT; k++) {
+      if (k < ISLANDS.length) {
+        // The featured chain sinks while you're over the others (it would peek in at the edge).
+        this.isleRise[k] = ev.islands[k] * (1 - this.allAmt);
+        continue;
+      }
+      const j = k - ISLANDS.length;
+      const row = Math.floor(j / CHAIN.max);
+      const i = j % CHAIN.max;
+      if (i >= (this.chainN[row] ?? 0)) {
+        this.isleRise[k] = 0;
+        continue;
+      }
+      const x = Math.min(1, Math.max(0, (this.allT - 0.7 - (i + row * 0.5) * 0.22) / 0.9));
+      this.isleRise[k] = x * x * (3 - 2 * x);
+    }
+    if (this.allAmt > 0) {
+      const t = this.allAmt * this.allAmt * (3 - 2 * this.allAmt);
+      const f = ALL_PROJECTS;
+      const m = (a: number, b: number) => a + (b - a) * t;
+      // Out to the right first, climbing as it goes.
+      const tu = Math.min(1, t * 1.25) ** 1.5;
+      for (let ax = 0; ax < 3; ax++) cam.pos[ax] = ax === 1 ? cam.pos[1] + (f.pos[1] - cam.pos[1]) * tu : m(cam.pos[ax], f.pos[ax]);
+      cam.yaw = m(cam.yaw, f.yaw);
+      cam.pitch = cam.pitch + (f.pitch - cam.pitch) * tu;
+      cam.roll = m(cam.roll, f.roll);
+      cam.fov = m(cam.fov, f.fov);
+      cam.fog = m(cam.fog, f.fog);
+      cam.glyph = m(cam.glyph, f.glyph);
+    }
+    // Island close-up: ease away from the camera and back (reduced motion: cut).
     const fk = this.reduced ? 1 : 1 - Math.exp(-dt * 3.2);
     this.focusAmt += ((this.focusOn ? 1 : 0) - this.focusAmt) * fk;
     if (Math.abs((this.focusOn ? 1 : 0) - this.focusAmt) < 1e-3) this.focusAmt = this.focusOn ? 1 : 0;
@@ -499,7 +684,7 @@ export class OceanEngine {
       cam.glyph = m(cam.glyph, f.glyph);
     }
     // Ride the water: never dip below the swell / waves under the camera.
-    if (ev.dive < 0.01 && cam.pitch > -89.9) {
+    if (ev.dive < 0.01 && ev.deep < 0.01 && cam.pitch > -89.9) {
       const floor = swellAt(cam.pos[0], cam.pos[2]) * ev.swell + PLASMA_AMP * 0.5 * cam.amp + 0.75;
       if (cam.pos[1] < floor) cam.pos[1] = floor;
     }
@@ -529,7 +714,9 @@ export class OceanEngine {
     const fy = Math.sin(pitchR);
     const fz = -Math.cos(yawR) * Math.cos(pitchR);
     // Ground focus: where the view axis meets the water (clamped for shallow views).
-    const tHit = fy < -0.05 ? Math.min(cam.pos[1] / -fy, 14) : 14;
+    // (Height above the water, which inside the whirlpool is below sea level.)
+    const alt = Math.max(0.5, cam.pos[1] - whirlH(cam.pos[0], cam.pos[2], ev.whirl));
+    const tHit = fy < -0.05 ? Math.min(alt / -fy, 14) : 14;
     const hl = Math.hypot(fx, fz) || 1;
 
     gl.useProgram(this.fieldProg);
@@ -561,7 +748,10 @@ export class OceanEngine {
     gl.clearColor(this.bg[0], this.bg[1], this.bg[2], 1);
     gl.clearDepth(1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    if (ev.calm > 0.001) this.drawSky(cam, aspect, ev.calm);
+    const under = ev.deep > 0.5;
+    if (ev.deep > 0.001 && this.deepProg) this.drawDeep(cam, ev.deep);
+    const sun = ev.calm * (1 - ev.deep);
+    if (sun > 0.001 && this.skyProg) this.drawSky(cam, aspect, sun);
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LESS);
 
@@ -585,6 +775,7 @@ export class OceanEngine {
     gl.uniform1f(su.uSunAmt, ev.calm);
     gl.uniform2f(su.uFog, cam.fog * 0.45, cam.fog);
     gl.uniform1f(su.uGlyph, cam.glyph);
+    gl.uniform1f(su.uDeep, ev.deep);
     gl.uniform2f(su.uRes, this.w, this.h);
     this.setQuietUniforms(su);
 
@@ -598,40 +789,32 @@ export class OceanEngine {
     gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.glyphL);
     gl.uniform1i(su.uGlyphL, 2);
 
+    // Under the sea the surface is blended over the water (the deep pass) instead of painting it out.
+    if (under) {
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    }
     gl.bindVertexArray(this.vao);
     gl.drawElements(gl.TRIANGLES, this.nIdx, gl.UNSIGNED_INT, 0);
     gl.bindVertexArray(null);
+    if (ev.deep > 0.001 && this.bubbleProg) this.drawBubbles(cam, ev.deep);
+    gl.disable(gl.BLEND);
 
-    if (ev.blackout > 0.001) this.drawForm(ev);
+    const fl = this.flash * this.flash * (3 - 2 * this.flash);
+    const black = Math.max(ev.blackout, fl);
+    if (black > 0.001 && this.formProg) this.drawFade(black);
   }
 
-  /** The bottom of the maelstrom: black, then the field gathers into the directory's boxes. */
-  private drawForm(ev: Events): void {
+  /** Fade to the background (the bottom of the whirlpool; cuts). */
+  private drawFade(amt: number): void {
     const gl = this.gl;
     const k = this.mu;
     gl.disable(gl.DEPTH_TEST);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     gl.useProgram(this.formProg);
-    gl.uniform2f(k.uNative, this.cellW, this.cellH);
-    gl.uniform2f(k.uRes, this.w, this.h);
-    gl.uniform1f(k.uTime, this.time);
-    gl.uniform1f(k.uSpin, this.whirlPhase * 0.5);
-    gl.uniform1f(k.uBlack, ev.blackout);
-    gl.uniform1f(k.uForm, ev.form);
-    const boxes = this.boxSource?.() ?? [];
-    const b = new Float32Array(MAX_BOX * 4);
-    boxes.slice(0, MAX_BOX).forEach((r, i) =>
-      b.set([r.x0 * this.dpr, r.y0 * this.dpr, r.x1 * this.dpr, r.y1 * this.dpr], i * 4),
-    );
-    gl.uniform4fv(k.uBox, b);
-    gl.uniform1i(k.uBoxN, Math.min(MAX_BOX, boxes.length));
-    gl.uniform1f(k.uBoxHi, this.boxHi);
-    // Always the dark-theme accents: this happens on black.
-    gl.uniform3fv(k.uAcc, new Float32Array([0.64, 0.9, 0.21, 0.98, 0.57, 0.24, 0.98, 0.8, 0.08]));
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.glyphS);
-    gl.uniform1i(k.uGlyphS, 1);
+    gl.uniform3fv(k.uBg, this.bg);
+    gl.uniform1f(k.uBlack, amt);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     gl.disable(gl.BLEND);
   }
@@ -664,12 +847,17 @@ export class OceanEngine {
     gl.uniform3fv(u.uCrest, ev.crest);
     gl.uniform3fv(u.uCrestB, ev.crestBuild);
     const e = new Float32Array(MAX_ISLE * 4);
-    ISLANDS.forEach((d, i) => e.set([d.c[0], d.c[1], ev.islands[i], d.seed], i * 4));
+    for (let k = 0; k < ISLE_COUNT; k++) {
+      const c = isleCentre(k, this.chainN);
+      e.set([c[0], c[1], this.isleRise[k], isleSeed(k)], k * 4);
+    }
     gl.uniform4fv(u.uIsle, e);
+    gl.uniform1f(u.uIsleSea, Math.max(ev.isleSea, this.allAmt));
     gl.uniform1f(u.uCurW, ev.currents);
     gl.uniform1f(u.uCalmW, ev.calm);
     gl.uniform1f(u.uWhirlW, ev.whirl);
     gl.uniform1f(u.uWhirlPhase, this.whirlPhase);
+    gl.uniform1f(u.uDive, ev.dive);
     gl.uniform1f(u.uIsleHi, this.isleHi);
     // In the swell and the currents the only colours are the items' own (ambient strips fade out).
     gl.uniform1f(u.uAmbient, 1 - 0.95 * Math.max(ev.swell, ev.currents));
@@ -714,6 +902,61 @@ export class OceanEngine {
     gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.glyphS);
     gl.uniform1i(k.uGlyphS, 1);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
+  }
+
+  /** Under the sea: the water behind everything (screen-locked glyph cells). */
+  private drawDeep(c: Camera, amt: number): void {
+    const gl = this.gl;
+    const { f, r, up } = this.basis(c);
+    gl.disable(gl.DEPTH_TEST);
+    gl.useProgram(this.deepProg);
+    const k = this.du;
+    gl.uniform2f(k.uNative, this.cellW, this.cellH);
+    gl.uniform2f(k.uRes, this.w, this.h);
+    gl.uniform3fv(k.uCamR, r);
+    gl.uniform3fv(k.uCamU, up);
+    gl.uniform3fv(k.uCamF, f);
+    gl.uniform1f(k.uTanHalf, Math.tan((c.fov * Math.PI) / 360));
+    gl.uniform1f(k.uTime, this.time);
+    gl.uniform3fv(k.uBg, this.bg);
+    gl.uniform3fv(k.uLo, this.lo);
+    gl.uniform3fv(k.uHi, this.hi);
+    gl.uniform1f(k.uDeep, amt);
+    this.setQuietUniforms(k);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.glyphS);
+    gl.uniform1i(k.uGlyphS, 1);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  }
+
+  /** Under the sea: bubbles rising (world-space points, depth-tested against the surface). */
+  private drawBubbles(c: Camera, amt: number): void {
+    const gl = this.gl;
+    const yaw = (c.yaw * Math.PI) / 180;
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthMask(false);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    gl.useProgram(this.bubbleProg);
+    const k = this.bu;
+    gl.uniformMatrix4fv(k.uVP, false, this.vp);
+    gl.uniform3fv(k.uCam, c.pos);
+    gl.uniform3f(k.uFwd, Math.sin(yaw), 0, -Math.cos(yaw));
+    gl.uniform1f(k.uTime, this.time);
+    gl.uniform2f(k.uRes, this.w, this.h);
+    gl.uniform2f(k.uNative, this.cellW, this.cellH);
+    gl.uniform1f(k.uDeep, amt);
+    gl.uniform3fv(k.uHi, this.hi);
+    gl.uniform3fv(k.uLo, this.lo);
+    gl.uniform3fv(k.uAcc, this.acc);
+    this.setQuietUniforms(k);
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.glyphL);
+    gl.uniform1i(k.uGlyphL, 2);
+    gl.bindVertexArray(this.emptyVao);
+    gl.drawArrays(gl.POINTS, 0, BUBBLES);
+    gl.bindVertexArray(null);
+    gl.depthMask(true);
   }
 
   private basis(c: Camera): { f: number[]; r: number[]; up: number[] } {

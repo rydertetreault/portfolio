@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { normalizePathname } from "@/lib/utils";
+import { isClassicPath, stripClassic } from "@/lib/classic";
 import { isReducedMotion } from "@/lib/motion";
 import { asciiFieldStore } from "@/components/ascii-field/store";
 import { corruptText, wipeText, decodePage } from "./corrupt";
@@ -33,21 +34,25 @@ type Kind = "cloud" | "terminal";
 
 /**
  * Projects and the resume now open as lightboxes over the ocean (components/ocean),
- * so no route gets this choreography any more; kept for pages outside the ocean.
+ * so the ocean's routes get no choreography. The classic site (/classic, the live
+ * site without the ocean) keeps the live tabs' transitions.
  */
 function kindFor(path: string): Kind | null {
-  void path;
+  if (!isClassicPath(path)) return null;
+  const live = stripClassic(path);
+  if (live === "/resume" || live.startsWith("/resume/")) return "terminal";
+  if (live === "/projects") return "cloud";
   return null;
 }
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
-const TERMINAL_SCRIPT = (href: string) => ({
-  command: `ryder --open ${href.replace(/^\//, "")}`,
+const TERMINAL_SCRIPT = (href: string, shown = stripClassic(href)) => ({
+  command: `ryder --open ${shown.replace(/^\//, "")}`,
   lines: [
     ["resolving profile", "", "ok"],
     ["loading sections", "[5/5]", "ok"],
-    ["rendering", href, "ok"],
+    ["rendering", shown, "ok"],
   ] as [string, string, string][],
 });
 

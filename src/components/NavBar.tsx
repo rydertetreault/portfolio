@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Menu, X } from "lucide-react";
+import { Menu, Waves, X } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import MotionToggle from "@/components/MotionToggle";
 import { normalizePathname } from "@/lib/utils";
+import { classicHref, isClassicPath, stripClassic } from "@/lib/classic";
 import "@/components/ascii-ui/deeplink.css";
 
 const sectionItems = [
@@ -16,9 +17,25 @@ const sectionItems = [
   { id: "contact", label: "Contact" },
 ];
 
+// The classic site keeps the live site's tabs (Projects is already a page link there).
+const classicSectionItems = [
+  { id: "experience", label: "Experience" },
+  { id: "skills", label: "Skills" },
+  { id: "education", label: "Education" },
+  { id: "contact", label: "Contact" },
+];
+
+const sameHref = (href: string) => href;
+
 export default function NavBar() {
   // Normalised: Vercel prerenders "/" as "/index" on the server, "/" in the browser.
-  const pathname = normalizePathname(usePathname());
+  const fullPath = normalizePathname(usePathname());
+  // The classic site (/classic/...) is the live site without the ocean: same nav, every
+  // link kept inside /classic. Below, `pathname` is the live equivalent ("/classic" → "/").
+  const classic = isClassicPath(fullPath);
+  const pathname = stripClassic(fullPath);
+  const siteHref = classic ? classicHref : sameHref;
+  const tabs = classic ? classicSectionItems : sectionItems;
   const isHome = pathname === "/";
   const isProjects = pathname.startsWith("/projects");
   const isResume = pathname.startsWith("/resume");
@@ -62,9 +79,11 @@ export default function NavBar() {
     window.setTimeout(() => document.documentElement.classList.remove("ascii-deeplink"), 4000);
   };
 
-  // Ocean pages (the homepage and its lightboxes) bring their own header.
+  // Ocean pages (the homepage and its lightboxes) bring their own header; the classic
+  // equivalents (/classic, /classic/projects, …) show this nav.
   const isOcean =
-    isHome || isResume || pathname === "/contact" || (isProjects && !pathname.startsWith("/projects/snapshift"));
+    !classic &&
+    (isHome || isResume || pathname === "/contact" || (isProjects && !pathname.startsWith("/projects/snapshift")));
   if (isOcean) return null;
 
   return (
@@ -75,7 +94,22 @@ export default function NavBar() {
           : "border-transparent shadow-none"
       }`}
     >
-      <div className="mx-auto max-w-6xl px-6 sm:px-8 flex items-center justify-end h-16 pt-[env(safe-area-inset-top)]">
+      <div
+        className={`mx-auto max-w-6xl px-6 sm:px-8 flex items-center h-16 pt-[env(safe-area-inset-top)] ${
+          classic ? "justify-between" : "justify-end"
+        }`}
+      >
+        {/* Classic site: the way back to the animated (ocean) homepage */}
+        {classic && (
+          <Link
+            href="/"
+            title="Back to the animated version"
+            className="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.25em] text-text-faint hover:text-accent transition-colors duration-300"
+          >
+            <Waves size={14} aria-hidden />
+            Ocean view
+          </Link>
+        )}
         {/* Desktop nav */}
         <div className="hidden md:flex items-center gap-8">
           {isHome ? (
@@ -92,13 +126,13 @@ export default function NavBar() {
           ) : (
             <Link
               onClick={markDeepLink}
-                href="/#about"
+                href={siteHref("/#about")}
               className="text-sm text-text-faint hover:text-foreground transition-colors duration-300"
             >
               Overview
             </Link>
           )}
-          {sectionItems.map((item) =>
+          {tabs.map((item) =>
             isHome ? (
               <button
                 key={item.id}
@@ -114,7 +148,7 @@ export default function NavBar() {
             ) : (
               <Link
                 key={item.id}
-                href={`/#${item.id}`}
+                href={siteHref(`/#${item.id}`)}
                 className="text-sm text-text-faint hover:text-foreground transition-colors duration-300"
               >
                 {item.label}
@@ -122,7 +156,7 @@ export default function NavBar() {
             )
           )}
           <Link
-            href="/projects"
+            href={siteHref("/projects")}
             className={`text-sm transition-colors duration-300 ${
               isProjects
                 ? "text-accent"
@@ -132,7 +166,7 @@ export default function NavBar() {
             Projects
           </Link>
           <Link
-            href="/resume"
+            href={siteHref("/resume")}
             className={`text-sm transition-colors duration-300 ${
               isResume
                 ? "text-accent"
@@ -180,14 +214,14 @@ export default function NavBar() {
               </button>
             ) : (
               <Link
-                href="/#about"
+                href={siteHref("/#about")}
                 onClick={markDeepLink}
                 className="block w-full text-left py-3 text-sm text-text-muted hover:text-accent transition-colors"
               >
                 Overview
               </Link>
             )}
-            {sectionItems.map((item) =>
+            {tabs.map((item) =>
               isHome ? (
                 <button
                   key={item.id}
@@ -203,7 +237,7 @@ export default function NavBar() {
               ) : (
                 <Link
                   key={item.id}
-                  href={`/#${item.id}`}
+                  href={siteHref(`/#${item.id}`)}
                   onClick={markDeepLink}
                   className="block w-full text-left py-3 text-sm text-text-muted hover:text-accent transition-colors"
                 >
@@ -212,7 +246,7 @@ export default function NavBar() {
               )
             )}
             <Link
-              href="/projects"
+              href={siteHref("/projects")}
               onClick={() => setMobileMenuOpen(false)}
               className={`block w-full text-left py-3 text-sm transition-colors ${
                 isProjects
@@ -223,7 +257,7 @@ export default function NavBar() {
               Projects
             </Link>
             <Link
-              href="/resume"
+              href={siteHref("/resume")}
               onClick={() => setMobileMenuOpen(false)}
               className={`block w-full text-left py-3 text-sm transition-colors ${
                 isResume

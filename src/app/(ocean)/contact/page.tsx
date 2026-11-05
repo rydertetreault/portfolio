@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
-import WaveBox from "@/components/ocean/WaveBox";
-import { ContactDetails } from "@/components/ocean/stops";
+import ShadeBox from "@/components/ocean/ShadeBox";
+import { ContactBox } from "@/components/ocean/boxes";
 
 export const metadata: Metadata = { title: "Contact | Ryder Tetreault" };
 
 export default function ContactPage() {
   return (
-    <WaveBox path="~/contact">
-      <ContactDetails />
-    </WaveBox>
+    <ShadeBox path="~/contact">
+      <ContactBox />
+    </ShadeBox>
   );
 }

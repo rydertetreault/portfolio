@@ -49,6 +49,10 @@ function resolveMonoFamily(): string {
 const DEFAULT_ROUTE_PRESETS: Record<string, PresetName> = {
   // The ocean (components/ocean) renders its own field for "/", /projects, /resume, /contact.
   "/projects/snapshift": "hero",
+  // The classic site (/classic: the live site without the ocean) keeps the live mapping.
+  "/classic": "hero",
+  "/classic/projects": "hero", // same field as home: the projects transition never touches the background
+  "/classic/resume": "resume",
 };
 
 function presetForPath(path: string, map: Record<string, PresetName>): PresetName | null {

@@ -13,5 +13,7 @@ export const oceanView = {
   heights: null as null | (() => Float32Array | null),
   /** This frame's events (swell strength etc.). */
   events: null as null | (() => Events | null),
+  /** Islands this frame: centre of island k, each island's rise, how far into All projects. */
+  isles: null as null | (() => { centre: (k: number) => [number, number]; rise: Float32Array; all: number }),
   frame: new Set<() => void>(),
 };

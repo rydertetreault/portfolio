@@ -1,19 +1,13 @@
 import type { Metadata } from "next";
-import WaveBox from "@/components/ocean/WaveBox";
-import { buildLines } from "./source";
-import ResumeEditor from "./ResumeEditor";
-import "@/components/ascii-ui/terminal.css";
-import "./resume-code.css";
+import ShadeBox from "@/components/ocean/ShadeBox";
+import { ResumeBox } from "@/components/ocean/boxes";
 
 export const metadata: Metadata = { title: "Resume | Ryder Tetreault" };
 
 export default function ResumePage() {
-  const lines = buildLines();
   return (
-    <WaveBox path="~/resume">
-      <div className="py-4">
-        <ResumeEditor lines={lines} />
-      </div>
-    </WaveBox>
+    <ShadeBox path="~/resume">
+      <ResumeBox />
+    </ShadeBox>
   );
 }

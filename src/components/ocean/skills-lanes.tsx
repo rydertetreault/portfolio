@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type CSSProperties } from "react";
 import type { MotionValue } from "framer-motion";
 import { SKILLS } from "@/data/profile";
 import { oceanView } from "./nav";
@@ -27,6 +27,9 @@ export default function SkillsLanes({ u }: { u: MotionValue<number> }) {
       el.style.opacity = String(o);
       el.style.visibility = o < 0.01 ? "hidden" : "visible";
       el.inert = o < 0.5;
+      // The chips cascade in once you've arrived (and reset once you've gone).
+      if (o > 0.6) el.dataset.on = "";
+      else if (o < 0.05) delete el.dataset.on;
       if (o < 0.01) return;
       SKILLS.forEach((_, k) => {
         const col = cols.current[k];
@@ -41,32 +44,58 @@ export default function SkillsLanes({ u }: { u: MotionValue<number> }) {
   }, [u]);
 
   return (
-    <div ref={root} data-ocean-stop className="pointer-events-none fixed inset-0 z-10" style={{ opacity: 0 }}>
-      {SKILLS.map((g, k) => (
-        <div
-          key={g.title}
-          ref={(d) => {
-            cols.current[k] = d;
-          }}
-          className="absolute left-0 top-0 w-[min(19rem,27vw)] will-change-transform"
-        >
-          <div data-ocean-quiet="0.6" className="space-y-2 text-center">
-            <p className="text-lg font-medium" style={{ color: accent(CURRENTS.colors[k]) }}>
-              {g.title}
-            </p>
-            <p className="text-[14px] leading-relaxed text-text-muted">
-              {g.items.map((it, j) => (
-                <span key={it}>
-                  <span className="whitespace-nowrap">
+    <div ref={root} data-ocean-stop className="group pointer-events-none fixed inset-0 z-10" style={{ opacity: 0 }}>
+      {SKILLS.map((g, k) => {
+        const c = accent(CURRENTS.colors[k]);
+        return (
+          <div
+            key={g.title}
+            ref={(d) => {
+              cols.current[k] = d;
+            }}
+            className="absolute left-0 top-0 w-[min(23rem,30vw)] will-change-transform"
+          >
+            <div data-ocean-quiet="0.6" className="relative space-y-2.5 text-center">
+              {/* where the current meets the text: a short stream of glyphs flowing down into it */}
+              <p aria-hidden className="ocean-stream absolute -top-4 left-0 right-0 font-mono text-[11px] leading-none" style={{ color: c }}>
+                ≈≈≈
+              </p>
+              <div className="space-y-1">
+                <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-text-faint">
+                  Current {String(k + 1).padStart(2, "0")}
+                  <span className="mx-2 opacity-50">/</span>
+                  {g.items.length} skills
+                </p>
+                <p className="text-xl font-semibold tracking-tight" style={{ color: c }}>
+                  {g.title}
+                </p>
+                <p className="text-[13px] text-text-muted">{g.blurb}</p>
+              </div>
+              <ul className="flex flex-wrap justify-center gap-1">
+                {g.items.map((it, j) => (
+                  <li
+                    key={it}
+                    className="pointer-events-auto translate-y-1.5 rounded-sm border bg-[color-mix(in_srgb,var(--chip)_7%,transparent)] px-1.5 py-px text-[12px] text-foreground/85 opacity-0 hover:bg-[color-mix(in_srgb,var(--chip)_20%,transparent)] group-data-[on]:translate-y-0 group-data-[on]:opacity-100"
+                    style={
+                      {
+                        "--chip": c,
+                        borderColor: `color-mix(in srgb, ${c} 35%, transparent)`,
+                        // staggered in, but hover answers at once
+                        transition: ["opacity", "transform"]
+                          .map((p) => `${p} 500ms ease-out ${180 + k * 120 + j * 45}ms`)
+                          .concat("background-color 150ms")
+                          .join(", "),
+                      } as CSSProperties
+                    }
+                  >
                     {it}
-                    {j < g.items.length - 1 && <span className="text-text-faint"> ·</span>}
-                  </span>{" "}
-                </span>
-              ))}
-            </p>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
