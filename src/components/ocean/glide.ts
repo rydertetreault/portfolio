@@ -29,8 +29,13 @@ const GESTURE_GAP = 220;
 const MS_PER_VH = 650;
 const MIN_MS = 650;
 const MAX_MS = 2600;
+/** Glides through the whirlpool dive (the helix down the funnel) go slower: ms per vh, no cap. */
+const DIVE_MS_PER_VH = 1000;
+const DIVE = WINDOWS[BEATS.findIndex((b) => b.id === "dive")];
 
 const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+/** Gentler ease for the dive: peaks at ~1.6x average speed instead of 3x. */
+const easeSine = (t: number) => 0.5 - 0.5 * Math.cos(Math.PI * t);
 const EPS = 0.02;
 
 /** The rest point after (dir 1) or before (dir -1) u, or null past either end. */
@@ -94,12 +99,21 @@ export function useGlide(): void {
         window.scrollTo({ top: to, behavior: "auto" });
         return;
       }
-      const ms = Math.min(MAX_MS, Math.max(MIN_MS, (Math.abs(dist) / window.innerHeight) * MS_PER_VH));
+      const vh = Math.abs(dist) / window.innerHeight;
+      const a = Math.min(from, to) / window.innerHeight;
+      const b = Math.max(from, to) / window.innerHeight;
+      // The helix part of the flight is paced by DIVE_MS_PER_VH, the rest at the normal rate.
+      const inDive = Math.max(0, Math.min(b, DIVE.arrive) - Math.max(a, DIVE.start));
+      const dive = inDive > 0;
+      const ms = dive
+        ? inDive * DIVE_MS_PER_VH + (vh - inDive) * MS_PER_VH
+        : Math.min(MAX_MS, Math.max(MIN_MS, vh * MS_PER_VH));
+      const curve = dive ? easeSine : ease;
       const t0 = performance.now();
       gliding = Math.sign(dist);
       const step = (now: number) => {
         const t = Math.min(1, (now - t0) / ms);
-        window.scrollTo({ top: from + dist * ease(t), behavior: "auto" });
+        window.scrollTo({ top: from + dist * curve(t), behavior: "auto" });
         if (t < 1) raf = requestAnimationFrame(step);
         else gliding = 0;
       };
@@ -111,6 +125,13 @@ export function useGlide(): void {
       const now = performance.now();
       if (locked() || now - blockedAt < 500) return;
       const d = Math.sign(e.deltaY);
+      // A glide always plays out: swallow everything (any direction) until it lands, and its momentum after.
+      if (gliding) {
+        e.preventDefault();
+        gesture = d;
+        gestureEnd = now;
+        return;
+      }
       // Still the gesture that started a glide (or its momentum): swallow it.
       if (gesture === d && now - gestureEnd < GESTURE_GAP) {
         e.preventDefault();
@@ -155,10 +176,16 @@ export function useGlide(): void {
       window.clearTimeout(idle);
       if (!gliding) idle = window.setTimeout(settle, IDLE);
     };
-    const onTake = () => stop();
+    // Touch, keys and clicks don't interrupt a glide either.
+    const onTouchMove = (e: TouchEvent) => {
+      if (gliding) e.preventDefault();
+    };
+    const SCROLL_KEYS = new Set(["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "]);
+    const onKey = (e: KeyboardEvent) => {
+      if (gliding && SCROLL_KEYS.has(e.key)) e.preventDefault();
+    };
     const onDown = () => {
       pointerDown = true;
-      stop();
     };
     const onUp = () => {
       pointerDown = false;
@@ -168,8 +195,8 @@ export function useGlide(): void {
 
     window.addEventListener("wheel", onWheel, { passive: false });
     window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("touchstart", onTake, { passive: true });
-    window.addEventListener("keydown", onTake);
+    window.addEventListener("touchmove", onTouchMove, { passive: false });
+    window.addEventListener("keydown", onKey);
     window.addEventListener("pointerdown", onDown);
     window.addEventListener("pointerup", onUp);
     window.addEventListener("pointercancel", onUp);
@@ -178,8 +205,8 @@ export function useGlide(): void {
       window.clearTimeout(idle);
       window.removeEventListener("wheel", onWheel);
       window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("touchstart", onTake);
-      window.removeEventListener("keydown", onTake);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("keydown", onKey);
       window.removeEventListener("pointerdown", onDown);
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onUp);

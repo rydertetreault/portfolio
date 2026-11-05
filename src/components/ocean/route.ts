@@ -18,6 +18,8 @@ export type Beat = {
   via?: Shot[];
   travel: number;
   hold: number;
+  /** Flown through without slowing (no rest, the camera keeps moving). */
+  pass?: boolean;
   /** Where the text sits; the camera frames the event on the other side. */
   side: "left" | "right" | "center" | "split" | "full";
 };
@@ -154,7 +156,7 @@ export const BEATS: Beat[] = [
   { id: "skills", section: "skills", via: [TO_SKILLS], shot: SKILLS, travel: 1.6, hold: 1.4, side: "left" },
   { id: "projects", section: "projects", shot: PROJECTS, travel: 1.5, hold: 2.8, side: "left" },
   { id: "education", section: "education", shot: EDUCATION, travel: 1.4, hold: 1.1, side: "left" },
-  { id: "whirlpool", section: "whirlpool", shot: CONTACT, travel: 1.6, hold: 0.7, side: "center" },
+  { id: "whirlpool", section: "whirlpool", shot: CONTACT, travel: 1.6, hold: 0, pass: true, side: "center" },
   { id: "dive", section: "whirlpool", via: HELIX, shot: DIVE_IN, travel: 3.0, hold: 0, side: "center" },
   // Out of the black, high over the whirlpool.
   { id: "deep", section: "contact", via: [DEEP_IN], shot: DEEP, travel: 1.4, hold: 1.2, side: "full" },
@@ -185,7 +187,7 @@ export const KEYS: Key[] = (() => {
     const w = WINDOWS[i];
     const via = b.via ?? [];
     via.forEach((s, j) => keys.push({ at: w.start + (b.travel * (j + 1)) / (via.length + 1.4), shot: s, pass: true }));
-    keys.push({ at: w.arrive, shot: b.shot });
+    keys.push({ at: w.arrive, shot: b.shot, pass: b.pass });
     if (b.hold > 0) keys.push({ at: w.leave, shot: b.shot });
   });
   return keys;
